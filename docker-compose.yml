@@ -5,6 +5,8 @@ services:
     ports:
       - "6379:6379"
     restart: unless-stopped
+    volumes:
+      - redis_data:/data
   backend:
     build: ./backend_server 
     container_name: backend_server
@@ -15,3 +17,12 @@ services:
     environment:
       - REDIS_URL=redis://redis_db:6379
     restart: unless-stopped
+  frontend:
+    build: ./frontend
+    container_name: frontend_client
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    restart: unless-stopped
+     
