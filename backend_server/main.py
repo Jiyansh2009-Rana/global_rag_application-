@@ -24,6 +24,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from docx import Document as DocxDocument
 from pptx import Presentation as PptxPresentation
+from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pypdf import PdfReader
 from pdf2image import convert_from_bytes
 import pytesseract
@@ -313,36 +314,51 @@ def recursive_chunking(text: str) -> List[str]:
     return chunks 
 
 
-def docx_chunking(text: str) -> List[str]:
+def docx_chunking(text: str, max_chunk_size: int = 1500) -> List[str]:
     
     chunks = []
     current_section = ""
+    
     for line in text.split('\n'):
-        if line.startswith('#') or line.startswith('##') or line.startswith('###'):
+        if line.startswith('# ') or line.startswith('## ') or line.startswith('### '):
             if current_section:
                 chunks.append(current_section.strip())
             current_section = line
         else:
             current_section += "\n" + line
+            
+           
+            if len(current_section) > max_chunk_size:
+                chunks.append(current_section.strip())
+                current_section = "" 
+                
     if current_section:
         chunks.append(current_section.strip())
-    return [c for c in chunks if len(c.strip()) > 30]
         
+    return [c for c in chunks if len(c) > 30]
+
 def row_chunking(text: str, rows_per_chunk: int = 20) -> List[str]:
     
-    lines = text.split('\n')
-    if not lines:
+    if not text.strip():
         return []
-    header = lines[0] if lines else ""
+        
+    lines = text.split('\n')
     chunks = []
-    current_chunk = header
-    for i, line in enumerate(lines[1:], 1):
-        current_chunk += "\n" + line
-        if i % rows_per_chunk == 0:
-            chunks.append(current_chunk)
-            current_chunk = header
-    if current_chunk != header:
-        chunks.append(current_chunk)
+    current_chunk = []
+    
+    for line in lines:
+        if not line.strip():
+            continue
+            
+        current_chunk.append(line)
+        
+        if len(current_chunk) == rows_per_chunk:
+            chunks.append("\n".join(current_chunk))
+            current_chunk = []
+            
+    if current_chunk:
+        chunks.append("\n".join(current_chunk))
+        
     return chunks
     
 def ppt_chunking(text: str) -> List[str]:
@@ -351,14 +367,29 @@ def ppt_chunking(text: str) -> List[str]:
     chunk_of_slide = [s.strip() for s in slides if len(s.strip()) > 30]
     return chunk_of_slide
         
-def chunk_tag_aware(html_text: str) -> List[str]:
+def chunk_tag_aware(text: str, max_chunk_size: int = 1500) -> List[str]:
     
-    soup = BeautifulSoup(html_text, 'html.parser')
+    chunks = []
+    current_section = ""
     
-    for tag in soup.find_all(['nav', 'footer', 'script', 'style']):
-        tag.decompose()
-    text = soup.get_text(separator='\n', strip=True)
-    return docx_chunking(text)
+    lines = [line for line in text.split('\n') if line.strip()]
+    
+    for line in lines:
+        if line.startswith('# ') or line.startswith('## ') or line.startswith('### '):
+            if current_section:
+                chunks.append(current_section.strip())
+            current_section = line
+        else:
+            current_section += "\n" + line
+            
+            if len(current_section) > max_chunk_size:
+                chunks.append(current_section.strip())
+                current_section = "" 
+                
+    if current_section:
+        chunks.append(current_section.strip())
+        
+    return [c for c in chunks if len(c) > 30]
 
         
 def extract_pdf_text(file_bytes: bytes) -> tuple[str, int]:
@@ -411,51 +442,157 @@ def extract_pdf_text(file_bytes: bytes) -> tuple[str, int]:
 def extract_docx_text(file_bytes: bytes) -> tuple[str, int]:
     
     try:
-        doc = DocxDocument(io.BytesIO(file_bytes))
-        text = "\n".join([para.text for para in doc.paragraphs])
-        page_count = len(doc.paragraphs)
-        return text, page_count
+        doc = DocxDocument.Document(io.BytesIO(file_bytes))
+        text_parts = []
+        
+        for para in doc.paragraphs:
+            text = para.text.strip()
+            if not text:
+                continue
+                
+            style_name = para.style.name.lower()
+            
+            if style_name.startswith('heading 1'):
+                text = f"# {text}"
+            elif style_name.startswith('heading 2'):
+                text = f"## {text}"
+            elif style_name.startswith('heading 3'):
+                text = f"### {text}"
+                
+            text_parts.append(text)
+            
+        for table in doc.tables:
+            for row in table.rows:
+                row_data = [cell.text.replace('\n', ' ').strip() for cell in row.cells]
+                if any(row_data):
+                    text_parts.append(" | ".join(row_data))
+                    
+        full_text = "\n".join(text_parts)
+        
+        block_count = len(doc.paragraphs) + sum(len(t.rows) for t in doc.tables)
+        
+        return full_text, block_count
+        
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"DOCX extraction failed: {str(e)}")                
+        raise HTTPException(status_code=400, detail=f"DOCX extraction failed: {str(e)}") 
+               
 def extract_xlsx_text(file_bytes: bytes) -> tuple[str, int]:
+   
+    full_text_lines = []
+    total_rows = 0
     
     try:
-        df = pd.read_excel(io.BytesIO(file_bytes))
-        text = df.to_string()
-        return text, len(df)
-    except:
         try:
-            df = pd.read_csv(io.BytesIO(file_bytes))
-            text = df.to_string()
-            return text, len(df)
-        except Exception as e:
-            raise HTTPException(status_code=400, detail=f"Spreadsheet extraction failed: {str(e)}")
+            excel_dict = pd.read_excel(io.BytesIO(file_bytes), sheet_name=None)
+        except Exception:
+            excel_dict = {"Sheet1": pd.read_csv(io.BytesIO(file_bytes))}
             
-def extract_pptx_text(file_bytes: bytes) -> tuple[str, int]:
+        for sheet_name, df in excel_dict.items():
+            
+            df = df.fillna("")
+            total_rows += len(df)
+            columns = df.columns.tolist()
+            
+            for index, row in df.iterrows():
+                
+                row_parts = [f"Sheet: {sheet_name}"]
+                for col in columns:
+                    val = str(row[col]).strip()
+                    if val:   
+                        row_parts.append(f"{col}: {val}")
+                
+                full_text_lines.append(" | ".join(row_parts))
+                
+        return "\n".join(full_text_lines), total_rows
+        
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Spreadsheet extraction failed: {str(e)}")
+
+
+def extract_text_from_shape(shape) -> str:
+    """Recursively extracts text from a PowerPoint shape, including tables and groups."""
+    text = ""
     
+    # 1. Standard text shapes
+    if hasattr(shape, "text") and shape.text:
+        text += shape.text + "\n"
+        
+    # 2. Tables
+    if shape.has_table:
+        for row in shape.table.rows:
+            row_data = []
+            for cell in row.cells:
+                # Clean up newlines inside cells for better RAG formatting
+                cell_text = cell.text_frame.text.replace('\n', ' ').strip()
+                if cell_text:
+                    row_data.append(cell_text)
+            text += " | ".join(row_data) + "\n"
+            
+    # 3. Grouped shapes (requires recursion)
+    if shape.shape_type == MSO_SHAPE_TYPE.GROUP:
+        for child_shape in shape.shapes:
+            text += extract_text_from_shape(child_shape)
+            
+    return text
+
+def extract_pptx_text(file_bytes: bytes) -> tuple[str, int]:
     try:
         prs = PptxPresentation(io.BytesIO(file_bytes))
-        text = ""
-        for slide in prs.slides:
-            slide_text = ""
+        full_text = ""
+        
+        for slide_num, slide in enumerate(prs.slides, start=1):
+
+            slide_text = f"Slide {slide_num}:\n"
+            
+            
             for shape in slide.shapes:
-                if hasattr(shape, "text"):
-                    slide_text += shape.text + "\n"
-            text += slide_text + "\n---SLIDE_BREAK---\n"
-        return text, len(prs.slides)
+                slide_text += extract_text_from_shape(shape)
+                
+            
+            if slide.has_notes_slide and slide.notes_slide.notes_text_frame:
+                notes = slide.notes_slide.notes_text_frame.text.strip()
+                if notes:
+                    slide_text += f"\nSpeaker Notes:\n{notes}\n"
+                    
+            full_text += slide_text + "\n---SLIDE_BREAK---\n"
+            
+        return full_text, len(prs.slides)
+        
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"PPTX extraction failed: {str(e)}")            
 def extract_html_text(file_bytes: bytes) -> tuple[str, int]:
     
     try:
-        html_text = file_bytes.decode('utf-8')
+        html_text = file_bytes.decode('utf-8', errors='ignore')
         soup = BeautifulSoup(html_text, 'html.parser')
-        for tag in soup.find_all(['nav', 'footer', 'script', 'style']):
+        
+        for tag in soup.find_all(['nav', 'footer', 'script', 'style', 'aside', 'header', 'iframe']):
             tag.decompose()
+            
+        for level in range(1, 7):
+            for header in soup.find_all(f'h{level}'):
+                markdown_header = f"\n{'#' * level} {header.get_text(strip=True)}\n"
+                header.string = markdown_header
+                
+        for table in soup.find_all('table'):
+            table_lines = []
+            for row in table.find_all('tr'):
+                cells = row.find_all(['td', 'th'])
+                row_data = [cell.get_text(strip=True).replace('\n', ' ') for cell in cells]
+                
+                if any(row_data):
+                    table_lines.append(" | ".join(row_data))
+                    
+            if table_lines:
+                table.insert_after("\n" + "\n".join(table_lines) + "\n")
+                table.decompose()
+                
         text = soup.get_text(separator='\n', strip=True)
         return text, 1
+        
     except Exception as e:
-        raise HTTPException(status_code=400, detail=f"HTML extraction failed: {str(e)}")      
+        raise HTTPException(status_code=400, detail=f"HTML extraction failed: {str(e)}")
+        
 def extract_plainfile_text(file_bytes : bytes):
     
     text = file_bytes.decode('utf-8')
