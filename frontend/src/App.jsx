@@ -292,7 +292,7 @@ const Toast = ({ message, type = "info", onClose }) => {
 };
 
 // ─── API LAYER ────────────────────────────────────────────────────────────────
-const BASE = "http://localhost:8000/api/v1";
+const BASE = import.meta.env.VITE_API_BASE_URL;
 
 const api = {
   async call(path, opts = {}) {

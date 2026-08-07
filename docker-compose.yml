@@ -11,7 +11,7 @@ services:
     build: ./backend_server 
     container_name: backend_server
     ports:
-      - "8000:8000"
+      - "6000:6000"
     depends_on:
       - redis_db
     environment:
