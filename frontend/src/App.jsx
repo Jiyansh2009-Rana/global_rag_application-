@@ -25,12 +25,12 @@ const GlobalStyle = () => (
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      /* Background effects applied here */
-      background: #667eea; /* Fallback for older browsers */
-      background: -webkit-radial-gradient(circle , #667eea 51%, #764ba2 100%);
-      background: -moz-radial-gradient(circle , #667eea 51%, #764ba2 100%);
-      background: -o-radial-gradient(circle , #667eea 51%, #764ba2 100%);
-      background: radial-gradient(circle , #667eea 51%, #764ba2 100%);
+      /* Fallback for older browsers */
+      background: #4facfe;
+      background: -webkit-linear-gradient(221deg, #4facfe 13%, #00f2fe 100%);
+      background: -moz-linear-gradient(221deg, #4facfe 13%, #00f2fe 100%);
+      background: -o-linear-gradient(221deg, #4facfe 13%, #00f2fe 100%);
+      background: linear-gradient(221deg, #4facfe 13%, #00f2fe 100%);
       
       color: ${T.body};
       font-family: 'Inter', sans-serif;
@@ -56,7 +56,7 @@ const GlobalStyle = () => (
 
     button { cursor: pointer; font-family: 'Space Grotesk', sans-serif; }
 
-    /* Button Hover & Focus Effects */
+    /* Button Effect from User */
     .btn-effect {
       transition: transform 0.3s ease, box-shadow 0.3s ease, filter 0.3s ease;
     }
@@ -356,10 +356,10 @@ const api = {
 
 // ─── AUTH VIEWS ──────────────────────────────────────────────────────────────
 function AuthView({ onAuth }) {
-  const [tab,  setTab]    = useState("login");
-  const [form, setForm]   = useState({ email: "", password: "", role: "User", org_id: "" });
-  const [busy, setBusy]   = useState(false);
-  const [err,  setErr]    = useState("");
+  const [tab,  setTab]   = useState("login");
+  const [form, setForm]  = useState({ email: "", password: "", role: "User", org_id: "" });
+  const [busy, setBusy]  = useState(false);
+  const [err,  setErr]   = useState("");
 
   const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -384,7 +384,7 @@ function AuthView({ onAuth }) {
   return (
     <div style={{
       minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
-      background: "transparent", position: "relative", overflow: "hidden",
+      position: "relative", overflow: "hidden", // Removed background: T.bg to show gradient
     }}>
       {/* Ambient BG */}
       <div style={{
@@ -1124,7 +1124,7 @@ export default function App() {
 
   if (booting) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "transparent" }}>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <GlobalStyle />
         <Spinner />
       </div>
