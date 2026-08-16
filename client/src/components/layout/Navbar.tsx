@@ -134,13 +134,14 @@ interface NavbarProps {
 }
 
 export function Navbar({ activePage, onNavigate }: NavbarProps) {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isSuperAdmin } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
 
   const navLinks = [
     { key: 'chat',   label: 'Chat',   icon: '◆' },
     { key: 'upload', label: 'Upload', icon: '↑' },
     ...(isAdmin ? [{ key: 'admin', label: 'Admin', icon: '⊞' }] : []),
+    ...(isSuperAdmin ? [{ key: 'super-admin', label: 'Super Admin', icon: '⚡' }] : []),
   ];
 
   return (

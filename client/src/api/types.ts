@@ -116,3 +116,27 @@ export const OrgDocumentSchema = z.object({
 });
 export type OrgDocument = z.infer<typeof OrgDocumentSchema>;
 
+/* ── Super Admin — Global User ── */
+export const SuperAdminUserSchema = z.object({
+  id:         z.string(),
+  email:      z.string(),
+  role:       z.string(),
+  org_id:     z.string().nullable().optional(),
+  created_at: z.string(),
+});
+export type SuperAdminUser = z.infer<typeof SuperAdminUserSchema>;
+
+/* ── Super Admin — Global Document ── */
+export const SuperAdminDocumentSchema = z.object({
+  id:           z.string(),
+  file_name:    z.string(),
+  file_hash:    z.string().optional(),
+  total_pages:  z.number().optional(),
+  status:       z.string().optional(),
+  uploaded_by:  z.string().optional(),
+  uploaded_at:  z.string().optional(),
+  org_id:       z.string().nullable().optional(),
+});
+export type SuperAdminDocument = z.infer<typeof SuperAdminDocumentSchema>;
+
+

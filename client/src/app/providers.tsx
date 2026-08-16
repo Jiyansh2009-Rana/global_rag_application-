@@ -10,12 +10,13 @@ import { AuthPage } from '@/features/auth/AuthPage';
 import { ChatPage } from '@/features/chat/ChatPage';
 import { UploadPage } from '@/features/upload/UploadPage';
 import { AdminPage } from '@/features/admin/AdminPage';
+import { SuperAdminPage } from '@/features/super-admin/SuperAdminPage';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
 });
 
-type Page = 'chat' | 'upload' | 'admin';
+type Page = 'chat' | 'upload' | 'admin' | 'super-admin';
 
 /* ── Loading screen ── */
 function LoadingScreen() {
@@ -52,7 +53,7 @@ function PreAuthNav() {
 
 /* ── App Shell (inside all providers) ── */
 function AppShell() {
-  const { user, isAdmin, isLoading } = useAuth();
+  const { user, isAdmin, isSuperAdmin, isLoading } = useAuth();
   const [page, setPage] = useState<Page>('chat');
 
   if (isLoading) return <LoadingScreen />;
@@ -67,9 +68,10 @@ function AppShell() {
   }
 
   const pageMap: Record<Page, React.ReactNode> = {
-    chat:   <ChatPage />,
-    upload: <UploadPage />,
-    admin:  isAdmin ? <AdminPage /> : <ChatPage />,
+    chat:          <ChatPage />,
+    upload:        <UploadPage />,
+    admin:         isAdmin ? <AdminPage /> : <ChatPage />,
+    'super-admin': isSuperAdmin ? <SuperAdminPage /> : <ChatPage />,
   };
 
   return (
