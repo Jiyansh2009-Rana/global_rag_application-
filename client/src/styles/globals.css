@@ -1,0 +1,232 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Global RAG — Global Styles v3 (Space / Nebula Background)
+─────────────────────────────────────────────────────────────────────────────── */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html {
+  height: 100%;
+  font-size: 16px;
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+}
+
+body {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--text);
+  min-height: 100vh;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+
+  /* ── SPACE BASE BACKGROUND ── */
+  background:
+    /* Teal nebula — top-left (like image) */
+    radial-gradient(ellipse 75% 58% at -5% 0%,   rgba(0,210,200,0.28)   0%, rgba(0,180,180,0.14) 35%, transparent 68%),
+    /* Purple / magenta nebula — bottom-left */
+    radial-gradient(ellipse 65% 52% at -8% 102%,  rgba(168,85,247,0.30)  0%, rgba(139,92,246,0.18) 30%, transparent 62%),
+    /* Deep cyan glow — top-center */
+    radial-gradient(ellipse 50% 35% at 50% -5%,   rgba(34,211,238,0.12)  0%, transparent 55%),
+    /* Subtle violet — mid-right */
+    radial-gradient(ellipse 40% 40% at 105% 50%,  rgba(139,92,246,0.12)  0%, transparent 55%),
+    /* Star-field base */
+    #040b10;
+}
+
+/* ── STAR PARTICLES (CSS-only, layered) ── */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    /* fine stars */
+    radial-gradient(1px 1px at 12%  8%,  rgba(255,255,255,0.85) 0%, transparent 100%),
+    radial-gradient(1px 1px at 25%  22%, rgba(255,255,255,0.75) 0%, transparent 100%),
+    radial-gradient(1px 1px at 38%  5%,  rgba(255,255,255,0.65) 0%, transparent 100%),
+    radial-gradient(1px 1px at 55%  15%, rgba(255,255,255,0.80) 0%, transparent 100%),
+    radial-gradient(1px 1px at 70%  6%,  rgba(255,255,255,0.70) 0%, transparent 100%),
+    radial-gradient(1px 1px at 82%  20%, rgba(255,255,255,0.60) 0%, transparent 100%),
+    radial-gradient(1px 1px at 92%  10%, rgba(255,255,255,0.75) 0%, transparent 100%),
+    radial-gradient(1px 1px at 5%   35%, rgba(255,255,255,0.70) 0%, transparent 100%),
+    radial-gradient(1px 1px at 18%  48%, rgba(255,255,255,0.50) 0%, transparent 100%),
+    radial-gradient(1px 1px at 42%  38%, rgba(255,255,255,0.65) 0%, transparent 100%),
+    radial-gradient(1px 1px at 60%  45%, rgba(255,255,255,0.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 78%  35%, rgba(255,255,255,0.70) 0%, transparent 100%),
+    radial-gradient(1px 1px at 95%  42%, rgba(255,255,255,0.60) 0%, transparent 100%),
+    radial-gradient(1px 1px at 8%   62%, rgba(255,255,255,0.65) 0%, transparent 100%),
+    radial-gradient(1px 1px at 30%  70%, rgba(255,255,255,0.50) 0%, transparent 100%),
+    radial-gradient(1px 1px at 50%  58%, rgba(255,255,255,0.60) 0%, transparent 100%),
+    radial-gradient(1px 1px at 67%  75%, rgba(255,255,255,0.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 85%  65%, rgba(255,255,255,0.70) 0%, transparent 100%),
+    radial-gradient(1px 1px at 98%  80%, rgba(255,255,255,0.60) 0%, transparent 100%),
+    radial-gradient(1px 1px at 15%  85%, rgba(255,255,255,0.50) 0%, transparent 100%),
+    radial-gradient(1px 1px at 45%  90%, rgba(255,255,255,0.65) 0%, transparent 100%),
+    radial-gradient(1px 1px at 75%  88%, rgba(255,255,255,0.55) 0%, transparent 100%),
+    radial-gradient(1px 1px at 90%  95%, rgba(255,255,255,0.60) 0%, transparent 100%),
+    /* slightly larger stars */
+    radial-gradient(1.5px 1.5px at 35%  12%, rgba(255,255,255,0.90) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 62%  28%, rgba(180,240,255,0.85) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 88%  55%, rgba(255,255,255,0.80) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 22%  75%, rgba(200,180,255,0.75) 0%, transparent 100%),
+    radial-gradient(1.5px 1.5px at 73%  92%, rgba(255,255,255,0.85) 0%, transparent 100%),
+    /* bright accent stars with soft glow */
+    radial-gradient(2.5px 2.5px at 48%  30%, rgba(255,255,255,1.00) 0%, rgba(180,240,255,0.2) 60%, transparent 100%),
+    radial-gradient(2.5px 2.5px at 20%  55%, rgba(255,255,255,0.95) 0%, rgba(200,180,255,0.2) 60%, transparent 100%),
+    radial-gradient(2.5px 2.5px at 80%  20%, rgba(255,255,255,1.00) 0%, rgba(180,240,255,0.2) 60%, transparent 100%),
+    radial-gradient(2.5px 2.5px at 10%  90%, rgba(255,255,255,0.90) 0%, rgba(200,180,255,0.2) 60%, transparent 100%);
+  animation: starsTwinkle 8s ease-in-out infinite alternate;
+}
+
+@keyframes starsTwinkle {
+  0%   { opacity: 0.7;  }
+  33%  { opacity: 1.0;  }
+  66%  { opacity: 0.85; }
+  100% { opacity: 0.75; }
+}
+
+/* ── NEBULA DRIFT LAYER (slow moving glow) ── */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 55% 45% at 0% 0%,    rgba(0,210,200,0.15) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 0% 100%,   rgba(168,85,247,0.18) 0%, transparent 58%),
+    radial-gradient(ellipse 30% 30% at 100% 30%,  rgba(139,92,246,0.07) 0%, transparent 55%);
+  animation: nebulaDrift 20s ease-in-out infinite alternate;
+}
+
+@keyframes nebulaDrift {
+  0%   { opacity: 0.8; transform: scale(1)    translate(0px,   0px); }
+  33%  { opacity: 1.0; transform: scale(1.05) translate(15px, -10px); }
+  66%  { opacity: 0.9; transform: scale(0.97) translate(-10px, 15px); }
+  100% { opacity: 0.85;transform: scale(1.03) translate(8px,  -5px); }
+}
+
+/* ── LIGHT THEME ── */
+[data-theme="light"] body {
+  background:
+    radial-gradient(ellipse 75% 58% at -5% 0%,   rgba(13,148,136,0.10) 0%, transparent 68%),
+    radial-gradient(ellipse 65% 52% at -8% 102%,  rgba(139,92,246,0.06) 0%, transparent 62%),
+    #eef5f3;
+}
+[data-theme="light"] body::before { opacity: 0; }
+[data-theme="light"] body::after  {
+  background:
+    radial-gradient(ellipse 55% 45% at 0% 0%,    rgba(13,148,136,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 40% at 0% 100%,   rgba(139,92,246,0.04) 0%, transparent 58%);
+  animation: none;
+}
+
+/* ── ROOT ── */
+#root {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── GLASS SURFACE CLASSES ── */
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-top-color: var(--glass-border-top);
+  border-radius: 14px;
+  box-shadow: var(--glass-shadow);
+}
+.glass-card {
+  background: var(--glass-bg-card);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  border-top-color: var(--glass-border-top);
+  border-radius: 14px;
+  box-shadow: var(--glass-shadow);
+  transition: box-shadow 0.22s ease, transform 0.22s ease;
+}
+.glass-card:hover {
+  box-shadow: var(--glass-shadow), 0 0 28px rgba(0,210,200,0.09);
+}
+.glass-deep {
+  background: var(--glass-bg-deep);
+  backdrop-filter: var(--glass-blur-deep);
+  -webkit-backdrop-filter: var(--glass-blur-deep);
+  border: 1px solid var(--glass-border);
+  border-top-color: var(--glass-border-top);
+  border-radius: 20px;
+  box-shadow: var(--glass-shadow-lg);
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,210,200,0.22); border-radius: 9999px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,210,200,0.40); }
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: rgba(13,148,136,0.22); }
+
+/* ── TEXT SELECTION ── */
+::selection { background: rgba(0,210,200,0.24); color: var(--text); }
+
+/* ── FOCUS ── */
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+/* ── HEADINGS ── */
+h1, h2, h3, h4, h5, h6 {
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+/* ── TABULAR NUMS ── */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ── SKELETON SHIMMER ── */
+.skeleton {
+  background: linear-gradient(90deg, var(--surface) 25%, var(--surface-2) 50%, var(--surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+  border-radius: 6px;
+}
+@keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+/* ── KEYFRAMES ── */
+@keyframes spin         { to { transform: rotate(360deg); } }
+@keyframes pulseOpacity { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+@keyframes fadeSlideUp  { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+@keyframes zigZagPulse  { 0%,100% { stroke-dashoffset: 0; } 50% { stroke-dashoffset: -20; } }
+
+/* ── ZIG-ZAG CONNECTOR LINE ── */
+.zigzag-line {
+  stroke: url(#zigGrad);
+  stroke-width: 1.5;
+  fill: none;
+  stroke-dasharray: 6 4;
+  animation: zigZagPulse 3s ease-in-out infinite;
+}
+.zigzag-node {
+  filter: drop-shadow(0 0 8px rgba(0,210,200,0.8));
+}
+
+/* ── MARKDOWN PROSE ── */
+.prose { line-height: 1.78; font-size: 0.915rem; color: var(--text); }
+.prose p { margin-bottom: 0.85em; }
+.prose h1,.prose h2,.prose h3 { margin: 1.2em 0 0.45em; font-family: "Space Grotesk", sans-serif; }
+.prose ul,.prose ol { padding-left: 1.5em; margin-bottom: 0.85em; }
+.prose li { margin-bottom: 0.25em; }
+.prose strong { font-weight: 600; }
+.prose a { color: var(--accent); }
+.prose code { font-family: ui-monospace, monospace; font-size: 0.83em; background: var(--surface-2); border: 1px solid var(--border); padding: 0.1em 0.38em; border-radius: 4px; }
+.prose pre { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; overflow-x: auto; margin-bottom: 1em; }
+.prose pre code { background: none; border: none; padding: 0; }
+.prose blockquote { border-left: 3px solid var(--accent); padding-left: 1em; color: var(--muted); margin: 1em 0; font-style: italic; }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) { .hide-mobile { display: none !important; } }

@@ -1,0 +1,141 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+   Global RAG — Design System v2 (Full Glassmorphism)
+   CSS-first Tailwind v4 @theme block.
+   ALL components use var(--*) only — zero hardcoded colours.
+─────────────────────────────────────────────────────────────────────────────── */
+@import "tailwindcss";
+
+/* ── TAILWIND v4 THEME TOKENS ── */
+@theme {
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+  --font-body:    "Inter", system-ui, sans-serif;
+  --font-mono:    ui-monospace, "Cascadia Code", monospace;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DARK THEME (default)
+═══════════════════════════════════════════════════════════════════════════ */
+:root,
+[data-theme="dark"] {
+  /* ── Backgrounds (space) ── */
+  --bg-base:        #040b10;
+  --bg-layer1:      #061218;
+  --bg-layer2:      rgba(6,20,28,0.88);
+  --bg-layer3:      rgba(8,24,32,0.75);
+
+  --background:     var(--bg-base);
+  --surface:        var(--bg-layer2);
+  --surface-2:      var(--bg-layer3);
+  --surface-hover:  rgba(255,255,255,0.055);
+
+  /* ── Borders ── */
+  --border:         rgba(255,255,255,0.09);
+  --border-strong:  rgba(255,255,255,0.18);
+  --border-accent:  rgba(0,210,200,0.28);
+
+  /* ── Text ── */
+  --text:           #e8f8f6;
+  --text-secondary: #a8d0cb;
+  --muted:          #5e9a94;
+
+  /* ── Accent — space teal (matching image) ── */
+  --accent:         #00d2c8;
+  --accent-2:       #00b5aa;
+  --accent-dim:     rgba(0,210,200,0.12);
+  --accent-glow:    rgba(0,210,200,0.07);
+  --accent-fg:      #001a19;
+
+  /* ── Purple accent (nebula) ── */
+  --nebula:         #a855f7;
+  --nebula-dim:     rgba(168,85,247,0.12);
+
+  /* ── Status ── */
+  --danger:         #f87171;
+  --danger-dim:     rgba(248,113,113,0.12);
+  --success:        #34d399;
+  --success-dim:    rgba(52,211,153,0.12);
+  --warning:        #fbbf24;
+  --warning-dim:    rgba(251,191,36,0.12);
+
+  /* ── Glass system (space glass) ── */
+  --glass-bg:          linear-gradient(135deg, rgba(255,255,255,0.07) 0%, rgba(0,180,200,0.04) 50%, rgba(255,255,255,0.025) 100%);
+  --glass-bg-deep:     linear-gradient(145deg, rgba(4,18,28,0.92) 0%, rgba(2,12,20,0.96) 100%);
+  --glass-bg-card:     linear-gradient(145deg, rgba(255,255,255,0.065) 0%, rgba(0,180,200,0.035) 100%);
+  --glass-border:      rgba(0,210,200,0.14);
+  --glass-border-top:  rgba(255,255,255,0.20);
+  --glass-blur:        blur(28px) saturate(170%);
+  --glass-blur-deep:   blur(52px) saturate(210%);
+  --glass-shadow:      0 8px 32px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.08) inset, 0 0 0 1px rgba(0,210,200,0.05);
+  --glass-shadow-lg:   0 24px 72px rgba(0,0,0,0.65), 0 1px 0 rgba(255,255,255,0.10) inset, 0 0 0 1px rgba(0,210,200,0.08);
+
+  /* ── Navbar ── */
+  --navbar-bg:      linear-gradient(180deg, rgba(4,14,22,0.88) 0%, rgba(2,10,18,0.80) 100%);
+  --navbar-blur:    blur(36px) saturate(200%);
+  --navbar-border:  rgba(0,210,200,0.10);
+  --navbar-shadow:  0 1px 0 rgba(255,255,255,0.06) inset, 0 4px 24px rgba(0,0,0,0.4);
+
+  /* ── Sidebar ── */
+  --sidebar-bg:     linear-gradient(180deg, rgba(4,14,22,0.75) 0%, rgba(2,10,18,0.65) 100%);
+
+  /* ── Input ── */
+  --input-bg:       rgba(255,255,255,0.04);
+  --input-shadow:   0 2px 8px rgba(0,0,0,0.25) inset;
+  --input-focus-ring: 0 0 0 3px rgba(0,210,200,0.18), 0 2px 8px rgba(0,0,0,0.25) inset;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   LIGHT THEME
+═══════════════════════════════════════════════════════════════════════════ */
+[data-theme="light"] {
+  --bg-base:        #eef5f3;
+  --bg-layer1:      #f4faf8;
+  --bg-layer2:      #ffffff;
+  --bg-layer3:      #e8f2ef;
+
+  --background:     var(--bg-base);
+  --surface:        var(--bg-layer2);
+  --surface-2:      var(--bg-layer3);
+  --surface-hover:  rgba(0,0,0,0.035);
+
+  --border:         rgba(0,0,0,0.08);
+  --border-strong:  rgba(0,0,0,0.16);
+  --border-accent:  rgba(13,148,136,0.25);
+
+  --text:           #0b1e1b;
+  --text-secondary: #2a4a45;
+  --muted:          #547874;
+
+  --accent:         #0d9488;
+  --accent-2:       #0f766e;
+  --accent-dim:     rgba(13,148,136,0.10);
+  --accent-glow:    rgba(13,148,136,0.06);
+  --accent-fg:      #ffffff;
+
+  --danger:         #dc2626;
+  --danger-dim:     rgba(220,38,38,0.08);
+  --success:        #059669;
+  --success-dim:    rgba(5,150,105,0.08);
+  --warning:        #d97706;
+  --warning-dim:    rgba(217,119,6,0.08);
+
+  --glass-bg:          linear-gradient(135deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.65) 100%);
+  --glass-bg-deep:     linear-gradient(145deg, rgba(255,255,255,0.94) 0%, rgba(238,245,243,0.98) 100%);
+  --glass-bg-card:     linear-gradient(145deg, rgba(255,255,255,0.9) 0%, rgba(238,245,243,0.8) 100%);
+  --glass-border:      rgba(0,0,0,0.07);
+  --glass-border-top:  rgba(255,255,255,0.95);
+  --glass-blur:        blur(20px) saturate(130%);
+  --glass-blur-deep:   blur(36px) saturate(160%);
+  --glass-shadow:      0 4px 24px rgba(0,0,0,0.07), 0 1px 0 rgba(255,255,255,0.95) inset;
+  --glass-shadow-lg:   0 12px 48px rgba(0,0,0,0.10), 0 1px 0 rgba(255,255,255,0.95) inset;
+
+  --navbar-bg:      linear-gradient(180deg, rgba(240,250,248,0.88) 0%, rgba(228,242,238,0.82) 100%);
+  --navbar-blur:    blur(24px) saturate(150%);
+  --navbar-border:  rgba(0,0,0,0.08);
+  --navbar-shadow:  0 1px 0 rgba(255,255,255,0.9) inset, 0 2px 16px rgba(0,0,0,0.06);
+
+  --sidebar-bg:     linear-gradient(180deg, rgba(234,245,241,0.85) 0%, rgba(225,240,236,0.75) 100%);
+
+  --input-bg:       rgba(0,0,0,0.03);
+  --input-shadow:   0 1px 4px rgba(0,0,0,0.08) inset;
+  --input-focus-ring: 0 0 0 3px rgba(13,148,136,0.15), 0 1px 4px rgba(0,0,0,0.08) inset;
+}
