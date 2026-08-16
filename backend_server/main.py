@@ -1544,6 +1544,7 @@ async def query_rag(
     )
 
 admin_only = RoleChecker([Role.ADMIN, Role.SUPER_ADMIN])
+super_admin_only = RoleChecker([Role.SUPER_ADMIN]) 
 
 @app.get("/api/v1/admin/users", tags=["Admin"])
 async def get_organization_users(current_user: TokenClaims = Depends(admin_only)):
@@ -1664,6 +1665,100 @@ async def delete_organization_document(
         return {"message": f"Document {doc_id} and all related chunks successfully deleted."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to clear document registry: {e}")
+
+
+
+@app.get("/api/v1/super-admin/users", tags=["Super Admin"])
+async def super_admin_get_all_users(current_user: TokenClaims = Depends(super_admin_only)):
+    if not supabase_client:
+        raise HTTPException(status_code=500, detail="Supabase client not initialized")
+    
+    try:
+        
+        response = (
+            supabase_client.table("users")
+            .select("id, email, role, org_id, created_at")
+            .execute()
+        )
+        return {"users": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch users globally: {e}")
+
+
+@app.delete("/api/v1/super-admin/users/{target_user_id}", tags=["Super Admin"])
+async def super_admin_delete_user(target_user_id: str, current_user: TokenClaims = Depends(super_admin_only)):
+    
+    if not supabase_client:
+        raise HTTPException(status_code=500, detail="Supabase client not initialized")
+        
+    if current_user.user_id == target_user_id:
+        raise HTTPException(status_code=400, detail="You cannot delete your own Super Admin account.")
+
+    try:
+        
+        supabase_client.table("users").delete().eq("id", target_user_id).execute()
+        
+        if redis_client:
+            redis_client.delete(f"user:{target_user_id}:meta")
+            
+        return {"message": f"User {target_user_id} removed successfully from the platform."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete user globally: {e}")
+
+
+@app.get("/api/v1/super-admin/documents", tags=["Super Admin"])
+async def super_admin_get_all_documents(current_user: TokenClaims = Depends(super_admin_only)):
+    if not supabase_client:
+        raise HTTPException(status_code=500, detail="Supabase client not initialized")
+    
+    try:
+        response = supabase_client.table("document_registry").select("*").execute()
+        return {"documents": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch documents globally: {e}")
+
+
+@app.delete("/api/v1/super-admin/documents/{doc_id}", tags=["Super Admin"])
+async def super_admin_delete_document(doc_id: str, current_user: TokenClaims = Depends(super_admin_only)):
+    if not supabase_client:
+        raise HTTPException(status_code=500, detail="Supabase client not initialized")
+        
+    doc_check = supabase_client.table("document_registry").select("org_id").eq("id", doc_id).execute()
+    if not doc_check.data:
+        raise HTTPException(status_code=404, detail="Document not found on the platform.")
+    
+    target_org_id = doc_check.data[0]["org_id"]
+
+    conn = get_neon_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM document_chunks WHERE document_id = %s", (doc_id,))
+                cur.execute("DELETE FROM image_store WHERE id = %s", (doc_id,))
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            raise HTTPException(status_code=500, detail=f"Failed to delete document chunks globally from DB: {e}")
+        finally:
+            conn.close()
+    else:
+        raise HTTPException(status_code=500, detail="Database connection failed.")
+
+    try:
+        supabase_client.table("page_registry").delete().eq("document_id", doc_id).execute()
+        supabase_client.table("document_registry").delete().eq("id", doc_id).execute()
+        
+        supabase_client.table("audit_log").insert({
+            "event_type": "super_admin_global_document_deleted", 
+            "user_id": current_user.user_id,
+            "org_id": target_org_id, 
+            "doc_id": doc_id,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        }).execute()
+        
+        return {"message": f"Document {doc_id} and all related chunks successfully deleted globally."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to clear document registry globally: {e}")
 
 
 @app.get("/health")
