@@ -38,6 +38,15 @@ const api = {
     if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
     return data;
   },
+  async delete(path, token) {
+    const res = await fetch(`${BASE}${path}`, {
+      method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+    return data;
+  },
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -1187,6 +1196,140 @@ function OverviewPage({ userInfo }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   SUPER ADMIN PAGE
+───────────────────────────────────────────────────────────────────────────── */
+function SuperAdminPage({ token }) {
+  const [users, setUsers] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [uRes, dRes] = await Promise.all([
+        api.get('/api/v1/super-admin/users', token),
+        api.get('/api/v1/super-admin/documents', token)
+      ]);
+      setUsers(uRes.users || []);
+      setDocuments(dRes.documents || []);
+    } catch (e) {
+      setError(friendlyError(e.message));
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  const deleteUser = async (id) => {
+    if (!window.confirm(`Are you sure you want to delete user ${id}?`)) return;
+    try {
+      await api.delete(`/api/v1/super-admin/users/${id}`, token);
+      fetchData();
+    } catch (e) {
+      alert(friendlyError(e.message));
+    }
+  };
+
+  const deleteDocument = async (id) => {
+    if (!window.confirm(`Are you sure you want to delete document ${id}?`)) return;
+    try {
+      await api.delete(`/api/v1/super-admin/documents/${id}`, token);
+      fetchData();
+    } catch (e) {
+      alert(friendlyError(e.message));
+    }
+  };
+
+  return (
+    <div>
+      <div className="page-header">
+        <div className="page-title">Super Admin Panel</div>
+        <div className="page-sub">Manage global users and documents across all organisations.</div>
+      </div>
+      
+      {error && <div className="alert alert-error">{error}</div>}
+      
+      {loading ? (
+        <div style={{ color: 'var(--muted)' }}><span className="spinner" /> Loading platform data...</div>
+      ) : (
+        <>
+          <div className="glass" style={{ padding: '1.75rem', marginBottom: '1.5rem' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1rem' }}>All Users</div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                    <th style={{ padding: '0.75rem', color: 'var(--muted)' }}>ID</th>
+                    <th style={{ padding: '0.75rem', color: 'var(--muted)' }}>Email</th>
+                    <th style={{ padding: '0.75rem', color: 'var(--muted)' }}>Role</th>
+                    <th style={{ padding: '0.75rem', color: 'var(--muted)' }}>Organisation</th>
+                    <th style={{ padding: '0.75rem', color: 'var(--muted)', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.length === 0 ? (
+                    <tr><td colSpan={5} style={{ padding: '1rem', textAlign: 'center', color: 'var(--muted)' }}>No users found</td></tr>
+                  ) : users.map(u => (
+                    <tr key={u.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '0.75rem' }}>{u.id.substring(0,8)}...</td>
+                      <td style={{ padding: '0.75rem' }}>{u.email}</td>
+                      <td style={{ padding: '0.75rem' }}><span className="profile-role">{u.role}</span></td>
+                      <td style={{ padding: '0.75rem' }}>{u.org_id || '—'}</td>
+                      <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                        <button onClick={() => deleteUser(u.id)} className="btn-primary" style={{ padding: '0.4rem 0.8rem', marginTop: 0, width: 'auto', background: 'rgba(248,113,113,0.1)', color: 'var(--danger)', border: '1px solid rgba(248,113,113,0.3)', boxShadow: 'none' }}>
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="glass" style={{ padding: '1.75rem' }}>
+            <div style={{ fontSize: '1.1rem', fontWeight: 600, marginBottom: '1rem' }}>All Documents</div>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', textAlign: 'left', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
+                    <th style={{ padding: '0.75rem', color: 'var(--muted)' }}>Doc ID</th>
+                    <th style={{ padding: '0.75rem', color: 'var(--muted)' }}>Filename</th>
+                    <th style={{ padding: '0.75rem', color: 'var(--muted)' }}>Organisation</th>
+                    <th style={{ padding: '0.75rem', color: 'var(--muted)' }}>Status</th>
+                    <th style={{ padding: '0.75rem', color: 'var(--muted)', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {documents.length === 0 ? (
+                    <tr><td colSpan={5} style={{ padding: '1rem', textAlign: 'center', color: 'var(--muted)' }}>No documents found</td></tr>
+                  ) : documents.map(d => (
+                    <tr key={d.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                      <td style={{ padding: '0.75rem' }}>{d.id.substring(0,8)}...</td>
+                      <td style={{ padding: '0.75rem' }}>{d.filename}</td>
+                      <td style={{ padding: '0.75rem' }}>{d.org_id}</td>
+                      <td style={{ padding: '0.75rem' }}>{d.status}</td>
+                      <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                        <button onClick={() => deleteDocument(d.id)} className="btn-primary" style={{ padding: '0.4rem 0.8rem', marginTop: 0, width: 'auto', background: 'rgba(248,113,113,0.1)', color: 'var(--danger)', border: '1px solid rgba(248,113,113,0.3)', boxShadow: 'none' }}>
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    DASHBOARD SHELL
 ───────────────────────────────────────────────────────────────────────────── */
 function Dashboard({ token, onLogout }) {
@@ -1219,6 +1362,10 @@ function Dashboard({ token, onLogout }) {
     { key: 'query',    label: 'Query',      icon: '◆' },
     { key: 'upload',   label: 'Upload',     icon: '↑' },
   ];
+
+  if (userInfo?.role === 'Super Admin') {
+    navItems.push({ key: 'superadmin', label: 'Super Admin', icon: '⚡' });
+  }
 
   return (
     <div className="dashboard">
@@ -1266,6 +1413,7 @@ function Dashboard({ token, onLogout }) {
           {page === 'overview' && <OverviewPage userInfo={userInfo} />}
           {page === 'query'    && <QueryPage token={token} orgId={userInfo?.org_id} />}
           {page === 'upload'   && <UploadPage token={token} userInfo={userInfo} />}
+          {page === 'superadmin' && userInfo?.role === 'Super Admin' && <SuperAdminPage token={token} />}
         </main>
       </div>
     </div>
