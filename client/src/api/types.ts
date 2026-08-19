@@ -139,4 +139,34 @@ export const SuperAdminDocumentSchema = z.object({
 });
 export type SuperAdminDocument = z.infer<typeof SuperAdminDocumentSchema>;
 
+/* ── Chat History ── */
+export const ChatHistoryItemSchema = z.object({
+  id:         z.string().optional(),
+  user_id:    z.string().optional(),
+  org_id:     z.string().optional(),
+  query:      z.string(),
+  answer:     z.string(),
+  query_mode: z.string().optional(),
+  created_at: z.string().optional(),
+});
+export type ChatHistoryItem = z.infer<typeof ChatHistoryItemSchema>;
+
+/* ── Platform Guide ── */
+export interface GuideStep {
+  step: number;
+  title: string;
+  description: string;
+  details?: Record<string, string>;
+}
+
+export interface PlatformGuide {
+  title: string;
+  introduction: string;
+  how_to_use_steps: GuideStep[];
+  tips_for_best_results: string[];
+  support: string;
+  contact: string;
+}
+
+
 

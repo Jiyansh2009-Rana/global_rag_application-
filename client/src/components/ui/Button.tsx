@@ -46,9 +46,9 @@ const variantStyles: Record<Variant, string> = {
 };
 
 const sizeStyles: Record<Size, string> = {
-  sm: 'px-3 py-1.5 text-xs rounded-lg',
-  md: 'px-4 py-2.5 text-sm rounded-[var(--radius-sm)]',
-  lg: 'px-6 py-3.5 text-sm rounded-[var(--radius-md)]',
+  sm: 'h-[34px] px-3.5 text-[0.78rem] rounded-[10px]',
+  md: 'h-[40px] px-5 text-[0.84rem] rounded-[12px]',
+  lg: 'h-[46px] px-6 text-[0.88rem] rounded-[14px]',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -74,13 +74,14 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         aria-busy={loading}
         className={`
           relative inline-flex items-center justify-center gap-2
-          font-medium transition-all duration-[220ms] ease-[var(--ease-smooth)]
+          font-medium transition-all duration-[200ms] ease-out
           cursor-pointer select-none overflow-hidden
           ${variantStyles[variant]}
           ${sizeStyles[size]}
           ${fullWidth ? 'w-full' : ''}
           ${className}
         `}
+        style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
         {...props}
       >
         {/* Shine overlay for primary */}

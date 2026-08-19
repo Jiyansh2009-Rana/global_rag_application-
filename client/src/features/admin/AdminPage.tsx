@@ -59,10 +59,10 @@ function SectionCard({ children, title, subtitle, delay = 0 }: {
       style={{ ...glassPanel, padding: '2rem 2.25rem' }}
     >
       <div style={{ marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(0,210,200,0.10)' }}>
-        <h2 style={{ fontFamily: '"Space Grotesk", sans-serif', fontSize: '1rem', fontWeight: 700, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: subtitle ? 4 : 0 }}>
+        <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: subtitle ? 4 : 0 }}>
           {title}
         </h2>
-        {subtitle && <p style={{ fontSize: '0.75rem', color: 'var(--muted)', lineHeight: 1.5 }}>{subtitle}</p>}
+        {subtitle && <p style={{ fontSize: '0.75rem', color: 'var(--muted)', lineHeight: 1.5, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{subtitle}</p>}
       </div>
       {children}
     </motion.div>
@@ -122,7 +122,7 @@ function ConfirmDialog({
         }}
       >
         <div style={{ fontSize: '1.5rem', marginBottom: 14 }}>⚠️</div>
-        <h3 style={{ fontFamily: '"Space Grotesk", sans-serif', fontSize: '1rem', fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
+        <h3 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 10 }}>
           Confirm Delete
         </h3>
         <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.65, marginBottom: 22 }}>
@@ -303,7 +303,7 @@ function UsersTab() {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(0,210,200,0.10)' }}>
           <div>
-            <h2 style={{ fontFamily: '"Space Grotesk", sans-serif', fontSize: '1rem', fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>
+            <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Organisation Users
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
@@ -491,7 +491,7 @@ function DocumentsTab() {
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(0,210,200,0.10)' }}>
           <div>
-            <h2 style={{ fontFamily: '"Space Grotesk", sans-serif', fontSize: '1rem', fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>
+            <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Organisation Documents
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
@@ -664,7 +664,7 @@ export function AdminPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
             <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', background: 'linear-gradient(135deg, rgba(0,210,200,0.18), rgba(168,85,247,0.14))', border: '1px solid rgba(0,210,200,0.22)', boxShadow: '0 4px 16px rgba(0,210,200,0.14)' }}>⊞</div>
             <div>
-              <h1 style={{ fontFamily: '"Space Grotesk", sans-serif', fontSize: '1.65rem', fontWeight: 700, letterSpacing: '-0.035em', color: 'var(--text)', lineHeight: 1.1 }}>Admin Panel</h1>
+              <h1 style={{ fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif', fontSize: '1.65rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', lineHeight: 1.15 }}>Admin Panel</h1>
               <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 3 }}>Manage users, documents, roles and system configuration.</p>
             </div>
           </div>

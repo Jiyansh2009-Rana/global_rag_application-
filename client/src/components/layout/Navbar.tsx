@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useContextHooks';
 import { useTheme } from '@/hooks/useContextHooks';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { GuideModal } from '@/components/guide/GuideModal';
 
 /* ── Theme Toggle ── */
 function ThemeToggle() {
@@ -136,6 +137,7 @@ interface NavbarProps {
 export function Navbar({ activePage, onNavigate }: NavbarProps) {
   const { user, isAdmin, isSuperAdmin } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(false);
 
   const navLinks = [
     { key: 'chat',   label: 'Chat',   icon: '◆' },
@@ -145,120 +147,173 @@ export function Navbar({ activePage, onNavigate }: NavbarProps) {
   ];
 
   return (
-    <nav
-      style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 1.75rem', height: 60,
-        background: 'var(--navbar-bg)',
-        backdropFilter: 'var(--navbar-blur)',
-        WebkitBackdropFilter: 'var(--navbar-blur)',
-        borderBottom: '1px solid var(--navbar-border)',
-        boxShadow: 'var(--navbar-shadow)',
-      }}
-    >
-      {/* Logo */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-        <div
-          style={{
-            width: 30, height: 30, borderRadius: 9,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontSize: '0.58rem', fontWeight: 900, letterSpacing: '0.05em',
-            color: 'var(--accent-fg)',
-            background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
-            boxShadow: '0 0 14px rgba(45,212,191,0.45)',
-          }}
-        >
-          GR
-        </div>
-        <span style={{ fontSize: '0.9rem', fontWeight: 600, letterSpacing: '-0.025em', fontFamily: '"Space Grotesk", sans-serif' }}>
-          Global<span style={{ color: 'var(--accent)' }}>RAG</span>
-        </span>
-      </div>
-
-      {/* Nav links */}
-      {onNavigate && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '2px' }}>
-          {navLinks.map((link) => {
-            const isActive = activePage === link.key;
-            return (
-              <motion.button
-                key={link.key}
-                whileTap={{ scale: 0.94 }}
-                onClick={() => onNavigate(link.key)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '0.4rem',
-                  padding: '0.375rem 0.875rem',
-                  borderRadius: 10,
-                  fontSize: '0.78rem', fontWeight: 500,
-                  cursor: 'pointer', border: 'none',
-                  transition: 'all 0.18s ease',
-                  background: isActive ? 'var(--accent-dim)' : 'transparent',
-                  color: isActive ? 'var(--accent)' : 'var(--muted)',
-                  outline: isActive ? '1px solid var(--border-accent)' : 'none',
-                }}
-                onMouseEnter={e => {
-                  if (!isActive) {
-                    (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)';
-                    (e.currentTarget as HTMLElement).style.color = 'var(--text)';
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!isActive) {
-                    (e.currentTarget as HTMLElement).style.background = 'transparent';
-                    (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
-                  }
-                }}
-              >
-                <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>{link.icon}</span>
-                {link.label}
-              </motion.button>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Right side */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-        {user?.org_id && (
-          <span className="hide-mobile" style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>
-            org: <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{user.org_id}</span>
-          </span>
-        )}
-        <ThemeToggle />
-        {/* Avatar */}
-        <div style={{ position: 'relative' }}>
-          <motion.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setProfileOpen((p) => !p)}
+    <>
+      <nav
+        style={{
+          position: 'sticky', top: 0, zIndex: 100,
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '0 1.75rem', height: 60,
+          background: 'var(--navbar-bg)',
+          backdropFilter: 'var(--navbar-blur)',
+          WebkitBackdropFilter: 'var(--navbar-blur)',
+          borderBottom: '1px solid var(--navbar-border)',
+          boxShadow: 'var(--navbar-shadow)',
+        }}
+      >
+        {/* Logo */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+          <div
             style={{
-              width: 34, height: 34, borderRadius: '50%',
+              width: 30, height: 30, borderRadius: 9,
               display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-fg)',
+              fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.05em',
+              color: 'var(--accent-fg)',
               background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
-              border: '2px solid transparent',
-              cursor: 'pointer', transition: 'all 0.22s ease',
+              boxShadow: '0 0 14px rgba(45,212,191,0.45)',
+            }}
+          >
+            GR
+          </div>
+          <span style={{ 
+  fontSize: '1.25rem', 
+  letterSpacing: '-0.04em', 
+  fontFamily: '"Outfit", "Quicksand", sans-serif',
+  display: 'inline-flex',
+  alignItems: 'center'
+}}>
+          <span style={{ fontSize: '1rem', fontWeight: 700, letterSpacing: '-0.02em', fontFamily: '"Comfortaa", "Quicksand", "Outfit", sans-serif' }}>
+            Global<span style={{ color: 'var(--accent)' }}> RAG</span>
+</span>
+</span>
+        </div>
+
+        {/* Nav links */}
+        {onNavigate && (
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            {navLinks.map((link) => {
+              const isActive = activePage === link.key;
+              return (
+                <motion.button
+                  key={link.key}
+                  whileTap={{ scale: 0.94 }}
+                  onClick={() => onNavigate(link.key)}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '0.4rem',
+                    padding: '0.4rem 0.9rem',
+                    borderRadius: 11,
+                    fontSize: '0.78rem', fontWeight: 500,
+                    cursor: 'pointer', border: 'none',
+                    fontFamily: '"Plus Jakarta Sans", sans-serif',
+                    transition: 'all 0.18s ease',
+                    background: isActive ? 'var(--accent-dim)' : 'transparent',
+                    color: isActive ? 'var(--accent)' : 'var(--muted)',
+                    outline: isActive ? '1px solid var(--border-accent)' : 'none',
+                  }}
+                  onMouseEnter={e => {
+                    if (!isActive) {
+                      (e.currentTarget as HTMLElement).style.background = 'var(--surface-hover)';
+                      (e.currentTarget as HTMLElement).style.color = 'var(--text)';
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isActive) {
+                      (e.currentTarget as HTMLElement).style.background = 'transparent';
+                      (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
+                    }
+                  }}
+                >
+                  <span style={{ fontSize: '0.7rem', opacity: 0.75 }}>{link.icon}</span>
+                  {link.label}
+                </motion.button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Right side */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
+          {user?.org_id && (
+            <span className="hide-mobile" style={{ fontSize: '0.68rem', color: 'var(--muted)', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+              org: <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{user.org_id}</span>
+            </span>
+          )}
+
+          {/* Guide button (on the left side of toggle button) */}
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onClick={() => setGuideOpen(true)}
+            style={{
+              height: 34,
+              padding: '0 12px',
+              borderRadius: 11,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 6,
+              background: 'rgba(0, 210, 200, 0.08)',
+              border: '1px solid rgba(0, 210, 200, 0.22)',
+              color: 'var(--accent)',
+              fontSize: '0.78rem',
+              fontWeight: 500,
+              fontFamily: '"Plus Jakarta Sans", sans-serif',
+              cursor: 'pointer',
+              transition: 'all 0.2s ease',
             }}
             onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.4)';
-              (e.currentTarget as HTMLElement).style.boxShadow = '0 0 0 3px rgba(45,212,191,0.22), 0 0 18px rgba(45,212,191,0.3)';
-              (e.currentTarget as HTMLElement).style.transform = 'scale(1.08)';
+              (e.currentTarget as HTMLElement).style.background = 'rgba(0, 210, 200, 0.16)';
+              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0, 210, 200, 0.4)';
+              (e.currentTarget as HTMLElement).style.boxShadow = '0 0 14px rgba(0, 210, 200, 0.2)';
             }}
             onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.borderColor = 'transparent';
+              (e.currentTarget as HTMLElement).style.background = 'rgba(0, 210, 200, 0.08)';
+              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0, 210, 200, 0.22)';
               (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-              (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
             }}
-            aria-label="Open profile menu"
-            aria-expanded={profileOpen}
+            aria-label="Open platform guide"
           >
-            {user?.email?.charAt(0).toUpperCase() ?? '?'}
+            <span style={{ fontSize: '0.85rem' }}>📖</span>
+            <span>Guide</span>
           </motion.button>
-          <AnimatePresence>
-            {profileOpen && <ProfileDropdown onClose={() => setProfileOpen(false)} />}
-          </AnimatePresence>
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
+          {/* Avatar */}
+          <div style={{ position: 'relative' }}>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
+              onClick={() => setProfileOpen((p) => !p)}
+              style={{
+                width: 34, height: 34, borderRadius: '50%',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-fg)',
+                background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
+                border: '2px solid transparent',
+                cursor: 'pointer', transition: 'all 0.22s ease',
+              }}
+              onMouseEnter={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.4)';
+                (e.currentTarget as HTMLElement).style.boxShadow = '0 0 0 3px rgba(45,212,191,0.22), 0 0 18px rgba(45,212,191,0.3)';
+                (e.currentTarget as HTMLElement).style.transform = 'scale(1.08)';
+              }}
+              onMouseLeave={e => {
+                (e.currentTarget as HTMLElement).style.borderColor = 'transparent';
+                (e.currentTarget as HTMLElement).style.boxShadow = 'none';
+                (e.currentTarget as HTMLElement).style.transform = 'scale(1)';
+              }}
+              aria-label="Open profile menu"
+              aria-expanded={profileOpen}
+            >
+              {user?.email?.charAt(0).toUpperCase() ?? '?'}
+            </motion.button>
+            <AnimatePresence>
+              {profileOpen && <ProfileDropdown onClose={() => setProfileOpen(false)} />}
+            </AnimatePresence>
+          </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+
+      {/* Platform Guide Modal */}
+      <GuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
+    </>
   );
 }

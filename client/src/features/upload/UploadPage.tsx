@@ -289,9 +289,9 @@ export function UploadPage() {
             </div>
             <div>
               <h1 style={{
-                fontFamily: '"Space Grotesk", sans-serif',
-                fontSize: '1.65rem', fontWeight: 700,
-                letterSpacing: '-0.035em', color: 'var(--text)', lineHeight: 1.1,
+                fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif',
+                fontSize: '1.65rem', fontWeight: 600,
+                letterSpacing: '-0.025em', color: 'var(--text)', lineHeight: 1.15,
               }}>
                 Upload Document
               </h1>
@@ -360,11 +360,11 @@ export function UploadPage() {
               >
                 <div style={{ fontSize: '1.8rem', marginBottom: 10 }}>{icon}</div>
                 <div style={{
-                  fontFamily: '"Space Grotesk", sans-serif',
-                  fontWeight: 700, fontSize: '0.95rem',
+                  fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif',
+                  fontWeight: 600, fontSize: '0.95rem',
                   color: selected ? 'var(--accent)' : 'var(--text)',
                   marginBottom: 6,
-                  letterSpacing: '-0.02em',
+                  letterSpacing: '-0.015em',
                 }}>
                   {title}
                 </div>
@@ -410,8 +410,8 @@ export function UploadPage() {
             >
               {/* Consent title */}
               <div style={{
-                fontFamily: '"Space Grotesk", sans-serif',
-                fontWeight: 700, fontSize: '0.95rem',
+                fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif',
+                fontWeight: 600, fontSize: '0.95rem',
                 color: 'var(--text)', marginBottom: 10,
                 display: 'flex', alignItems: 'center', gap: 8,
               }}>
@@ -484,7 +484,7 @@ export function UploadPage() {
           {(phase === 'idle' || phase === 'error') && (
             <motion.div key="btn" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
               <Button
-                variant="primary" size="lg" fullWidth
+                variant="primary" size="md" fullWidth
                 disabled={!file || !confirmed}
                 onClick={() => void handleUpload()}
               >

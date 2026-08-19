@@ -64,7 +64,7 @@ function LoginForm() {
         autoComplete="email" error={errors.email?.message} {...register('email')} />
       <Input label="Password" type="password" placeholder="At least 8 characters"
         autoComplete="current-password" error={errors.password?.message} {...register('password')} />
-      <Button type="submit" fullWidth loading={isSubmitting} size="lg" style={{ marginTop: 6 }}>
+      <Button type="submit" fullWidth loading={isSubmitting} size="md" style={{ marginTop: 8 }}>
         Sign in →
       </Button>
     </form>
@@ -120,7 +120,7 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
           <p style={{ fontSize: '0.72rem', color: 'var(--danger)', lineHeight: 1.5 }}>⚠ {roleError}</p>
         )}
       </div>
-      <Button type="submit" fullWidth loading={isSubmitting} size="lg" style={{ marginTop: 4 }}>
+      <Button type="submit" fullWidth loading={isSubmitting} size="md" style={{ marginTop: 6 }}>
         Create account →
       </Button>
     </form>
@@ -338,11 +338,11 @@ function ZigZagFeatures() {
                 {f.icon}
               </span>
               <span style={{
-                fontFamily: '"Space Grotesk", sans-serif',
-                fontSize: '0.8rem',
-                fontWeight: 650,
+                fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif',
+                fontSize: '0.84rem',
+                fontWeight: 600,
                 color: 'var(--text)',
-                letterSpacing: '-0.02em',
+                letterSpacing: '-0.015em',
                 lineHeight: 1.2,
               }}>
                 {f.title}
@@ -350,7 +350,7 @@ function ZigZagFeatures() {
             </div>
             {/* Description */}
             <p style={{
-              fontSize: '0.67rem',
+              fontSize: '0.68rem',
               color: 'var(--muted)',
               lineHeight: 1.55,
               paddingLeft: 26,
@@ -396,24 +396,25 @@ export function AuthPage() {
             animation: 'pulseOpacity 2s infinite', display: 'inline-block',
           }} />
           <span style={{
-            fontSize: '0.67rem', fontWeight: 600,
-            letterSpacing: '0.14em', textTransform: 'uppercase',
+            fontSize: '0.68rem', fontWeight: 600,
+            letterSpacing: '0.12em', textTransform: 'uppercase',
             color: 'var(--accent)',
+            fontFamily: '"Comfortaa", "Quicksand", "Outfit", sans-serif',
           }}>
             Enterprise RAG Platform
           </span>
         </motion.div>
 
-        {/* Headline */}
+        {/* Headline / Quote */}
         <motion.h1
           initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.06 }}
           style={{
-            fontFamily: '"Space Grotesk", sans-serif',
+            fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif',
             fontSize: 'clamp(1.7rem, 2.8vw, 2.7rem)',
-            fontWeight: 700,
-            letterSpacing: '-0.04em',
-            lineHeight: 1.09,
+            fontWeight: 600,
+            letterSpacing: '-0.025em',
+            lineHeight: 1.2,
             color: 'var(--text)',
             maxWidth: 500,
             marginBottom: '0.9rem',
@@ -425,6 +426,7 @@ export function AuthPage() {
             backgroundImage: 'linear-gradient(90deg, #00d2c8 0%, #a855f7 100%)',
             WebkitBackgroundClip: 'text',
             backgroundClip: 'text',
+            fontWeight: 700,
           }}>
             every document
           </span>{' '}
@@ -437,6 +439,7 @@ export function AuthPage() {
           style={{
             fontSize: '0.86rem', color: 'var(--muted)',
             lineHeight: 1.7, maxWidth: 420, marginBottom: '2.5rem',
+            fontFamily: '"Plus Jakarta Sans", sans-serif',
           }}
         >
           Hybrid vector + keyword retrieval, delta-aware indexing, session-private
@@ -451,6 +454,7 @@ export function AuthPage() {
           marginTop: 'auto', paddingTop: '2rem',
           fontSize: '0.62rem', color: 'var(--muted)',
           opacity: 0.38, letterSpacing: '0.04em',
+          fontFamily: '"Plus Jakarta Sans", sans-serif',
         }}>
           LangChain chunking · pgvector on Neon · Groq LLaMA 3.3 70B · Supabase registries
         </div>
@@ -492,8 +496,8 @@ export function AuthPage() {
                   onClick={() => setTab(t)}
                   style={{
                     flex: 1, padding: '10px 0',
-                    borderRadius: 11, fontSize: '0.8rem', fontWeight: 500,
-                    cursor: 'pointer', border: 'none', fontFamily: 'inherit',
+                    borderRadius: 11, fontSize: '0.8rem', fontWeight: 600,
+                    cursor: 'pointer', border: 'none', fontFamily: '"Comfortaa", "Plus Jakarta Sans", sans-serif',
                     transition: 'all 0.2s ease',
                     background: tab === t
                       ? 'linear-gradient(135deg, rgba(0,210,200,0.16), rgba(168,85,247,0.12))'
@@ -520,15 +524,16 @@ export function AuthPage() {
                 transition={{ duration: 0.17 }}
               >
                 <h2 style={{
-                  fontFamily: '"Space Grotesk", sans-serif',
-                  fontSize: '1.25rem', fontWeight: 700,
-                  letterSpacing: '-0.03em', marginBottom: 5, color: 'var(--text)',
+                  fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif',
+                  fontSize: '1.25rem', fontWeight: 600,
+                  letterSpacing: '-0.025em', marginBottom: 5, color: 'var(--text)',
                 }}>
                   {tab === 'login' ? 'Welcome back' : 'Create an account'}
                 </h2>
                 <p style={{
                   fontSize: '0.8rem', color: 'var(--muted)',
                   lineHeight: 1.6, marginBottom: '1.6rem',
+                  fontFamily: '"Plus Jakarta Sans", sans-serif',
                 }}>
                   {tab === 'login'
                     ? 'Use your organisation credentials to access the retrieval console.'

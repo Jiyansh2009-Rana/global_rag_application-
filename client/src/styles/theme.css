@@ -7,8 +7,11 @@
 
 /* ── TAILWIND v4 THEME TOKENS ── */
 @theme {
-  --font-display: "Space Grotesk", system-ui, sans-serif;
-  --font-body:    "Inter", system-ui, sans-serif;
+  --font-display: "Comfortaa", "Outfit", "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-brand:   "Comfortaa", "Quicksand", "Outfit", sans-serif;
+  --font-quote:   "Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif;
+  --font-heading: "Comfortaa", "Plus Jakarta Sans", "Outfit", sans-serif;
+  --font-body:    "Plus Jakarta Sans", "Lexend", system-ui, sans-serif;
   --font-mono:    ui-monospace, "Cascadia Code", monospace;
 }
 

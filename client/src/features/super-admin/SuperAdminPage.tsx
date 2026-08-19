@@ -65,10 +65,10 @@ function SectionCard({ children, title, subtitle, delay = 0 }: {
       style={{ ...glassPanel, padding: '2rem 2.25rem' }}
     >
       <div style={{ marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(168,85,247,0.12)' }}>
-        <h2 style={{ fontFamily: '"Space Grotesk", sans-serif', fontSize: '1rem', fontWeight: 700, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: subtitle ? 4 : 0 }}>
+        <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: subtitle ? 4 : 0 }}>
           {title}
         </h2>
-        {subtitle && <p style={{ fontSize: '0.75rem', color: 'var(--muted)', lineHeight: 1.5 }}>{subtitle}</p>}
+        {subtitle && <p style={{ fontSize: '0.75rem', color: 'var(--muted)', lineHeight: 1.5, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{subtitle}</p>}
       </div>
       {children}
     </motion.div>
@@ -129,7 +129,7 @@ function ConfirmDialog({
         }}
       >
         <div style={{ fontSize: '1.6rem', marginBottom: 14 }}>⚠️</div>
-        <h3 style={{ fontFamily: '"Space Grotesk", sans-serif', fontSize: '1.05rem', fontWeight: 700, color: 'var(--text)', marginBottom: 10 }}>
+        <h3 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', marginBottom: 10 }}>
           Super Admin Global Action
         </h3>
         <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.65, marginBottom: 22 }}>
@@ -221,7 +221,7 @@ function GlobalOverviewTab({
                 {icon}
               </span>
             </div>
-            <div style={{ fontSize: '1.8rem', fontWeight: 800, fontFamily: '"Space Grotesk", sans-serif', color: 'var(--text)', lineHeight: 1.1, marginBottom: 4 }}>
+            <div style={{ fontSize: '1.8rem', fontWeight: 700, fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', color: 'var(--text)', lineHeight: 1.1, marginBottom: 4 }}>
               {value}
             </div>
             <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
@@ -369,7 +369,7 @@ function AllUsersTab({
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(168,85,247,0.12)' }}>
           <div>
-            <h2 style={{ fontFamily: '"Space Grotesk", sans-serif', fontSize: '1rem', fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>
+            <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Global Platform Users &amp; Admins
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
@@ -632,7 +632,7 @@ function AllDocumentsTab({
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(168,85,247,0.12)' }}>
           <div>
-            <h2 style={{ fontFamily: '"Space Grotesk", sans-serif', fontSize: '1rem', fontWeight: 700, color: 'var(--text)', marginBottom: 3 }}>
+            <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Global Platform Documents
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
@@ -893,7 +893,7 @@ export function SuperAdminPage() {
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <h1 style={{ fontFamily: '"Space Grotesk", sans-serif', fontSize: '1.75rem', fontWeight: 700, letterSpacing: '-0.035em', color: 'var(--text)', lineHeight: 1.1 }}>
+                  <h1 style={{ fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif', fontSize: '1.75rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', lineHeight: 1.15 }}>
                     Super Admin Console
                   </h1>
                   <span style={{
