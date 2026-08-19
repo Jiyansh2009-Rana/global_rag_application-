@@ -1220,7 +1220,7 @@ def generate_llm_answer(
     full_system = f"{base_prompt}\n\nLanguage instruction: {lang_instruction}\n\nContext from documents:\n{context_text}"
     try:
         completion = groq_client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
+            model = "qwen/qwen3.6-27b",
             messages=[
                 {"role": "system", "content": full_system},
                 {"role": "user",   "content": user_query}
