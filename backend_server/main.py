@@ -692,7 +692,7 @@ class RoleChecker:
 def enforce_tenant_access(requested_org_id: str, current_user: TokenClaims):
     if current_user.role == Role.SUPER_ADMIN:
         return True  
-    if current_user.orgId != requested_org_id:
+    if current_user.org_id != requested_org_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Tenant Isolation Policy: Access to requested organisation data is forbidden"
@@ -847,6 +847,24 @@ def run_delta_management(
 
     if existing_doc:
         registered_doc_id = existing_doc["id"]
+
+        # ── Alias tracking: log if a different filename was used for the same content ──
+        original_filename = existing_doc.get("file_name", "unknown")
+        if filename != original_filename and supabase_client:
+            try:
+                supabase_client.table("audit_log").insert({
+                    "event_type":        "duplicate_file_detected",
+                    "doc_id":            registered_doc_id,
+                    "alias_filename":    filename,           # e.g. Brd_v2.pdf
+                    "original_filename": original_filename,  # e.g. Brd_v1.pdf
+                    "file_hash":         file_hash_val,
+                    "user_id":           uploaded_by,
+                    "org_id":            org_id,
+                    "timestamp":         datetime.now(timezone.utc).isoformat()
+                }).execute()
+            except Exception as e:
+                print(f"Alias audit log write failed: {e}")
+
         pages_skipped = 0
         pages_newly_indexed = 0
         chunks_created = 0
@@ -1213,7 +1231,24 @@ def generate_llm_answer(
         return completion.choices[0].message.content
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"LLM generation failed: {e}")
-        
+
+
+def save_chat_history(user_id: str, org_id: str, query: str, answer: str, query_mode: str) -> None:
+    if not supabase_client:
+        return
+    try:
+        supabase_client.table("chat_history").insert({
+            "user_id": user_id,
+            "org_id": org_id,
+            "query": query,
+            "answer": answer,
+            "query_mode": query_mode,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }).execute()
+    except Exception as e:
+        print(f"Failed to save chat history: {e}")
+
+
 def log_query_event(
     user_id: str, org_id: str, query: str,
     query_mode: str, sources_found: int, ip_address: str
@@ -1521,6 +1556,15 @@ async def query_rag(
         language=body.language, system_prompt=body.system_prompt
     )
 
+    if body.upload_mode in [QueryMode.GLOBAL, QueryMode.BOTH]:
+        save_chat_history(
+            user_id=user_id,
+            org_id=org_id,
+            query=body.query,
+            answer=answer,
+            query_mode=body.upload_mode.value
+        )
+
     log_query_event(
         user_id=user_id, org_id=org_id, query=body.query,
         query_mode=body.upload_mode.value, sources_found=len(retrieved_chunks), ip_address=ip_address
@@ -1761,6 +1805,80 @@ async def super_admin_delete_document(doc_id: str, current_user: TokenClaims = D
         raise HTTPException(status_code=500, detail=f"Failed to clear document registry globally: {e}")
 
 
+@app.get("/api/v1/chat/history", tags=["Chat"])
+async def get_chat_history(
+    limit: int = Query(50, description="Number of historical chats to retrieve"),
+    current_user: TokenClaims = Depends(get_current_user)
+):
+    if not supabase_client:
+        raise HTTPException(status_code=500, detail="Supabase client not initialized")
+    
+    try:
+        response = (
+            supabase_client.table("chat_history")
+            .select("*")
+            .eq("user_id", current_user.user_id)
+            .eq("org_id", current_user.org_id)
+            .order("created_at", desc=True)
+            .limit(limit)
+            .execute()
+        )
+        return {"history": response.data}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch chat history: {e}")
+
+@app.get("/api/v1/guide", tags=["Help & Guide"])
+async def platform_guide():
+
+    contact_email = "mcode1929@gmail.com"
+
+    return {
+        "title": "Welcome to the Enterprise RAG Platform",
+        "introduction": (
+            "This platform acts as your intelligent document assistant. "
+            "You can securely upload your documents (PDFs, Word docs, Spreadsheets, Presentations, etc.) "
+            "and ask AI questions to instantly find answers based strictly on your files."
+        ),
+        "how_to_use_steps": [
+            {
+                "step": 1,
+                "title": "🔐 Create an Account & Log In",
+                "description": "Start by signing up with your email. Once logged in, you'll be securely assigned to your organization's workspace."
+            },
+            {
+                "step": 2,
+                "title": "📂 Upload Documents (Local vs. Global)",
+                "description": "You have two ways to upload documents, depending on your needs:",
+                "details": {
+                    "Local Mode (Private & Temporary)": "Perfect for sensitive, one-off analysis. Documents are visible ONLY to you and are permanently deleted after 1 hour.",
+                    "Global Mode (Org-Wide)": "Available for Admins. Documents uploaded globally act as a shared knowledge base for everyone in your organization."
+                }
+            },
+            {
+                "step": 3,
+                "title": "💬 Ask Questions (Querying)",
+                "description": "Head over to the chat interface to ask questions. You can filter where the AI searches for answers:",
+                "details": {
+                    "Local": "Searches only your temporarily uploaded files.",
+                    "Global": "Searches your organization's permanent knowledge base.",
+                    "Both": "Searches across both your private session files and the organization's files."
+                }
+            },
+            {
+                "step": 4,
+                "title": "📜 View Chat History",
+                "description": "Whenever you ask questions in 'Global' or 'Both' modes, your chat history is safely stored. You can revisit your past questions and answers at any time in the History tab."
+            }
+        ],
+        "tips_for_best_results": [
+            "Be specific with your questions.",
+            "If the AI doesn't know the answer, it will tell you. It will never make up information.",
+            "You can ask the AI to answer in different languages!"
+        ],
+        "support": "If you need elevated access (like Global Upload permissions), please contact your Organization's Admin.",
+        "contact": f"if you see any issue or you have any suggetion then contact this email {contact_email} "
+    }
+    
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
