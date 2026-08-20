@@ -1715,12 +1715,22 @@ function Dashboard({ token, onLogout }) {
         </aside>
 
         <main className="main-content">
-          {page === 'overview' && <OverviewPage userInfo={userInfo} />}
-          {page === 'query'    && <QueryPage token={token} orgId={userInfo?.org_id} />}
-          {page === 'upload'   && <UploadPage token={token} userInfo={userInfo} />}
-          {page === 'super-admin' && <SuperAdminPage token={token} currentUser={userInfo} />}
-        </main>
-      </div>
+          <div style={{ display: page === 'overview' ? 'block' : 'none' }}>
+            <OverviewPage userInfo={userInfo} />
+          </div>
+          <div style={{ display: page === 'query' ? 'block' : 'none' }}>
+            <QueryPage token={token} orgId={userInfo?.org_id} />
+          </div>
+          <div style={{ display: page === 'upload' ? 'block' : 'none' }}>
+            <UploadPage token={token} userInfo={userInfo} />
+          </div>
+          {userInfo?.role === 'Super Admin' && (
+            <div style={{ display: page === 'super-admin' ? 'block' : 'none' }}>
+              <SuperAdminPage token={token} currentUser={userInfo} />
+            </div>
+          )}
+        </main>      
+        </div>
     </div>
   );
 }

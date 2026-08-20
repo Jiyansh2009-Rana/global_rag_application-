@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from './theme-provider';
 import { AuthProvider } from './auth-provider';
@@ -112,29 +111,26 @@ function AppShell() {
     );
   }
 
-  const pageMap: Record<Page, React.ReactNode> = {
-    chat:          <ChatPage />,
-    upload:        <UploadPage />,
-    admin:         isAdmin ? <AdminPage /> : <ChatPage />,
-    'super-admin': isSuperAdmin ? <SuperAdminPage /> : <ChatPage />,
-  };
-
   return (
     <>
       <Navbar activePage={page} onNavigate={(p) => setPage(p as Page)} />
       <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={page}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.18 }}
-            style={{ flex: 1, display: 'flex', flexDirection: 'column' }}
-          >
-            {pageMap[page]}
-          </motion.div>
-        </AnimatePresence>
+        <div style={{ display: page === 'chat' ? 'flex' : 'none', flex: 1, flexDirection: 'column' }}>
+          <ChatPage />
+        </div>
+        <div style={{ display: page === 'upload' ? 'flex' : 'none', flex: 1, flexDirection: 'column' }}>
+          <UploadPage />
+        </div>
+        {isAdmin && (
+          <div style={{ display: page === 'admin' ? 'flex' : 'none', flex: 1, flexDirection: 'column' }}>
+            <AdminPage />
+          </div>
+        )}
+        {isSuperAdmin && (
+          <div style={{ display: page === 'super-admin' ? 'flex' : 'none', flex: 1, flexDirection: 'column' }}>
+            <SuperAdminPage />
+          </div>
+        )}
       </main>
     </>
   );
