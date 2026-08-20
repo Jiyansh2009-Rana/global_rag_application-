@@ -1226,7 +1226,6 @@ def generate_llm_answer(
                 {"role": "user",   "content": user_query}
             ],
             temperature=0.3,       
-            max_tokens=1024
         )
         return completion.choices[0].message.content
     except Exception as e:
@@ -1807,7 +1806,6 @@ async def super_admin_delete_document(doc_id: str, current_user: TokenClaims = D
 
 @app.get("/api/v1/chat/history", tags=["Chat"])
 async def get_chat_history(
-    limit: int = Query(50, description="Number of historical chats to retrieve"),
     current_user: TokenClaims = Depends(get_current_user)
 ):
     if not supabase_client:
@@ -1820,7 +1818,6 @@ async def get_chat_history(
             .eq("user_id", current_user.user_id)
             .eq("org_id", current_user.org_id)
             .order("created_at", desc=True)
-            .limit(limit)
             .execute()
         )
         return {"history": response.data}
