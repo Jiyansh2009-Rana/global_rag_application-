@@ -177,6 +177,7 @@ class QueryMode(str, Enum):
 
 class RAGRequest(BaseModel):
     query: str
+    session_id: Optional[str] = None  
     upload_mode: QueryMode = QueryMode.GLOBAL
     top_k: int = 5
     vector_weight: float = 0.7     
@@ -1232,12 +1233,13 @@ def generate_llm_answer(
         raise HTTPException(status_code=502, detail=f"LLM generation failed: {e}")
 
 
-def save_chat_history(user_id: str, org_id: str, query: str, answer: str, query_mode: str) -> None:
+def save_chat_history(user_id: str, org_id: str, query: str, answer: str, query_mode: str, session_id:str) -> None:
     if not supabase_client:
         return
     try:
         supabase_client.table("chat_history").insert({
             "user_id": user_id,
+            "session_id": session_id, 
             "org_id": org_id,
             "query": query,
             "answer": answer,
@@ -1550,6 +1552,8 @@ async def query_rag(
         merged.sort(key=lambda x: x["similarity_score"], reverse=True)
         retrieved_chunks = merged[:body.top_k]
 
+    current_session_id = body.session_id or f"session_{uuid.uuid4().hex[:12]}"
+
     answer = generate_llm_answer(
         user_query=body.query, context_chunks=retrieved_chunks,
         language=body.language, system_prompt=body.system_prompt
@@ -1561,7 +1565,8 @@ async def query_rag(
             org_id=org_id,
             query=body.query,
             answer=answer,
-            query_mode=body.upload_mode.value
+            query_mode=body.upload_mode.value,
+            session_id=current_session_id 
         )
 
     log_query_event(
