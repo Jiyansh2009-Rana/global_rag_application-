@@ -38,6 +38,15 @@ const api = {
     if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
     return data;
   },
+  async delete(path, token) {
+    const res = await fetch(`${BASE}${path}`, {
+      method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || JSON.stringify(data));
+    return data;
+  },
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -776,6 +785,135 @@ body::before {
 .report-item-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 0.3rem; }
 .report-item-value { font-size: 1rem; font-weight: 600; }
 
+/* ── SUPER ADMIN & TABLES ── */
+.admin-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.75rem;
+}
+.admin-tab {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--muted);
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+}
+.admin-tab:hover {
+  color: var(--text);
+  background: rgba(255,255,255,0.04);
+}
+.admin-tab.active {
+  color: var(--accent);
+  background: rgba(45,212,191,0.1);
+  border-color: rgba(45,212,191,0.3);
+}
+.admin-table-container {
+  overflow-x: auto;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: rgba(10,23,20,0.5);
+  backdrop-filter: blur(16px);
+}
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.82rem;
+}
+.admin-table th {
+  padding: 0.875rem 1rem;
+  background: rgba(255,255,255,0.03);
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.admin-table td {
+  padding: 0.875rem 1rem;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: var(--text);
+  vertical-align: middle;
+}
+.admin-table tr:last-child td {
+  border-bottom: none;
+}
+.admin-table tr:hover td {
+  background: rgba(45,212,191,0.02);
+}
+.badge-role {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.badge-super-admin {
+  background: rgba(251,191,36,0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(251,191,36,0.3);
+}
+.badge-admin {
+  background: rgba(45,212,191,0.15);
+  color: #2dd4bf;
+  border: 1px solid rgba(45,212,191,0.3);
+}
+.badge-user {
+  background: rgba(148,163,184,0.15);
+  color: #94a3b8;
+  border: 1px solid rgba(148,163,184,0.3);
+}
+.btn-delete {
+  background: rgba(248,113,113,0.1);
+  color: var(--danger);
+  border: 1px solid rgba(248,113,113,0.25);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s var(--ease);
+}
+.btn-delete:hover:not(:disabled) {
+  background: var(--danger);
+  color: #07100f;
+  border-color: var(--danger);
+  box-shadow: 0 0 12px rgba(248,113,113,0.4);
+}
+.btn-delete:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.search-bar {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  align-items: center;
+}
+.search-input {
+  flex: 1;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.85rem;
+  color: var(--text);
+  font-size: 0.82rem;
+  outline: none;
+}
+.search-input:focus {
+  border-color: var(--accent);
+}
+
 /* ── RESPONSIVE ── */
 @media (max-width: 900px) {
   .auth-layout { grid-template-columns: 1fr; }
@@ -1187,6 +1325,303 @@ function OverviewPage({ userInfo }) {
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   SUPER ADMIN CONSOLE
+───────────────────────────────────────────────────────────────────────────── */
+function SuperAdminPage({ token, currentUser }) {
+  const [tab, setTab] = useState('users'); // 'users' | 'documents'
+  const [users, setUsers] = useState([]);
+  const [documents, setDocuments] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const [search, setSearch] = useState('');
+
+  const fetchUsers = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.get('/api/v1/super-admin/users', token);
+      setUsers(data.users || []);
+    } catch (err) {
+      setError(err.message || 'Failed to load users');
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  const fetchDocuments = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.get('/api/v1/super-admin/documents', token);
+      setDocuments(data.documents || []);
+    } catch (err) {
+      setError(err.message || 'Failed to load documents');
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    if (tab === 'users') {
+      fetchUsers();
+    } else {
+      fetchDocuments();
+    }
+  }, [tab, fetchUsers, fetchDocuments]);
+
+  const handleDeleteUser = async (user) => {
+    if (!window.confirm(`Are you sure you want to remove user "${user.email}" (${user.role}) from the platform? This cannot be undone.`)) {
+      return;
+    }
+    setActionLoading(user.id);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await api.delete(`/api/v1/super-admin/users/${user.id}`, token);
+      setSuccess(res.message || `User ${user.email} removed successfully.`);
+      setUsers(prev => prev.filter(u => u.id !== user.id));
+    } catch (err) {
+      setError(err.message || 'Failed to delete user');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDeleteDoc = async (doc) => {
+    if (!window.confirm(`Are you sure you want to delete document "${doc.file_name || doc.id}"? All chunks and indexes will be permanently removed.`)) {
+      return;
+    }
+    setActionLoading(doc.id);
+    setError(null);
+    setSuccess(null);
+    try {
+      const res = await api.delete(`/api/v1/super-admin/documents/${doc.id}`, token);
+      setSuccess(res.message || `Document ${doc.file_name || doc.id} removed successfully.`);
+      setDocuments(prev => prev.filter(d => d.id !== doc.id));
+    } catch (err) {
+      setError(err.message || 'Failed to delete document');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const filteredUsers = users.filter(u => {
+    const q = search.toLowerCase();
+    return (
+      (u.email && u.email.toLowerCase().includes(q)) ||
+      (u.role && u.role.toLowerCase().includes(q)) ||
+      (u.org_id && u.org_id.toLowerCase().includes(q)) ||
+      (u.id && u.id.toLowerCase().includes(q))
+    );
+  });
+
+  const filteredDocs = documents.filter(d => {
+    const q = search.toLowerCase();
+    return (
+      (d.file_name && d.file_name.toLowerCase().includes(q)) ||
+      (d.id && d.id.toLowerCase().includes(q)) ||
+      (d.org_id && d.org_id.toLowerCase().includes(q)) ||
+      (d.uploaded_by && d.uploaded_by.toLowerCase().includes(q)) ||
+      (d.upload_mode && d.upload_mode.toLowerCase().includes(q))
+    );
+  });
+
+  return (
+    <div>
+      <div className="page-header">
+        <div className="page-title">⚡ Super Admin Console</div>
+        <div className="page-sub">Global platform management — inspect and manage all organization admins, users, and documents across tenants.</div>
+      </div>
+
+      <div className="admin-tabs">
+        <button
+          className={`admin-tab ${tab === 'users' ? 'active' : ''}`}
+          onClick={() => { setTab('users'); setSearch(''); setError(null); setSuccess(null); }}
+        >
+          👥 Users & Organisation Admins ({users.length})
+        </button>
+        <button
+          className={`admin-tab ${tab === 'documents' ? 'active' : ''}`}
+          onClick={() => { setTab('documents'); setSearch(''); setError(null); setSuccess(null); }}
+        >
+          📁 Global Documents ({documents.length})
+        </button>
+      </div>
+
+      <div style={{ marginBottom: '1rem' }}>
+        <Alert type="error" message={error} />
+        <Alert type="success" message={success} />
+      </div>
+
+      <div className="search-bar">
+        <input
+          type="text"
+          className="search-input"
+          placeholder={tab === 'users' ? 'Search by email, role, org ID, or user ID...' : 'Search by filename, document ID, org ID, uploader...'}
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+        />
+        <button
+          className="btn-primary"
+          style={{ width: 'auto', padding: '0.5rem 1rem', fontSize: '0.82rem' }}
+          onClick={tab === 'users' ? fetchUsers : fetchDocuments}
+          disabled={loading}
+        >
+          {loading ? <><Spinner /> Refreshing…</> : '↻ Refresh'}
+        </button>
+      </div>
+
+      {tab === 'users' && (
+        <div className="admin-table-container">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>Email / User</th>
+                <th>Role</th>
+                <th>Organisation</th>
+                <th>User ID</th>
+                <th>Joined</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && users.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
+                    <Spinner /> Loading users...
+                  </td>
+                </tr>
+              ) : filteredUsers.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
+                    {search ? 'No matching users found.' : 'No users found.'}
+                  </td>
+                </tr>
+              ) : (
+                filteredUsers.map(u => {
+                  const isSelf = currentUser && (currentUser.user_id === u.id || currentUser.email === u.email);
+                  const roleClass = u.role === 'Super Admin'
+                    ? 'badge-super-admin'
+                    : u.role === 'Admin'
+                    ? 'badge-admin'
+                    : 'badge-user';
+
+                  return (
+                    <tr key={u.id}>
+                      <td>
+                        <div style={{ fontWeight: 600, color: 'var(--text)' }}>{u.email}</div>
+                        {isSelf && <span style={{ fontSize: '0.7rem', color: 'var(--accent)' }}>(You)</span>}
+                      </td>
+                      <td>
+                        <span className={`badge-role ${roleClass}`}>{u.role}</span>
+                      </td>
+                      <td>
+                        <span style={{ color: u.org_id ? 'var(--text)' : 'var(--muted)', fontStyle: u.org_id ? 'normal' : 'italic' }}>
+                          {u.org_id || 'None (Global)'}
+                        </span>
+                      </td>
+                      <td style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--muted)' }}>
+                        {u.id}
+                      </td>
+                      <td style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                        {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
+                      </td>
+                      <td style={{ textAlign: 'right' }}>
+                        <button
+                          className="btn-delete"
+                          onClick={() => handleDeleteUser(u)}
+                          disabled={isSelf || actionLoading === u.id}
+                          title={isSelf ? 'You cannot delete your own Super Admin account' : 'Remove user'}
+                        >
+                          {actionLoading === u.id ? <Spinner /> : 'Delete'}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === 'documents' && (
+        <div className="admin-table-container">
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>File Name</th>
+                <th>Upload Mode</th>
+                <th>Organisation</th>
+                <th>Uploaded By</th>
+                <th>Doc ID</th>
+                <th>Created At</th>
+                <th style={{ textAlign: 'right' }}>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading && documents.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
+                    <Spinner /> Loading documents...
+                  </td>
+                </tr>
+              ) : filteredDocs.length === 0 ? (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '2rem', color: 'var(--muted)' }}>
+                    {search ? 'No matching documents found.' : 'No documents indexed.'}
+                  </td>
+                </tr>
+              ) : (
+                filteredDocs.map(d => (
+                  <tr key={d.id}>
+                    <td>
+                      <div style={{ fontWeight: 600, color: 'var(--text)' }}>{d.file_name || 'Untitled Document'}</div>
+                      <div style={{ fontSize: '0.7rem', color: 'var(--muted)' }}>{d.doc_type || 'Unknown Type'}</div>
+                    </td>
+                    <td>
+                      <span className={`badge-role ${d.upload_mode === 'global' ? 'badge-admin' : 'badge-user'}`}>
+                        {d.upload_mode || 'global'}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ color: d.org_id ? 'var(--text)' : 'var(--muted)' }}>
+                        {d.org_id || 'Global'}
+                      </span>
+                    </td>
+                    <td style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--muted)' }}>
+                      {d.uploaded_by || '—'}
+                    </td>
+                    <td style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--muted)' }}>
+                      {d.id}
+                    </td>
+                    <td style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                      {d.created_at ? new Date(d.created_at).toLocaleDateString() : '—'}
+                    </td>
+                    <td style={{ textAlign: 'right' }}>
+                      <button
+                        className="btn-delete"
+                        onClick={() => handleDeleteDoc(d)}
+                        disabled={actionLoading === d.id}
+                        title="Delete document permanently"
+                      >
+                        {actionLoading === d.id ? <Spinner /> : 'Delete'}
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    DASHBOARD SHELL
 ───────────────────────────────────────────────────────────────────────────── */
 function Dashboard({ token, onLogout }) {
@@ -1209,6 +1644,19 @@ function Dashboard({ token, onLogout }) {
     }
   }, [token, userInfo]);
 
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        const data = await api.get('/api/v1/auth/me', token);
+        if (mounted) setUserInfo(data);
+      } catch {
+        if (mounted) setUserInfo(null);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [token]);
+
   const handleLogout = async () => {
     try { await api.post('/api/v1/auth/logout', {}, token); } catch { /* ignore */ }
     onLogout();
@@ -1219,6 +1667,10 @@ function Dashboard({ token, onLogout }) {
     { key: 'query',    label: 'Query',      icon: '◆' },
     { key: 'upload',   label: 'Upload',     icon: '↑' },
   ];
+
+  if (userInfo?.role === 'Super Admin') {
+    navItems.push({ key: 'super-admin', label: 'Super Admin', icon: '⚡' });
+  }
 
   return (
     <div className="dashboard">
@@ -1266,6 +1718,7 @@ function Dashboard({ token, onLogout }) {
           {page === 'overview' && <OverviewPage userInfo={userInfo} />}
           {page === 'query'    && <QueryPage token={token} orgId={userInfo?.org_id} />}
           {page === 'upload'   && <UploadPage token={token} userInfo={userInfo} />}
+          {page === 'super-admin' && <SuperAdminPage token={token} currentUser={userInfo} />}
         </main>
       </div>
     </div>
