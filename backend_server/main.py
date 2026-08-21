@@ -207,6 +207,8 @@ class RAGResponse(BaseModel):
     generated_by: str
     org_id: str
     queried_at: str
+    session_id: str           
+
     
 class UserInfo(BaseModel):
     user_id: str
@@ -1682,7 +1684,8 @@ async def query_rag(
         answer=answer, query=body.query, language=body.language,
         query_mode=body.upload_mode, sources=sources,
         total_sources_found=len(sources), generated_by="llama-3.3-70b-versatile (Groq)",
-        org_id=org_id, queried_at=queried_at
+        org_id=org_id, queried_at=queried_at,
+        session_id=current_session_id
     )
 
 admin_only = RoleChecker([Role.ADMIN, Role.SUPER_ADMIN])

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 
 /* ─────────────────────────────────────────────────────────────────────────────
    API LAYER — all backend calls go through here
@@ -609,7 +609,7 @@ body::before {
 }
 .query-select option { background: #0d201d; }
 
-.query-row { display: flex; gap: 0.75rem; align-items: flex-start; }
+.query-row { display: flex; gap: 0.75rem; align-items: stretch; }
 .query-textarea {
   flex: 1; min-height: 88px; padding: 0.8rem 1rem;
   background: rgba(255,255,255,0.04);
@@ -627,13 +627,16 @@ body::before {
 }
 .query-textarea::placeholder { color: rgba(126,173,166,0.3); }
 .btn-query {
-  padding: 0.78rem 1.5rem;
+  padding: 0 1.5rem;
+  width: auto;
+  min-width: 100px;
   background: linear-gradient(135deg, var(--accent), var(--accent2));
   color: #031f1c; font-weight: 700; font-family: var(--font); font-size: 0.85rem;
   border: none; border-radius: var(--radius-sm); cursor: pointer;
   transition: all 0.2s var(--ease); white-space: nowrap;
   box-shadow: 0 4px 16px rgba(45,212,191,0.25), 0 1px 0 rgba(255,255,255,0.15) inset;
   position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; gap: 0.4rem;
 }
 .btn-query::before {
   content: '';
@@ -1019,43 +1022,134 @@ function SourceModal({ source, onClose }) {
 /* ─────────────────────────────────────────────────────────────────────────────
    PAGE: QUERY
 ───────────────────────────────────────────────────────────────────────────── */
-function QueryPage({ token, orgId }) {
+function QueryPage({ token, orgId, activeSessionId, setActiveSessionId, chatMessages, setChatMessages }) {
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState('global');
   const [language, setLanguage] = useState('English');
   const [topK, setTopK] = useState(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [result, setResult] = useState(null);
   const [selectedSource, setSelectedSource] = useState(null);
+  const bottomRef = useRef(null);
+
+  // Auto-scroll to the latest message whenever chat grows
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
 
   const handleQuery = async () => {
     if (!query.trim()) return;
+    const currentQuery = query.trim();
     setLoading(true);
     setError(null);
-    setResult(null);
+    setQuery(''); // clear input immediately for snappy UX
     try {
       const data = await api.post('/api/v1/query', {
-        query,
+        query: currentQuery,
         upload_mode: mode,
         top_k: topK,
         language,
+        session_id: activeSessionId,   // null on first message → backend creates one
       }, token);
-      setResult(data);
+
+      // Capture the session_id returned by the backend for all follow-up messages
+      if (data.session_id && !activeSessionId) {
+        setActiveSessionId(data.session_id);
+      }
+
+      // Append new Q&A — NEVER replay existing messages
+      setChatMessages(prev => [...prev, {
+        query: currentQuery,
+        answer: data.answer,
+        sources: data.sources || [],
+        session_id: data.session_id,
+        query_mode: data.query_mode,
+        language: data.language,
+        queried_at: data.queried_at,
+      }]);
     } catch (e) {
       setError(friendlyError(e.message));
+      setQuery(currentQuery); // restore query text on error
     } finally {
       setLoading(false);
     }
   };
 
+  const handleNewChat = () => {
+    setActiveSessionId(null);
+    setChatMessages([]);
+    setQuery('');
+    setError(null);
+  };
+
   return (
     <div>
       <div className="page-header">
-        <div className="page-title">Query Documents</div>
-        <div className="page-sub">Ask questions grounded in your organisation&apos;s indexed documents.</div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div className="page-title">Query Documents</div>
+            <div className="page-sub">Ask questions grounded in your organisation&apos;s indexed documents.</div>
+          </div>
+          {chatMessages.length > 0 && (
+            <button
+              className="btn-query"
+              onClick={handleNewChat}
+              style={{ fontSize: '0.78rem', padding: '0.5rem 1.1rem', width: 'auto', marginTop: '0.25rem' }}
+            >
+              + New Chat
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* ── Conversation Thread ── */}
+      {chatMessages.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '1.5rem' }}>
+          {chatMessages.map((msg, i) => (
+            <div key={i}>
+              {/* User query bubble */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.625rem' }}>
+                <div style={{
+                  background: 'rgba(45,212,191,0.12)',
+                  border: '1px solid rgba(45,212,191,0.25)',
+                  borderRadius: '14px 14px 4px 14px',
+                  padding: '0.75rem 1rem',
+                  maxWidth: '72%',
+                  fontSize: '0.88rem',
+                  color: 'var(--text)',
+                  lineHeight: 1.5,
+                }}>
+                  {msg.query}
+                </div>
+              </div>
+              {/* Answer card */}
+              <div className="glass answer-card" style={{ marginBottom: 0 }}>
+                <div className="answer-meta">
+                  <span>Mode: {msg.query_mode}</span>
+                  <span>Sources: {msg.sources?.length || 0}</span>
+                  <span>Lang: {msg.language}</span>
+                </div>
+                <div className="answer-text">{msg.answer}</div>
+                {msg.sources?.length > 0 && (
+                  <>
+                    <div className="sources-title">Source Citations</div>
+                    <div className="source-chips">
+                      {msg.sources.map((s, si) => (
+                        <span key={s.chunk_id} className="source-chip" onClick={() => setSelectedSource(s)}>
+                          [{si + 1}] {s.document_name} p.{s.page_number}
+                        </span>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+          ))}
+          <div ref={bottomRef} />
+        </div>
+      )}
+
+      {/* ── Query Input Box ── */}
       <div className="glass query-box">
         <div className="query-controls">
           <select className="query-select" value={mode} onChange={e => setMode(e.target.value)}>
@@ -1075,45 +1169,154 @@ function QueryPage({ token, orgId }) {
         <div className="query-row">
           <textarea
             className="query-textarea"
-            placeholder="Ask anything about your documents…"
+            placeholder={chatMessages.length > 0 ? 'Ask a follow-up question\u2026' : 'Ask anything about your documents\u2026'}
             value={query}
             onChange={e => setQuery(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter' && e.metaKey) handleQuery(); }}
+            onKeyDown={e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleQuery(); }}
           />
           <button className="btn-query" onClick={handleQuery} disabled={loading || !query.trim()}>
-            {loading ? <Spinner /> : null}
-            {loading ? 'Searching…' : 'Ask →'}
+            {loading && <Spinner />}
+            {loading ? 'Searching\u2026' : chatMessages.length > 0 ? 'Reply \u2192' : 'Ask \u2192'}
+          </button>
+        </div>
+      </div>
+
+      <Alert type="error" message={error} />
+      {selectedSource && <SourceModal source={selectedSource} onClose={() => setSelectedSource(null)} />}
+    </div>
+  );
+}
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PAGE: HISTORY
+───────────────────────────────────────────────────────────────────────────── */
+function HistoryPage({ token, onResumeSession, isVisible }) {
+  const [history, setHistory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  const fetchHistory = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await api.get('/api/v1/chat/history', token);
+      setHistory(data.history || []);
+    } catch (e) {
+      setError(friendlyError(e.message));
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  // Refetch every time the History page becomes visible
+  useEffect(() => {
+    if (isVisible) fetchHistory();
+  }, [isVisible, fetchHistory]);
+
+  // Group rows by session_id on the client side
+  const sessions = useMemo(() => {
+    const map = {};
+    for (const row of history) {
+      const sid = row.session_id || 'unsorted';
+      if (!map[sid]) map[sid] = [];
+      map[sid].push(row);
+    }
+    return Object.entries(map)
+      .map(([sid, msgs]) => {
+        const sorted = [...msgs].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+        const lastMsg = [...msgs].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))[0];
+        return {
+          session_id: sid,
+          messages: sorted,
+          firstQuery: sorted[0]?.query || '',
+          lastAt: lastMsg?.created_at,
+          mode: sorted[0]?.query_mode || 'global',
+        };
+      })
+      .sort((a, b) => new Date(b.lastAt) - new Date(a.lastAt));
+  }, [history]);
+
+  return (
+    <div>
+      <div className="page-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div className="page-title">Chat History</div>
+            <div className="page-sub">Your saved sessions. Click any session to continue the conversation.</div>
+          </div>
+          <button
+            className="btn-query"
+            onClick={fetchHistory}
+            disabled={loading}
+            style={{ fontSize: '0.78rem', padding: '0.5rem 1.1rem', width: 'auto', marginTop: '0.25rem' }}
+          >
+            {loading ? <Spinner /> : '\u21bb Refresh'}
           </button>
         </div>
       </div>
 
       <Alert type="error" message={error} />
 
-      {result && (
-        <div className="glass answer-card">
-          <div className="answer-meta">
-            <span>Mode: {result.query_mode}</span>
-            <span>Sources: {result.total_sources_found}</span>
-            <span>Lang: {result.language}</span>
-            <span>Model: {result.generated_by}</span>
-          </div>
-          <div className="answer-text">{result.answer}</div>
-          {result.sources?.length > 0 && (
-            <>
-              <div className="sources-title">Source Citations</div>
-              <div className="source-chips">
-                {result.sources.map((s, i) => (
-                  <span key={s.chunk_id} className="source-chip" onClick={() => setSelectedSource(s)}>
-                    [{i + 1}] {s.document_name} p.{s.page_number}
-                  </span>
-                ))}
-              </div>
-            </>
-          )}
+      {loading && history.length === 0 && (
+        <div style={{ color: 'var(--muted)', display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '1rem 0' }}>
+          <Spinner /> Loading history\u2026
         </div>
       )}
 
-      {selectedSource && <SourceModal source={selectedSource} onClose={() => setSelectedSource(null)} />}
+      {!loading && sessions.length === 0 && (
+        <div className="glass" style={{ padding: '2.5rem', textAlign: 'center', color: 'var(--muted)' }}>
+          No history yet \u2014 start a query in <strong>Global</strong> or <strong>Both</strong> mode to save a session.
+        </div>
+      )}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+        {sessions.map(s => (
+          <div
+            key={s.session_id}
+            className="glass"
+            style={{
+              padding: '1.25rem 1.5rem',
+              cursor: 'pointer',
+              transition: 'border-color 0.18s',
+              borderColor: 'rgba(45,212,191,0.15)',
+            }}
+            onClick={() => onResumeSession(s.session_id, s.messages)}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(45,212,191,0.5)'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(45,212,191,0.15)'; }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '1rem' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{
+                  fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)',
+                  marginBottom: '0.375rem',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>
+                  {s.firstQuery}
+                </div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+                  {s.messages.length} message{s.messages.length !== 1 ? 's' : ''} \u00b7 Mode: {s.mode}
+                </div>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.375rem', flexShrink: 0 }}>
+                <div style={{ fontSize: '0.72rem', color: 'var(--muted)' }}>
+                  {s.lastAt
+                    ? new Date(s.lastAt).toLocaleDateString() + ' ' +
+                      new Date(s.lastAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    : '\u2014'}
+                </div>
+                <span style={{
+                  fontSize: '0.7rem', padding: '0.2rem 0.6rem',
+                  background: 'rgba(45,212,191,0.12)', color: 'var(--accent)',
+                  borderRadius: '99px', border: '1px solid rgba(45,212,191,0.22)',
+                }}>
+                  Continue \u2192
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -1630,6 +1833,10 @@ function Dashboard({ token, onLogout }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
 
+  // ── Lifted session state — survives sidebar navigation ──
+  const [activeSessionId, setActiveSessionId] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+
   const fetchMe = useCallback(async () => {
     if (userInfo) { setProfileOpen(p => !p); return; }
     setProfileOpen(true);
@@ -1662,14 +1869,33 @@ function Dashboard({ token, onLogout }) {
     onLogout();
   };
 
+  // Called when user clicks a session card in HistoryPage.
+  // Loads stored Q&As into the chat thread WITHOUT re-submitting anything,
+  // then navigates to the Query page.
+  const handleResumeSession = (sessionId, messages) => {
+    const converted = messages.map(row => ({
+      query: row.query,
+      answer: row.answer,
+      sources: [],          // history endpoint doesn't store sources; shown as empty
+      session_id: row.session_id,
+      query_mode: row.query_mode,
+      language: row.language || 'English',
+      queried_at: row.created_at,
+    }));
+    setActiveSessionId(sessionId);
+    setChatMessages(converted);
+    setPage('query');       // navigate to query page — no query is fired
+  };
+
   const navItems = [
-    { key: 'overview', label: 'Overview',   icon: '⊞' },
-    { key: 'query',    label: 'Query',      icon: '◆' },
-    { key: 'upload',   label: 'Upload',     icon: '↑' },
+    { key: 'overview', label: 'Overview', icon: '\u229e' },
+    { key: 'query',    label: 'Query',    icon: '\u25c6' },
+    { key: 'upload',   label: 'Upload',   icon: '\u2191' },
+    { key: 'history',  label: 'History',  icon: '\ud83d\udcdc' },
   ];
 
   if (userInfo?.role === 'Super Admin') {
-    navItems.push({ key: 'super-admin', label: 'Super Admin', icon: '⚡' });
+    navItems.push({ key: 'super-admin', label: 'Super Admin', icon: '\u26a1' });
   }
 
   return (
@@ -1719,10 +1945,20 @@ function Dashboard({ token, onLogout }) {
             <OverviewPage userInfo={userInfo} />
           </div>
           <div style={{ display: page === 'query' ? 'block' : 'none' }}>
-            <QueryPage token={token} orgId={userInfo?.org_id} />
+            <QueryPage
+              token={token}
+              orgId={userInfo?.org_id}
+              activeSessionId={activeSessionId}
+              setActiveSessionId={setActiveSessionId}
+              chatMessages={chatMessages}
+              setChatMessages={setChatMessages}
+            />
           </div>
           <div style={{ display: page === 'upload' ? 'block' : 'none' }}>
             <UploadPage token={token} userInfo={userInfo} />
+          </div>
+          <div style={{ display: page === 'history' ? 'block' : 'none' }}>
+            <HistoryPage token={token} onResumeSession={handleResumeSession} isVisible={page === 'history'} />
           </div>
           {userInfo?.role === 'Super Admin' && (
             <div style={{ display: page === 'super-admin' ? 'block' : 'none' }}>
