@@ -187,6 +187,7 @@ class RAGRequest(BaseModel):
 
 class SourceResult(BaseModel):
     chunk_id: str
+    document_id: str 
     document_name: str
     page_number: int
     chunk_index: int
@@ -194,6 +195,7 @@ class SourceResult(BaseModel):
     text_preview: str            
     org_id: str
     upload_mode: str
+    document_url: str
 
 class RAGResponse(BaseModel):
     answer: str
@@ -800,6 +802,32 @@ def store_image_by_mode(
         )
     else:
         raise HTTPException(status_code=400, detail=f"Unknown upload mode: {upload_mode}")                
+
+def store_raw_file_local_redis(user_id: str, doc_id: str, filename: str, file_bytes: bytes) -> None:
+    if not redis_client:
+        return
+    try:
+        encoded_data = base64.b64encode(file_bytes).decode('utf-8')
+        payload = json.dumps({
+            "filename": filename,
+            "data": encoded_data
+        })
+        redis_client.setex(f"local_raw:{user_id}:{doc_id}", LOCAL_SESSION_TTL, payload)
+    except Exception as e:
+        print(f"Failed to store raw file in Redis: {e}")
+
+def store_raw_file_global_supabase(org_id: str, doc_id: str, filename: str, file_bytes: bytes) -> None:
+    if not supabase_client:
+        return
+    try:
+        path = f"{org_id}/{doc_id}/{filename}"
+        supabase_client.storage.from_("global_documents").upload(
+            file=file_bytes,
+            path=path,
+            file_options={"x-upsert": "true", "content-type": "application/octet-stream"}
+        )
+    except Exception as e:
+        print(f"Failed to store raw file in Supabase: {e}")
 
 class UploadConsent(BaseModel):
     upload_mode: UploadMode
@@ -1451,6 +1479,10 @@ async def upload_document(
         raise HTTPException(status_code=400, detail="No content could be extracted from the document.")
 
     if upload_mode == UploadMode.GLOBAL:
+
+        store_raw_file_global_supabase(org_id, doc_id, filename, file_bytes)
+
+    if upload_mode == UploadMode.GLOBAL:
         if supabase_client:
             try:
                 supabase_client.table("audit_log").insert({
@@ -1481,6 +1513,7 @@ async def upload_document(
     else:
         is_image = doc_type == DocumentType.IMAGE
         embeddings = get_jina_embeddings(chunks, is_image=is_image)
+        store_raw_file_local_redis(current_user.user_id, doc_id, filename, file_bytes)
         chunks_created = store_chunks_local_redis(
             doc_id=doc_id, user_id=current_user.user_id, org_id=org_id, filename=filename,
             chunks=chunks, embeddings=embeddings, doc_type=doc_type
@@ -1494,6 +1527,50 @@ async def upload_document(
             pages_skipped=0, chunks_created=chunks_created, status="indexed_locally_session_ttl_1hr",
             uploaded_at=uploaded_at
         )                                                                                                                                                                                                                           
+
+
+@app.get("/api/v1/documents/global/{doc_id}", tags=["Documents"])
+async def get_global_document(doc_id: str, current_user: TokenClaims = Depends(get_current_user)):
+    if not supabase_client:
+        raise HTTPException(status_code=500, detail="Supabase client unavailable")
+        
+    response = supabase_client.table("document_registry").select("org_id, file_name").eq("id", doc_id).execute()
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Document not found")
+        
+    org_id = response.data[0]["org_id"]
+    filename = response.data[0]["file_name"]
+
+    enforce_tenant_access(org_id, current_user)
+
+    path = f"{org_id}/{doc_id}/{filename}"
+    try:
+        file_data = supabase_client.storage.from_("global_documents").download(path)
+        return Response(
+            content=file_data, 
+            headers={"Content-Disposition": f'inline; filename="{filename}"'}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error downloading from storage: {e}")
+
+@app.get("/api/v1/documents/local/{doc_id}", tags=["Documents"])
+async def get_local_document(doc_id: str, current_user: TokenClaims = Depends(get_current_user)):
+    if not redis_client:
+        raise HTTPException(status_code=500, detail="Redis client unavailable")
+        
+    raw = redis_client.get(f"local_raw:{current_user.user_id}:{doc_id}")
+    if not raw:
+        raise HTTPException(status_code=404, detail="Local document not found or session expired")
+        
+    data = json.loads(raw)
+    file_bytes = base64.b64decode(data["data"])
+    filename = data["filename"]
+    
+    return Response(
+        content=file_bytes, 
+        headers={"Content-Disposition": f'inline; filename="{filename}"'}
+    )
+
 
 @app.post("/api/v1/query", response_model=RAGResponse)
 async def query_rag(
@@ -1574,15 +1651,32 @@ async def query_rag(
         query_mode=body.upload_mode.value, sources_found=len(retrieved_chunks), ip_address=ip_address
     )
 
-    sources = [
-        SourceResult(
-            chunk_id=c["chunk_id"], document_name=c["document_name"],
-            page_number=c["page_number"], chunk_index=c["chunk_index"], 
-            similarity_score=round(c["similarity_score"], 4),
-            text_preview=c["text"][:200], org_id=c["org_id"], upload_mode=c["upload_mode"]
+    sources = []
+    base_url = str(request.base_url).rstrip("/")
+    
+    for c in retrieved_chunks:
+        if c["upload_mode"] == "global":
+            doc_url = f"{base_url}/api/v1/documents/global/{c['document_id']}"
+        else:
+            doc_url = f"{base_url}/api/v1/documents/local/{c['document_id']}"
+            
+        if c["document_name"].lower().endswith(".pdf"):
+            doc_url += f"#page={c['page_number']}"
+
+        sources.append(
+            SourceResult(
+                chunk_id=c["chunk_id"], 
+                document_id=c["document_id"],
+                document_name=c["document_name"],
+                page_number=c["page_number"], 
+                chunk_index=c["chunk_index"], 
+                similarity_score=round(c["similarity_score"], 4),
+                text_preview=c["text"][:200], 
+                org_id=c["org_id"], 
+                upload_mode=c["upload_mode"],
+                document_url=doc_url
+            )
         )
-        for c in retrieved_chunks
-    ]
 
     return RAGResponse(
         answer=answer, query=body.query, language=body.language,
