@@ -20,6 +20,7 @@ interface Message {
   content: string;
   response?: QueryResponse;
   timestamp: Date;
+  animate?: boolean;
 }
 interface RetrievalSettings {
   topK: number;
@@ -77,9 +78,13 @@ function TypewriterText({ text, onDone }: { text: string; onDone?: () => void })
   const [displayed, setDisplayed] = useState('');
   const [done, setDone] = useState(false);
   const idx = useRef(0);
+  const onDoneRef = useRef(onDone);
+  onDoneRef.current = onDone;
 
   useEffect(() => {
-    idx.current = 0; setDisplayed(''); setDone(false);
+    idx.current = 0;
+    setDisplayed('');
+    setDone(false);
     const interval = setInterval(() => {
       if (idx.current < text.length) {
         const chunk = text.slice(idx.current, idx.current + 5);
@@ -89,11 +94,11 @@ function TypewriterText({ text, onDone }: { text: string; onDone?: () => void })
         clearInterval(interval);
         setDisplayed(text);
         setDone(true);
-        onDone?.();
+        onDoneRef.current?.();
       }
     }, 14);
     return () => clearInterval(interval);
-  }, [text, onDone]);
+  }, [text]);
 
   return (
     <div className="prose" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
@@ -176,9 +181,22 @@ function SourcesRail({ sources, loading }: { sources: Source[]; loading?: boolea
 }
 
 /* ── Answer Bubble ── */
-function AnswerBubble({ response, isLoading, stage }: { response?: QueryResponse; isLoading: boolean; stage: Stage }) {
-  const [typeDone, setTypeDone] = useState(false);
-  useEffect(() => { if (response) setTypeDone(false); }, [response]);
+function AnswerBubble({
+  response,
+  isLoading,
+  stage,
+  animate = false,
+}: {
+  response?: QueryResponse;
+  isLoading: boolean;
+  stage: Stage;
+  animate?: boolean;
+}) {
+  const [typeDone, setTypeDone] = useState(!animate);
+
+  const handleDone = useCallback(() => {
+    setTypeDone(true);
+  }, []);
 
   return (
     <div
@@ -207,14 +225,16 @@ function AnswerBubble({ response, isLoading, stage }: { response?: QueryResponse
               <span key={tag} style={{ fontSize: '0.67rem', padding: '2px 10px', borderRadius: 999, color: 'var(--muted)', background: 'var(--surface-2)', border: '1px solid var(--border)', fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 500 }}>{tag}</span>
             ))}
           </div>
-          <TypewriterText text={response.answer} onDone={() => setTypeDone(true)} />
-          <AnimatePresence>
-            {typeDone && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.15 }}>
-                <SourcesRail sources={response.sources} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {animate && !typeDone ? (
+            <TypewriterText text={response.answer} onDone={handleDone} />
+          ) : (
+            <div className="prose" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+              <ReactMarkdown>{response.answer}</ReactMarkdown>
+            </div>
+          )}
+          {(typeDone || !animate) && (
+            <SourcesRail sources={response.sources} />
+          )}
         </>
       )}
     </div>
@@ -524,7 +544,7 @@ export function ChatPage() {
       const payload: QueryRequest = { query: q, upload_mode: mode, top_k: settings.topK, vector_weight: settings.vectorWeight, keyword_weight: +(1 - settings.vectorWeight).toFixed(2), language: settings.language, system_prompt: settings.systemPrompt || undefined };
       const response = await queryApi.ask(payload);
       clearTimeout(t1); clearTimeout(t2);
-      setMessages((m) => [...m, { id: assistantId, type: 'assistant', content: response.answer, response, timestamp: new Date() }]);
+      setMessages((m) => [...m, { id: assistantId, type: 'assistant', content: response.answer, response, timestamp: new Date(), animate: true }]);
     } catch (err) {
       clearTimeout(t1); clearTimeout(t2);
       setMessages((m) => [...m, { id: assistantId, type: 'error', content: parseApiError(err), timestamp: new Date() }]);
@@ -560,6 +580,7 @@ export function ChatPage() {
       content: item.answer,
       response: mockResponse,
       timestamp: item.created_at ? new Date(item.created_at) : new Date(),
+      animate: false,
     };
     setMessages([userMsg, assistantMsg]);
   };
@@ -606,7 +627,14 @@ export function ChatPage() {
                     </div>
                   </div>
                 )}
-                {msg.type === 'assistant' && msg.response && <AnswerBubble response={msg.response} isLoading={false} stage="generating" />}
+                {msg.type === 'assistant' && msg.response && (
+                  <AnswerBubble
+                    response={msg.response}
+                    isLoading={false}
+                    stage="generating"
+                    animate={msg.animate ?? false}
+                  />
+                )}
                 {msg.type === 'error' && (
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 16px', borderRadius: 12, background: 'var(--danger-dim)', border: '1px solid rgba(248,113,113,0.22)', color: 'var(--danger)', fontSize: '0.85rem' }}>
                     <span>⚠</span><span>{msg.content}</span>
