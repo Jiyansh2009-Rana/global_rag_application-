@@ -271,10 +271,19 @@ function SettingsContent({ settings, onChange }: { settings: RetrievalSettings; 
 }
 
 /* ── Chat History Drawer Content ── */
+interface ChatSession {
+  sessionId: string;
+  messages: ChatHistoryItem[];
+  firstQuery: string;
+  lastAnswer: string;
+  mode: string;
+  lastAt?: string;
+}
+
 function HistoryContent({
-  onSelectHistory,
+  onSelectSession,
 }: {
-  onSelectHistory: (item: ChatHistoryItem) => void;
+  onSelectSession: (sessionId: string, messages: ChatHistoryItem[]) => void;
 }) {
   const [history, setHistory] = useState<ChatHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -285,7 +294,7 @@ function HistoryContent({
     setLoading(true);
     setError(null);
     try {
-      const items = await queryApi.getHistory(50);
+      const items = await queryApi.getHistory(100);
       setHistory(items);
     } catch (err) {
       setError(parseApiError(err));
@@ -298,16 +307,51 @@ function HistoryContent({
     void fetchHistory();
   }, [fetchHistory]);
 
-  const filtered = useMemo(() => {
-    if (!search.trim()) return history;
+  // Group individual rows into sessions by session_id
+  const sessions = useMemo<ChatSession[]>(() => {
+    const map: Record<string, ChatHistoryItem[]> = {};
+    for (const row of history) {
+      const sid = row.session_id || row.id || 'legacy';
+      if (!map[sid]) map[sid] = [];
+      map[sid].push(row);
+    }
+
+    return Object.entries(map)
+      .map(([sid, msgs]) => {
+        const sorted = [...msgs].sort((a, b) => {
+          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
+          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
+          return timeA - timeB;
+        });
+        const lastMsg = sorted[sorted.length - 1];
+        return {
+          sessionId: sid,
+          messages: sorted,
+          firstQuery: sorted[0]?.query || 'Untitled Question',
+          lastAnswer: lastMsg?.answer || '',
+          mode: sorted[0]?.query_mode || 'global',
+          lastAt: lastMsg?.created_at,
+        };
+      })
+      .sort((a, b) => {
+        const timeA = a.lastAt ? new Date(a.lastAt).getTime() : 0;
+        const timeB = b.lastAt ? new Date(b.lastAt).getTime() : 0;
+        return timeB - timeA;
+      });
+  }, [history]);
+
+  const filteredSessions = useMemo(() => {
+    if (!search.trim()) return sessions;
     const s = search.toLowerCase();
-    return history.filter(
-      (h) =>
-        h.query?.toLowerCase().includes(s) ||
-        h.answer?.toLowerCase().includes(s) ||
-        h.query_mode?.toLowerCase().includes(s)
+    return sessions.filter((session) =>
+      session.messages.some(
+        (m) =>
+          m.query?.toLowerCase().includes(s) ||
+          m.answer?.toLowerCase().includes(s) ||
+          m.query_mode?.toLowerCase().includes(s)
+      )
     );
-  }, [history, search]);
+  }, [sessions, search]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
@@ -315,7 +359,7 @@ function HistoryContent({
       <div style={{ display: 'flex', gap: 8 }}>
         <input
           type="text"
-          placeholder="Search past queries..."
+          placeholder="Search past conversations..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           style={{
@@ -370,18 +414,18 @@ function HistoryContent({
         </div>
       )}
 
-      {!loading && filtered.length === 0 && !error && (
+      {!loading && filteredSessions.length === 0 && !error && (
         <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--muted)', fontSize: '0.82rem' }}>
-          {search ? 'No matching questions found.' : 'No chat history recorded yet.'}
+          {search ? 'No matching conversations found.' : 'No chat history recorded yet.'}
         </div>
       )}
 
-      {!loading && filtered.length > 0 && (
+      {!loading && filteredSessions.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: 'calc(100vh - 160px)', overflowY: 'auto' }}>
-          {filtered.map((item, idx) => (
+          {filteredSessions.map((session) => (
             <div
-              key={item.id ?? idx}
-              onClick={() => onSelectHistory(item)}
+              key={session.sessionId}
+              onClick={() => onSelectSession(session.sessionId, session.messages)}
               style={{
                 padding: '12px 14px',
                 borderRadius: 12,
@@ -400,23 +444,28 @@ function HistoryContent({
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                <span
-                  style={{
-                    fontSize: '0.65rem',
-                    fontWeight: 600,
-                    textTransform: 'uppercase',
-                    padding: '2px 8px',
-                    borderRadius: 999,
-                    background: item.query_mode === 'global' ? 'var(--accent-dim)' : 'var(--surface-2)',
-                    color: item.query_mode === 'global' ? 'var(--accent)' : 'var(--muted)',
-                    border: '1px solid var(--border)',
-                  }}
-                >
-                  {item.query_mode ?? 'global'}
-                </span>
-                {item.created_at && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span
+                    style={{
+                      fontSize: '0.65rem',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      padding: '2px 8px',
+                      borderRadius: 999,
+                      background: session.mode === 'global' ? 'var(--accent-dim)' : 'var(--surface-2)',
+                      color: session.mode === 'global' ? 'var(--accent)' : 'var(--muted)',
+                      border: '1px solid var(--border)',
+                    }}
+                  >
+                    {session.mode}
+                  </span>
+                  <span style={{ fontSize: '0.68rem', color: 'var(--muted)' }}>
+                    {session.messages.length} msg{session.messages.length !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                {session.lastAt && (
                   <span style={{ fontSize: '0.67rem', color: 'var(--muted)' }}>
-                    {new Date(item.created_at).toLocaleDateString('en-IN', {
+                    {new Date(session.lastAt).toLocaleDateString('en-IN', {
                       day: '2-digit',
                       month: 'short',
                       hour: '2-digit',
@@ -427,7 +476,7 @@ function HistoryContent({
               </div>
 
               <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', marginBottom: 4, lineHeight: 1.4 }}>
-                {item.query}
+                {session.firstQuery}
               </div>
 
               <div
@@ -442,7 +491,7 @@ function HistoryContent({
                   WebkitBoxOrient: 'vertical',
                 }}
               >
-                {item.answer}
+                {session.lastAnswer}
               </div>
             </div>
           ))}
@@ -512,6 +561,7 @@ function EmptyState({ onSelectSuggestion }: { onSelectSuggestion: (q: string) =>
 ─────────────────────────────────────────────────────────────────────────────── */
 export function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<UploadMode>('global');
   const [isLoading, setIsLoading] = useState(false);
@@ -528,10 +578,8 @@ export function ChatPage() {
   const handleSubmit = async (textToSubmit?: string) => {
     const q = (textToSubmit ?? query).trim();
     if (!q || isLoading) return;
-    if (isHistoryView) {
-      setMessages([]);
-      setIsHistoryView(false);
-    }
+    setIsHistoryView(false);
+
     const userMsg: Message = { id: crypto.randomUUID(), type: 'user', content: q, timestamp: new Date() };
     const assistantId = crypto.randomUUID();
     setMessages((m) => [...m, userMsg]);
@@ -541,9 +589,24 @@ export function ChatPage() {
     const t1 = setTimeout(() => setStage('retrieving'), 900);
     const t2 = setTimeout(() => setStage('generating'), 2000);
     try {
-      const payload: QueryRequest = { query: q, upload_mode: mode, top_k: settings.topK, vector_weight: settings.vectorWeight, keyword_weight: +(1 - settings.vectorWeight).toFixed(2), language: settings.language, system_prompt: settings.systemPrompt || undefined };
+      const payload: QueryRequest = {
+        query: q,
+        upload_mode: mode,
+        top_k: settings.topK,
+        vector_weight: settings.vectorWeight,
+        keyword_weight: +(1 - settings.vectorWeight).toFixed(2),
+        language: settings.language,
+        system_prompt: settings.systemPrompt || undefined,
+        session_id: activeSessionId || undefined,
+      };
       const response = await queryApi.ask(payload);
       clearTimeout(t1); clearTimeout(t2);
+
+      // Track active session_id for future follow-up queries
+      if (response.session_id && !activeSessionId) {
+        setActiveSessionId(response.session_id);
+      }
+
       setMessages((m) => [...m, { id: assistantId, type: 'assistant', content: response.answer, response, timestamp: new Date(), animate: true }]);
     } catch (err) {
       clearTimeout(t1); clearTimeout(t2);
@@ -554,35 +617,43 @@ export function ChatPage() {
   const handleNewChat = () => {
     setMessages([]);
     setQuery('');
+    setActiveSessionId(null);
     setIsHistoryView(false);
   };
 
-  const handleSelectHistory = (item: ChatHistoryItem) => {
+  const handleSelectSession = (sessionId: string, sessionMessages: ChatHistoryItem[]) => {
     setHistoryOpen(false);
     setIsHistoryView(true);
+    setActiveSessionId(sessionId);
     setQuery('');
-    const userMsg: Message = {
-      id: crypto.randomUUID(),
-      type: 'user',
-      content: item.query,
-      timestamp: item.created_at ? new Date(item.created_at) : new Date(),
-    };
-    const mockResponse: QueryResponse = {
-      answer: item.answer,
-      language: 'English',
-      query_mode: (item.query_mode as 'global' | 'local' | 'both') || 'global',
-      sources: [],
-      total_sources_found: 0,
-    };
-    const assistantMsg: Message = {
-      id: crypto.randomUUID(),
-      type: 'assistant',
-      content: item.answer,
-      response: mockResponse,
-      timestamp: item.created_at ? new Date(item.created_at) : new Date(),
-      animate: false,
-    };
-    setMessages([userMsg, assistantMsg]);
+
+    const loadedMessages: Message[] = [];
+    for (const item of sessionMessages) {
+      const userMsg: Message = {
+        id: crypto.randomUUID(),
+        type: 'user',
+        content: item.query,
+        timestamp: item.created_at ? new Date(item.created_at) : new Date(),
+      };
+      const mockResponse: QueryResponse = {
+        answer: item.answer,
+        language: 'English',
+        query_mode: (item.query_mode as 'global' | 'local' | 'both') || 'global',
+        session_id: sessionId,
+        sources: [],
+        total_sources_found: 0,
+      };
+      const assistantMsg: Message = {
+        id: crypto.randomUUID(),
+        type: 'assistant',
+        content: item.answer,
+        response: mockResponse,
+        timestamp: item.created_at ? new Date(item.created_at) : new Date(),
+        animate: false,
+      };
+      loadedMessages.push(userMsg, assistantMsg);
+    }
+    setMessages(loadedMessages);
   };
 
   return (
@@ -785,7 +856,7 @@ export function ChatPage() {
 
       {/* History Sheet */}
       <Sheet open={historyOpen} onClose={() => setHistoryOpen(false)} title="Chat History" width="400px">
-        <HistoryContent onSelectHistory={handleSelectHistory} />
+        <HistoryContent onSelectSession={handleSelectSession} />
       </Sheet>
     </div>
   );

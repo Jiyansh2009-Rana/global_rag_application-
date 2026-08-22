@@ -61,6 +61,7 @@ export const QueryResponseSchema = z.object({
   total_sources_found: z.number(),
   language: z.string(),
   generated_by: z.string().optional(),
+  session_id: z.string().optional(),
   sources: z.array(SourceSchema),
 });
 export type QueryResponse = z.infer<typeof QueryResponseSchema>;
@@ -74,6 +75,7 @@ export const QueryRequestSchema = z.object({
   keyword_weight: z.number().min(0).max(1).default(0.3),
   language: z.string().default('English'),
   system_prompt: z.string().optional(),
+  session_id: z.string().optional(),
 });
 export type QueryRequest = z.infer<typeof QueryRequestSchema>;
 
@@ -143,6 +145,7 @@ export type SuperAdminDocument = z.infer<typeof SuperAdminDocumentSchema>;
 export const ChatHistoryItemSchema = z.object({
   id:         z.string().optional(),
   user_id:    z.string().optional(),
+  session_id: z.string().optional(),
   org_id:     z.string().optional(),
   query:      z.string(),
   answer:     z.string(),
