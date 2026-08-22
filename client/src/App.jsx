@@ -1032,9 +1032,21 @@ function QueryPage({ token, orgId, activeSessionId, setActiveSessionId, chatMess
   const [selectedSource, setSelectedSource] = useState(null);
   const bottomRef = useRef(null);
 
-  // Auto-scroll to the latest message whenever chat grows
+  // Track the previous message count so we ONLY scroll when a NEW message
+  // is appended (e.g. user sends a query), NOT when history is bulk-loaded.
+  const prevMsgCountRef = useRef(chatMessages.length);
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const prev = prevMsgCountRef.current;
+    const curr = chatMessages.length;
+    prevMsgCountRef.current = curr;
+
+    // Only scroll if exactly one message was added (new query/answer),
+    // not when history is loaded all at once (curr - prev > 1) or
+    // when the list is replaced entirely (prev > curr).
+    if (curr === prev + 1) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
   }, [chatMessages]);
 
   const handleQuery = async () => {
@@ -1106,7 +1118,7 @@ function QueryPage({ token, orgId, activeSessionId, setActiveSessionId, chatMess
       {chatMessages.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', marginBottom: '1.5rem' }}>
           {chatMessages.map((msg, i) => (
-            <div key={i}>
+            <div key={msg.queried_at ? `${msg.session_id}-${msg.queried_at}` : i}>
               {/* User query bubble */}
               <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.625rem' }}>
                 <div style={{
