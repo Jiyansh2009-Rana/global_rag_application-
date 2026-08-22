@@ -97,7 +97,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173","http://150.230.239.189:5173"],
+    allow_origins=["http://localhost:5173","http://13.201.77.82","http://13.201.77.82:80"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -634,12 +634,13 @@ def check_page_hash_in_registry(doc_id: str, page_num: int, page_hash_val: str) 
         print(f"Error checking page registry in Supabase: {e}")
         return False
 
-def store_page_hash(doc_id: str, page_num: int, page_hash_val: str, chunk_ids: List[str]) -> None:
+def store_page_hash(doc_id: str, page_num: int, page_hash_val: str, chunk_ids: List[str], org_id:str = "") -> None:
     if not supabase_client:
         return
     try:
         supabase_client.table("page_registry").insert({
             "document_id": doc_id,
+            "org_id": org_id,
             "page_number": page_num,
             "page_hash": page_hash_val,
             "chunk_ids": chunk_ids,
@@ -950,7 +951,7 @@ def run_delta_management(
                 finally:
                     conn.close()
 
-            store_page_hash(registered_doc_id, page_num, p_hash, new_chunk_ids)
+            store_page_hash(registered_doc_id, page_num, p_hash, new_chunk_ids, org_id )
             pages_newly_indexed += 1
 
         return {
@@ -1005,7 +1006,7 @@ def run_delta_management(
                                 )
                             )
                             chunks_created += 1
-                        store_page_hash(doc_id, page_num, p_hash, page_chunk_ids)
+                        store_page_hash(doc_id, page_num, p_hash, page_chunk_ids, org_id)
                         pages_newly_indexed += 1
 
                 conn.commit()
@@ -1683,7 +1684,7 @@ async def query_rag(
     return RAGResponse(
         answer=answer, query=body.query, language=body.language,
         query_mode=body.upload_mode, sources=sources,
-        total_sources_found=len(sources), generated_by="llama-3.3-70b-versatile (Groq)",
+        total_sources_found=len(sources), generated_by="qwen/qwen3.6-27b (Groq)",
         org_id=org_id, queried_at=queried_at,
         session_id=current_session_id
     )

@@ -557,7 +557,7 @@ export function ChatPage() {
       <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 1rem 1rem' }}>
         <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
           {messages.length === 0 && !isLoading && (
-            <EmptyState onSelectSuggestion={(q) => void handleSubmit(q)} />
+            <EmptyState onSelectSuggestion={(q) => setQuery(q)} />
           )}
           <AnimatePresence initial={false}>
             {messages.map((msg) => (
