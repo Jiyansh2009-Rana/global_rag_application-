@@ -498,6 +498,7 @@ export function ChatPage() {
   const [stage, setStage] = useState<Stage>('embedding');
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [isHistoryView, setIsHistoryView] = useState(false);
   const [settings, setSettings] = useState<RetrievalSettings>({ topK: 5, vectorWeight: 0.7, language: 'English', systemPrompt: '' });
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -507,10 +508,14 @@ export function ChatPage() {
   const handleSubmit = async (textToSubmit?: string) => {
     const q = (textToSubmit ?? query).trim();
     if (!q || isLoading) return;
+    if (isHistoryView) {
+      setMessages([]);
+      setIsHistoryView(false);
+    }
     const userMsg: Message = { id: crypto.randomUUID(), type: 'user', content: q, timestamp: new Date() };
     const assistantId = crypto.randomUUID();
     setMessages((m) => [...m, userMsg]);
-    if (!textToSubmit) setQuery('');
+    setQuery('');
     setIsLoading(true);
     setStage('embedding');
     const t1 = setTimeout(() => setStage('retrieving'), 900);
@@ -526,8 +531,16 @@ export function ChatPage() {
     } finally { setIsLoading(false); }
   };
 
+  const handleNewChat = () => {
+    setMessages([]);
+    setQuery('');
+    setIsHistoryView(false);
+  };
+
   const handleSelectHistory = (item: ChatHistoryItem) => {
     setHistoryOpen(false);
+    setIsHistoryView(true);
+    setQuery('');
     const userMsg: Message = {
       id: crypto.randomUUID(),
       type: 'user',
@@ -548,7 +561,7 @@ export function ChatPage() {
       response: mockResponse,
       timestamp: item.created_at ? new Date(item.created_at) : new Date(),
     };
-    setMessages((m) => [...m, userMsg, assistantMsg]);
+    setMessages([userMsg, assistantMsg]);
   };
 
   return (
@@ -556,6 +569,30 @@ export function ChatPage() {
       {/* Thread */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 1rem 1rem' }}>
         <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* ── History View Banner ── */}
+          {isHistoryView && messages.length > 0 && (
+            <div style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              padding: '8px 14px', borderRadius: 10,
+              background: 'rgba(0,210,200,0.06)', border: '1px solid rgba(0,210,200,0.2)',
+              fontSize: '0.75rem', color: 'var(--muted)',
+            }}>
+              <span>📜 Viewing saved history — type below to ask a new question</span>
+              <button
+                onClick={handleNewChat}
+                style={{
+                  padding: '3px 10px', borderRadius: 8, fontSize: '0.72rem',
+                  background: 'var(--accent-dim)', color: 'var(--accent)',
+                  border: '1px solid var(--border-accent)', cursor: 'pointer',
+                  fontFamily: 'inherit', fontWeight: 600,
+                }}
+              >
+                ✕ Clear
+              </button>
+            </div>
+          )}
+
           {messages.length === 0 && !isLoading && (
             <EmptyState onSelectSuggestion={(q) => setQuery(q)} />
           )}
@@ -621,6 +658,25 @@ export function ChatPage() {
               </button>
             ))}
             <div style={{ flex: 1 }} />
+
+            {/* New Chat Button */}
+            {messages.length > 0 && (
+              <button
+                onClick={handleNewChat}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '5px 12px', borderRadius: 10,
+                  fontSize: '0.74rem', color: 'var(--muted)',
+                  background: 'transparent', border: '1px solid var(--border)',
+                  cursor: 'pointer', transition: 'all 0.18s',
+                  fontFamily: 'inherit',
+                }}
+                onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text)'; (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)'; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
+              >
+                ✏ New Chat
+              </button>
+            )}
 
             {/* History Button */}
             <button
