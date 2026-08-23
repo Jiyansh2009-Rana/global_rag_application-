@@ -1,8 +1,10 @@
 fastapi
-uvicorn
+uvicorn[standard]
 pydantic[email]
+email-validator
+python-multipart
 langchain-text-splitters
-passlib
+passlib[bcrypt]
 bcrypt==3.2.2
 python-jose[cryptography]
 supabase
@@ -11,6 +13,7 @@ redis
 requests
 httpx
 pandas
+openpyxl
 beautifulsoup4
 python-docx
 python-pptx
@@ -20,6 +23,3 @@ pytesseract
 Pillow
 psycopg2-binary
 python-dotenv
-python-multipart
-email-validator
-mimetypes

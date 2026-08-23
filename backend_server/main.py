@@ -416,7 +416,7 @@ def extract_pdf_text(file_bytes: bytes) -> tuple[str, int]:
 
 def extract_docx_text(file_bytes: bytes) -> tuple[str, int]:
     try:
-        doc = DocxDocument.Document(io.BytesIO(file_bytes))
+        doc = DocxDocument(io.BytesIO(file_bytes))
         text_parts = []
         for para in doc.paragraphs:
             text = para.text.strip()
