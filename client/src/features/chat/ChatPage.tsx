@@ -14,6 +14,19 @@ import { Textarea } from '@/components/ui/Input';
 type UploadMode = 'global' | 'local' | 'both';
 type Stage = 'embedding' | 'retrieving' | 'generating';
 
+/* Safe UUID — crypto.randomUUID() only exists in secure contexts (HTTPS/localhost).
+   On plain-HTTP production it's undefined, so we fall back. */
+function safeUUID(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = (Math.random() * 16) | 0;
+    const v = c === 'x' ? r : (r & 0x3) | 0x8;
+    return v.toString(16);
+  });
+}
+
 /* ── Image Lightbox Modal ── */
 function ImageLightboxModal({
   source,
@@ -855,8 +868,8 @@ export function ChatPage() {
     if (!q || isLoading) return;
     setIsHistoryView(false);
 
-    const userMsg: Message = { id: crypto.randomUUID(), type: 'user', content: q, timestamp: new Date() };
-    const assistantId = crypto.randomUUID();
+    const userMsg: Message = { id: safeUUID(), type: 'user', content: q, timestamp: new Date() };
+    const assistantId = safeUUID();
     setMessages((m) => [...m, userMsg]);
     setQuery('');
     setIsLoading(true);
@@ -905,7 +918,7 @@ export function ChatPage() {
     const loadedMessages: Message[] = [];
     for (const item of sessionMessages) {
       const userMsg: Message = {
-        id: crypto.randomUUID(),
+        id: safeUUID(),
         type: 'user',
         content: item.query,
         timestamp: item.created_at ? new Date(item.created_at) : new Date(),
