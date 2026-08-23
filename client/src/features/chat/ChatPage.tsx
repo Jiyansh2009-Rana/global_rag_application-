@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
-import { queryApi } from '@/api/query';
+import { queryApi, downloadFile } from '@/api/query';
 import { parseApiError } from '@/api/client';
 import type { QueryResponse, Source, QueryRequest, ChatHistoryItem } from '@/api/types';
 import { Button } from '@/components/ui/Button';
@@ -13,6 +13,351 @@ import { Textarea } from '@/components/ui/Input';
 
 type UploadMode = 'global' | 'local' | 'both';
 type Stage = 'embedding' | 'retrieving' | 'generating';
+
+/* ── Image Lightbox Modal ── */
+function ImageLightboxModal({
+  source,
+  onClose,
+}: {
+  source: Source;
+  onClose: () => void;
+}) {
+  const [downloading, setDownloading] = useState(false);
+  const imageUrl = source.image_data || source.document_url || '';
+
+  const handleDownload = async () => {
+    setDownloading(true);
+    try {
+      if (source.image_data) {
+        await downloadFile(source.image_data, source.document_name);
+      } else if (source.document_url) {
+        await downloadFile(source.document_url, source.document_name);
+      }
+    } catch (err) {
+      console.error('Download failed:', err);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+      style={{
+        position: 'fixed',
+        inset: 0,
+        zIndex: 99999,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'rgba(0,0,0,0.86)',
+        backdropFilter: 'blur(16px)',
+        padding: '1.5rem',
+      }}
+    >
+      <motion.div
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.95, opacity: 0 }}
+        transition={{ duration: 0.2 }}
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          position: 'relative',
+          maxWidth: '92vw',
+          maxHeight: '92vh',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: 14,
+          background: 'linear-gradient(145deg, rgba(20,25,35,0.95) 0%, rgba(10,15,25,0.98) 100%)',
+          borderRadius: 20,
+          border: '1px solid rgba(0,210,200,0.25)',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,210,200,0.1)',
+          padding: '1.5rem',
+        }}
+      >
+        {/* Header */}
+        <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
+            <span style={{ fontSize: '1.2rem', color: 'var(--accent)' }}>🖼</span>
+            <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {source.document_name}
+            </div>
+            {source.similarity_score !== undefined && (
+              <span style={{ fontSize: '0.68rem', padding: '2px 8px', borderRadius: 999, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--border-accent)', fontWeight: 600, flexShrink: 0 }}>
+                Match: {(source.similarity_score * 100).toFixed(1)}%
+              </span>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+            <Button size="sm" variant="primary" loading={downloading} onClick={handleDownload}>
+              ⬇ Download Image
+            </Button>
+            <button
+              onClick={onClose}
+              style={{
+                width: 32, height: 32, borderRadius: '50%',
+                background: 'rgba(255,255,255,0.08)', border: '1px solid var(--border)',
+                color: 'var(--text)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '1rem', transition: 'all 0.15s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+
+        {/* Image Display */}
+        <div style={{
+          maxHeight: 'calc(80vh - 70px)',
+          maxWidth: '86vw',
+          overflow: 'hidden',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          borderRadius: 12,
+          background: 'rgba(0,0,0,0.5)',
+          border: '1px solid rgba(255,255,255,0.08)',
+        }}>
+          <img
+            src={imageUrl}
+            alt={source.document_name}
+            style={{
+              maxWidth: '100%',
+              maxHeight: 'calc(80vh - 70px)',
+              objectFit: 'contain',
+              borderRadius: 8,
+            }}
+          />
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/* ── Source Card ── */
+function SourceCard({
+  source,
+  index,
+  expanded,
+  onToggle,
+  onOpenImage,
+}: {
+  source: Source;
+  index: number;
+  expanded: boolean;
+  onToggle: () => void;
+  onOpenImage: (s: Source) => void;
+}) {
+  const isImg = source.is_image || !!source.image_data || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(source.document_name);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDownloading(true);
+    try {
+      if (source.image_data) {
+        await downloadFile(source.image_data, source.document_name);
+      } else if (source.document_url) {
+        await downloadFile(source.document_url, source.document_name);
+      }
+    } catch (err) {
+      console.error('Download failed:', err);
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: index * 0.04 }}
+      className="glass-card"
+      style={{ padding: '14px 16px', borderRadius: 12, border: '1px solid rgba(0,210,200,0.12)' }}
+    >
+      <div
+        onClick={onToggle}
+        style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}
+      >
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            {isImg && <span style={{ fontSize: '0.85rem' }}>🖼</span>}
+            <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+              {source.document_name}
+            </div>
+            {isImg && (
+              <span style={{ fontSize: '0.6rem', padding: '1px 6px', borderRadius: 999, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--border-accent)', fontWeight: 600 }}>
+                IMAGE
+              </span>
+            )}
+          </div>
+          <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
+            <span style={{ fontSize: '0.67rem', color: 'var(--muted)' }}>p.{source.page_number}</span>
+            {source.chunk_index !== undefined && <span style={{ fontSize: '0.67rem', color: 'var(--muted)' }}>chunk #{source.chunk_index}</span>}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button
+            onClick={handleDownload}
+            disabled={downloading}
+            title={`Download ${source.document_name}`}
+            style={{
+              padding: '3px 8px',
+              borderRadius: 6,
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid var(--border)',
+              color: 'var(--text)',
+              fontSize: '0.68rem',
+              cursor: downloading ? 'wait' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              transition: 'all 0.15s',
+              fontFamily: '"Plus Jakarta Sans", sans-serif',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0,210,200,0.12)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+          >
+            {downloading ? '⏳ Downloading…' : '⬇ Download'}
+          </button>
+          <span style={{ fontSize: '0.68rem', color: 'var(--muted)', flexShrink: 0 }}>
+            <span style={{ fontWeight: 600, color: 'var(--text)' }}>[{index + 1}]</span> {expanded ? '▲' : '▼'}
+          </span>
+        </div>
+      </div>
+
+      <ScoreBar score={source.similarity_score} />
+
+      {/* Image Thumbnail Preview */}
+      {isImg && source.image_data && (
+        <div style={{ marginTop: 10 }}>
+          <div
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenImage(source);
+            }}
+            style={{
+              cursor: 'zoom-in',
+              position: 'relative',
+              borderRadius: 8,
+              overflow: 'hidden',
+              background: 'rgba(0,0,0,0.3)',
+              border: '1px solid rgba(0,210,200,0.18)',
+              display: 'flex',
+              justifyContent: 'center',
+              alignItems: 'center',
+              maxHeight: 180,
+            }}
+          >
+            <img
+              src={source.image_data}
+              alt={source.document_name}
+              style={{
+                width: '100%',
+                maxHeight: 180,
+                objectFit: 'contain',
+                transition: 'transform 0.2s ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
+              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+            />
+            <div style={{
+              position: 'absolute',
+              bottom: 6,
+              right: 6,
+              padding: '3px 8px',
+              borderRadius: 6,
+              background: 'rgba(0,0,0,0.75)',
+              border: '1px solid rgba(255,255,255,0.12)',
+              fontSize: '0.65rem',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              fontFamily: '"Plus Jakarta Sans", sans-serif',
+            }}>
+              🔍 Click to preview
+            </div>
+          </div>
+        </div>
+      )}
+
+      <AnimatePresence>
+        {expanded && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }} style={{ overflow: 'hidden' }}>
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+              {source.text_preview}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.div>
+  );
+}
+
+/* ── Sources Rail ── */
+function SourcesRail({ sources, loading }: { sources: Source[]; loading?: boolean }) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [open, setOpen] = useState(true);
+  const [selectedImage, setSelectedImage] = useState<Source | null>(null);
+
+  if (!loading && sources.length === 0) return null;
+  return (
+    <div style={{ marginTop: 20 }}>
+      {/* Lightbox for full image inspection */}
+      <AnimatePresence>
+        {selectedImage && (
+          <ImageLightboxModal
+            source={selectedImage}
+            onClose={() => setSelectedImage(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      <button
+        onClick={() => setOpen((o) => !o)}
+        style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.68rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10, background: 'none', border: 'none', cursor: 'pointer', transition: 'color 0.15s', fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 600 }}
+        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
+        onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}
+      >
+        <span>{open ? '▼' : '▶'}</span>
+        Source Citations
+        {sources.length > 0 && (
+          <span style={{ padding: '1px 8px', borderRadius: 999, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--border-accent)', fontSize: '0.65rem', fontWeight: 600 }}>
+            {sources.length}
+          </span>
+        )}
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: 8, overflow: 'hidden' }}>
+            {loading
+              ? Array.from({ length: 3 }).map((_, i) => <SourceCardSkeleton key={i} />)
+              : sources.map((s, i) => (
+                  <SourceCard
+                    key={s.chunk_id}
+                    source={s}
+                    index={i}
+                    expanded={expandedId === s.chunk_id}
+                    onToggle={() => setExpandedId((id) => id === s.chunk_id ? null : s.chunk_id)}
+                    onOpenImage={(src) => setSelectedImage(src)}
+                  />
+                ))
+            }
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 interface Message {
   id: string;
@@ -108,77 +453,7 @@ function TypewriterText({ text, onDone }: { text: string; onDone?: () => void })
   );
 }
 
-/* ── Source Card ── */
-function SourceCard({ source, index, expanded, onToggle }: { source: Source; index: number; expanded: boolean; onToggle: () => void }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: index * 0.04 }}
-      onClick={onToggle}
-      className="glass-card"
-      style={{ padding: '14px 16px', cursor: 'pointer', borderRadius: 12 }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{source.document_name}</div>
-          <div style={{ display: 'flex', gap: 12, marginTop: 4 }}>
-            <span style={{ fontSize: '0.67rem', color: 'var(--muted)' }}>p.{source.page_number}</span>
-            {source.chunk_index !== undefined && <span style={{ fontSize: '0.67rem', color: 'var(--muted)' }}>chunk #{source.chunk_index}</span>}
-          </div>
-        </div>
-        <span style={{ fontSize: '0.68rem', color: 'var(--muted)', flexShrink: 0 }}>
-          <span style={{ fontWeight: 600, color: 'var(--text)' }}>[{index + 1}]</span> {expanded ? '▲' : '▼'}
-        </span>
-      </div>
-      <ScoreBar score={source.similarity_score} />
-      <AnimatePresence>
-        {expanded && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: 0.2 }} style={{ overflow: 'hidden' }}>
-            <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.65, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
-              {source.text_preview}
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
 
-/* ── Sources Rail ── */
-function SourcesRail({ sources, loading }: { sources: Source[]; loading?: boolean }) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [open, setOpen] = useState(true);
-  if (!loading && sources.length === 0) return null;
-  return (
-    <div style={{ marginTop: 20 }}>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.68rem', color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: 10, background: 'none', border: 'none', cursor: 'pointer', transition: 'color 0.15s', fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 600 }}
-        onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
-        onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}
-      >
-        <span>{open ? '▼' : '▶'}</span>
-        Source Citations
-        {sources.length > 0 && (
-          <span style={{ padding: '1px 8px', borderRadius: 999, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--border-accent)', fontSize: '0.65rem', fontWeight: 600 }}>
-            {sources.length}
-          </span>
-        )}
-      </button>
-      <AnimatePresence>
-        {open && (
-          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} style={{ display: 'flex', flexDirection: 'column', gap: 8, overflow: 'hidden' }}>
-            {loading
-              ? Array.from({ length: 3 }).map((_, i) => <SourceCardSkeleton key={i} />)
-              : sources.map((s, i) => (
-                  <SourceCard key={s.chunk_id} source={s} index={i} expanded={expandedId === s.chunk_id} onToggle={() => setExpandedId((id) => id === s.chunk_id ? null : s.chunk_id)} />
-                ))
-            }
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-}
 
 /* ── Answer Bubble ── */
 function AnswerBubble({

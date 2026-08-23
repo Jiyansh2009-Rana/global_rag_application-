@@ -45,12 +45,18 @@ export type UploadReport = z.infer<typeof UploadReportSchema>;
 /* ── Query Source ── */
 export const SourceSchema = z.object({
   chunk_id: z.string(),
+  document_id: z.string().optional(),
   document_name: z.string(),
   page_number: z.number(),
   chunk_index: z.number().optional(),
   similarity_score: z.number(),
   text_preview: z.string(),
   source_type: z.string().optional(),
+  org_id: z.string().optional(),
+  upload_mode: z.string().optional(),
+  document_url: z.string().optional(),
+  image_data: z.string().nullable().optional(),
+  is_image: z.boolean().optional(),
 });
 export type Source = z.infer<typeof SourceSchema>;
 

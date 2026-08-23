@@ -204,6 +204,8 @@ class SourceResult(BaseModel):
     org_id: str
     upload_mode: str
     document_url: str
+    image_data: Optional[str] = None
+    is_image: bool = False
 
 class RAGResponse(BaseModel):
     answer: str
@@ -1722,10 +1724,13 @@ async def query_rag(
             doc_url += f"#page={c['page_number']}"
 
         raw_chunk_text = c.get("text", "")
-        if isinstance(raw_chunk_text, str) and raw_chunk_text.startswith("data:image/"):
+        is_image = isinstance(raw_chunk_text, str) and raw_chunk_text.startswith("data:image/")
+        if is_image:
             preview_text = f"[Image Document: {c['document_name']}]"
+            image_data = raw_chunk_text
         else:
             preview_text = raw_chunk_text[:200]
+            image_data = None
 
         sources.append(
             SourceResult(
@@ -1738,7 +1743,9 @@ async def query_rag(
                 text_preview=preview_text, 
                 org_id=c["org_id"], 
                 upload_mode=c["upload_mode"],
-                document_url=doc_url
+                document_url=doc_url,
+                image_data=image_data,
+                is_image=is_image,
             )
         )
 

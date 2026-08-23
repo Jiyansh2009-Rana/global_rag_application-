@@ -82,7 +82,6 @@ function GlobalUploadSettingsCard({
   allowed: boolean;
   onSettingChange: (newVal: boolean) => void;
 }) {
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [statusMsg, setStatusMsg] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
 
@@ -157,7 +156,7 @@ function GlobalUploadSettingsCard({
           <Button
             variant={allowed ? 'ghost' : 'primary'}
             size="sm"
-            loading={saving || loading}
+            loading={saving}
             onClick={handleToggle}
             style={{
               flexShrink: 0,
