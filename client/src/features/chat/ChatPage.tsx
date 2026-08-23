@@ -431,6 +431,226 @@ function StatusStepper({ stage }: { stage: Stage }) {
   );
 }
 
+/* ── Helpers for parsing <think> / <thought> tags ── */
+export interface ParsedAnswer {
+  thought: string | null;
+  answer: string;
+}
+
+export function parseThoughtAndAnswer(rawText?: string | null): ParsedAnswer {
+  if (!rawText) return { thought: null, answer: '' };
+
+  const thinkPattern = /<(?:think|thought)>([\s\S]*?)<\/(?:think|thought)>/gi;
+  const thoughts: string[] = [];
+  let match: RegExpExecArray | null;
+
+  while ((match = thinkPattern.exec(rawText)) !== null) {
+    if (match[1]?.trim()) {
+      thoughts.push(match[1].trim());
+    }
+  }
+
+  let cleanedAnswer = rawText.replace(/<(?:think|thought)>[\s\S]*?<\/(?:think|thought)>/gi, '').trim();
+
+  // If there's an unclosed <think> or <thought> tag at the end (e.g. partial response)
+  const openMatch = cleanedAnswer.match(/<(?:think|thought)>([\s\S]*)$/i);
+  if (openMatch) {
+    if (openMatch[1]?.trim()) {
+      thoughts.push(openMatch[1].trim());
+    }
+    cleanedAnswer = cleanedAnswer.replace(/<(?:think|thought)>[\s\S]*$/i, '').trim();
+  }
+
+  const combinedThought = thoughts.join('\n\n---\n\n').trim();
+
+  return {
+    thought: combinedThought.length > 0 ? combinedThought : null,
+    answer: cleanedAnswer.length > 0 ? cleanedAnswer : (combinedThought ? '' : rawText),
+  };
+}
+
+export function getCleanAnswerText(rawText?: string | null): string {
+  const { thought, answer } = parseThoughtAndAnswer(rawText);
+  return answer || thought || rawText || '';
+}
+
+/* ── Thinking Process Component ── */
+function ThinkingBlock({
+  thought,
+  defaultExpanded = false,
+}: {
+  thought: string;
+  defaultExpanded?: boolean;
+}) {
+  const [expanded, setExpanded] = useState(defaultExpanded);
+
+  const wordCount = useMemo(() => {
+    return thought.trim().split(/\s+/).filter(Boolean).length;
+  }, [thought]);
+
+  return (
+    <div
+      style={{
+        marginBottom: 16,
+        borderRadius: 14,
+        background: 'linear-gradient(145deg, rgba(6,20,28,0.75) 0%, rgba(4,14,22,0.9) 100%)',
+        border: expanded ? '1px solid rgba(0,210,200,0.32)' : '1px solid rgba(0,210,200,0.15)',
+        boxShadow: expanded
+          ? '0 6px 20px rgba(0,0,0,0.35), 0 0 16px rgba(0,210,200,0.06)'
+          : '0 2px 10px rgba(0,0,0,0.2)',
+        overflow: 'hidden',
+        transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+      }}
+    >
+      {/* Header Bar */}
+      <button
+        type="button"
+        onClick={() => setExpanded((prev) => !prev)}
+        style={{
+          width: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 14px',
+          background: expanded ? 'rgba(0,210,200,0.05)' : 'transparent',
+          border: 'none',
+          cursor: 'pointer',
+          color: 'inherit',
+          textAlign: 'left',
+          transition: 'background 0.2s ease',
+          gap: 10,
+        }}
+        onMouseEnter={(e) => {
+          if (!expanded) e.currentTarget.style.background = 'rgba(0,210,200,0.03)';
+        }}
+        onMouseLeave={(e) => {
+          if (!expanded) e.currentTarget.style.background = 'transparent';
+        }}
+        aria-expanded={expanded}
+        aria-label="Toggle thinking process"
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0, flex: 1 }}>
+          <div
+            style={{
+              width: 26,
+              height: 26,
+              borderRadius: 8,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, rgba(0,210,200,0.18), rgba(168,85,247,0.18))',
+              border: '1px solid rgba(0,210,200,0.28)',
+              fontSize: '0.85rem',
+              flexShrink: 0,
+            }}
+          >
+            🧠
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0 }}>
+            <span
+              style={{
+                fontSize: '0.8rem',
+                fontWeight: 600,
+                color: 'var(--text)',
+                letterSpacing: '-0.01em',
+                fontFamily: '"Plus Jakarta Sans", sans-serif',
+              }}
+            >
+              Thinking Process
+            </span>
+            <span
+              style={{
+                fontSize: '0.66rem',
+                padding: '2px 8px',
+                borderRadius: 999,
+                background: 'rgba(168,85,247,0.12)',
+                color: '#c084fc',
+                border: '1px solid rgba(168,85,247,0.25)',
+                fontWeight: 600,
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 4,
+                flexShrink: 0,
+              }}
+            >
+              <span
+                style={{
+                  width: 5,
+                  height: 5,
+                  borderRadius: '50%',
+                  background: '#c084fc',
+                  boxShadow: '0 0 6px #c084fc',
+                }}
+              />
+              {wordCount} words
+            </span>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 6,
+            fontSize: '0.72rem',
+            color: 'var(--muted)',
+            fontWeight: 500,
+            flexShrink: 0,
+          }}
+        >
+          <span>{expanded ? 'Hide thought' : 'View thought'}</span>
+          <motion.span
+            animate={{ rotate: expanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+            style={{ display: 'inline-block', fontSize: '0.65rem', marginLeft: 2 }}
+          >
+            ▼
+          </motion.span>
+        </div>
+      </button>
+
+      {/* Accordion Body */}
+      <AnimatePresence initial={false}>
+        {expanded && (
+          <motion.div
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+            style={{ overflow: 'hidden' }}
+          >
+            <div
+              style={{
+                padding: '12px 14px 14px',
+                borderTop: '1px solid rgba(255,255,255,0.06)',
+                background: 'rgba(0,0,0,0.28)',
+              }}
+            >
+              <div
+                className="prose thinking-prose"
+                style={{
+                  borderLeft: '2px solid rgba(0,210,200,0.4)',
+                  paddingLeft: 12,
+                  fontSize: '0.8rem',
+                  lineHeight: 1.65,
+                  color: 'var(--text-secondary)',
+                  fontFamily: '"Plus Jakarta Sans", sans-serif',
+                  maxHeight: 380,
+                  overflowY: 'auto',
+                  wordBreak: 'break-word',
+                  overflowWrap: 'anywhere',
+                }}
+              >
+                <ReactMarkdown>{thought}</ReactMarkdown>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
 /* ── Typewriter ── */
 function TypewriterText({ text, onDone }: { text: string; onDone?: () => void }) {
   const [displayed, setDisplayed] = useState('');
@@ -466,8 +686,6 @@ function TypewriterText({ text, onDone }: { text: string; onDone?: () => void })
   );
 }
 
-
-
 /* ── Answer Bubble ── */
 function AnswerBubble({
   response,
@@ -485,6 +703,12 @@ function AnswerBubble({
   const handleDone = useCallback(() => {
     setTypeDone(true);
   }, []);
+
+  const parsed = useMemo(() => {
+    return response ? parseThoughtAndAnswer(response.answer) : { thought: null, answer: '' };
+  }, [response]);
+
+  const textToRender = parsed.answer || (parsed.thought ? '' : (response?.answer || ''));
 
   return (
     <div
@@ -513,13 +737,23 @@ function AnswerBubble({
               <span key={tag} style={{ fontSize: '0.67rem', padding: '2px 10px', borderRadius: 999, color: 'var(--muted)', background: 'var(--surface-2)', border: '1px solid var(--border)', fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 500 }}>{tag}</span>
             ))}
           </div>
-          {animate && !typeDone ? (
-            <TypewriterText text={response.answer} onDone={handleDone} />
-          ) : (
-            <div className="prose" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
-              <ReactMarkdown>{response.answer}</ReactMarkdown>
-            </div>
+
+          {/* Thinking Process Accordion */}
+          {parsed.thought && (
+            <ThinkingBlock thought={parsed.thought} defaultExpanded={false} />
           )}
+
+          {/* Clean Main Answer */}
+          {textToRender && (
+            animate && !typeDone ? (
+              <TypewriterText text={textToRender} onDone={handleDone} />
+            ) : (
+              <div className="prose" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+                <ReactMarkdown>{textToRender}</ReactMarkdown>
+              </div>
+            )
+          )}
+
           {(typeDone || !animate) && (
             <SourcesRail sources={response.sources} />
           )}
@@ -616,7 +850,7 @@ function HistoryContent({
           sessionId: sid,
           messages: sorted,
           firstQuery: sorted[0]?.query || 'Untitled Question',
-          lastAnswer: lastMsg?.answer || '',
+          lastAnswer: getCleanAnswerText(lastMsg?.answer || ''),
           mode: sorted[0]?.query_mode || 'global',
           lastAt: lastMsg?.created_at,
         };
@@ -635,7 +869,7 @@ function HistoryContent({
       session.messages.some(
         (m) =>
           m.query?.toLowerCase().includes(s) ||
-          m.answer?.toLowerCase().includes(s) ||
+          getCleanAnswerText(m.answer).toLowerCase().includes(s) ||
           m.query_mode?.toLowerCase().includes(s)
       )
     );
@@ -932,7 +1166,7 @@ export function ChatPage() {
         total_sources_found: 0,
       };
       const assistantMsg: Message = {
-        id: crypto.randomUUID(),
+        id: safeUUID(),
         type: 'assistant',
         content: item.answer,
         response: mockResponse,
@@ -1138,12 +1372,11 @@ export function ChatPage() {
             <Button
               type="submit"
               variant="primary"
-              size="md"
               loading={isLoading}
               disabled={!query.trim() || isLoading}
-              className="flex-shrink-0 self-end"
-            >
-              {isLoading ? 'Asking…' : 'Ask →'}
+              className="flex-shrink-0 self-end h-[46px] sm:h-[52px] px-4 sm:px-6 min-w-[80px] sm:min-w-[105px] text-xs sm:text-sm font-semibold rounded-xl"
+              >
+            {isLoading ? 'Asking…' : 'Ask →'}
             </Button>
           </div>
           <p style={{ textAlign: 'center', fontSize: '0.65rem', color: 'var(--muted)', opacity: 0.6 }}>
