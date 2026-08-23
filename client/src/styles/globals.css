@@ -241,8 +241,59 @@ h1, h2, h3, h4, h5, h6 {
 .prose a { color: var(--accent); }
 .prose code { font-family: ui-monospace, monospace; font-size: 0.83em; background: var(--surface-2); border: 1px solid var(--border); padding: 0.1em 0.38em; border-radius: 4px; }
 .prose pre { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; overflow-x: auto; margin-bottom: 1em; }
-.prose pre code { background: none; border: none; padding: 0; }
 .prose blockquote { border-left: 3px solid var(--accent); padding-left: 1em; color: var(--muted); margin: 1em 0; font-style: italic; }
+
+/* ── THINKING PROCESS STYLING ── */
+.thinking-prose {
+  font-size: 0.81rem;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+.thinking-prose p {
+  margin-bottom: 0.55em;
+}
+.thinking-prose p:last-child {
+  margin-bottom: 0;
+}
+.thinking-prose h1, .thinking-prose h2, .thinking-prose h3 {
+  font-size: 0.88rem;
+  margin: 0.8em 0 0.3em;
+  color: var(--text);
+  font-weight: 600;
+}
+.thinking-prose ul, .thinking-prose ol {
+  padding-left: 1.25em;
+  margin-bottom: 0.55em;
+}
+.thinking-prose li {
+  margin-bottom: 0.2em;
+}
+.thinking-prose code {
+  font-size: 0.76rem;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+}
+.thinking-prose pre {
+  padding: 0.6rem 0.8rem;
+  margin-bottom: 0.6em;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  overflow-x: auto;
+}
+.thinking-prose pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+.thinking-prose blockquote {
+  border-left: 2px solid var(--accent);
+  padding-left: 0.75rem;
+  margin: 0.5em 0;
+  color: var(--muted);
+}
 
 /* ── RESPONSIVE ── */
 @media (max-width: 768px) { .hide-mobile { display: none !important; } }
