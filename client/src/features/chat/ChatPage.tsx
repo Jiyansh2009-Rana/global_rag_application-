@@ -1011,12 +1011,19 @@ export function ChatPage() {
           WebkitBackdropFilter: 'var(--glass-blur)',
         }}
       >
-        <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleSubmit();
+          }}
+          style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}
+        >
           {/* Mode pills + settings + history */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {(['global', 'local', 'both'] as const).map((m) => (
               <button
                 key={m}
+                type="button"
                 onClick={() => setMode(m)}
                 style={{
                   padding: '5px 14px', borderRadius: 999, fontSize: '0.74rem', fontWeight: 500,
@@ -1036,6 +1043,7 @@ export function ChatPage() {
             {/* New Chat Button */}
             {messages.length > 0 && (
               <button
+                type="button"
                 onClick={handleNewChat}
                 style={{
                   display: 'flex', alignItems: 'center', gap: 6,
@@ -1054,6 +1062,7 @@ export function ChatPage() {
 
             {/* History Button */}
             <button
+              type="button"
               onClick={() => setHistoryOpen(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
@@ -1071,6 +1080,7 @@ export function ChatPage() {
 
             {/* Settings Button */}
             <button
+              type="button"
               onClick={() => setSettingsOpen(true)}
               style={{
                 display: 'flex', alignItems: 'center', gap: 6,
@@ -1092,8 +1102,13 @@ export function ChatPage() {
             <textarea
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={(e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void handleSubmit(); }}
-              placeholder="Ask anything about your documents… (⌘↵ to send)"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  void handleSubmit();
+                }
+              }}
+              placeholder="Ask anything about your documents… (Enter to send, Shift+Enter for new line)"
               rows={2}
               disabled={isLoading}
               style={{
@@ -1108,11 +1123,11 @@ export function ChatPage() {
               onBlur={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.boxShadow = 'none'; }}
             />
             <Button
+              type="submit"
               variant="primary"
               size="md"
               loading={isLoading}
               disabled={!query.trim() || isLoading}
-              onClick={() => void handleSubmit()}
               className="flex-shrink-0 self-end"
             >
               {isLoading ? 'Asking…' : 'Ask →'}
@@ -1121,17 +1136,17 @@ export function ChatPage() {
           <p style={{ textAlign: 'center', fontSize: '0.65rem', color: 'var(--muted)', opacity: 0.6 }}>
             Answers are grounded in your indexed documents only.
           </p>
-        </div>
+        </form>
       </div>
 
       {/* Settings Sheet */}
       <Sheet open={settingsOpen} onClose={() => setSettingsOpen(false)} title="Retrieval Settings" width="360px">
-        <SettingsContent settings={settings} onChange={setSettings} />
+        {settingsOpen && <SettingsContent settings={settings} onChange={setSettings} />}
       </Sheet>
 
       {/* History Sheet */}
       <Sheet open={historyOpen} onClose={() => setHistoryOpen(false)} title="Chat History" width="400px">
-        <HistoryContent onSelectSession={handleSelectSession} />
+        {historyOpen && <HistoryContent onSelectSession={handleSelectSession} />}
       </Sheet>
     </div>
   );
