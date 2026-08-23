@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useContextHooks';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { getOrgUsers, deleteOrgUser, getOrgDocuments, deleteOrgDocument } from '@/api/admin';
+import { getOrgUsers, deleteOrgUser, getOrgDocuments, deleteOrgDocument, getGlobalUploadSetting, updateGlobalUploadSetting } from '@/api/admin';
 import { parseApiError } from '@/api/client';
 import type { OrgUser, OrgDocument } from '@/api/types';
 
@@ -19,20 +19,20 @@ const glassPanel = {
 } as const;
 
 /* ─── capability matrix ─── */
-const ROLE_MATRIX = [
+const BASE_ROLE_MATRIX = [
   { capability: 'Query global index',         user: true,  admin: true,  superAdmin: true  },
   { capability: 'Query local session index',  user: true,  admin: true,  superAdmin: true  },
   { capability: 'Upload to local session',    user: true,  admin: true,  superAdmin: true  },
-  { capability: 'Upload to global org index', user: false, admin: true,  superAdmin: true  },
+  { capability: 'Upload to global org index', user: false, admin: true,  superAdmin: true, configurable: true },
   { capability: 'View admin panel',           user: false, admin: true,  superAdmin: true  },
   { capability: 'Manage all organisations',   user: false, admin: false, superAdmin: true  },
   { capability: 'Assign Super Admin role',    user: false, admin: false, superAdmin: true  },
 ];
 
 /* ── helpers ── */
-function Tick({ yes }: { yes: boolean }) {
+function Tick({ yes, note }: { yes: boolean; note?: string }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
       <span style={{
         fontSize: yes ? '1.05rem' : '0.85rem',
         color: yes ? 'var(--success)' : 'var(--border)',
@@ -41,6 +41,11 @@ function Tick({ yes }: { yes: boolean }) {
       }}>
         {yes ? '✓' : '—'}
       </span>
+      {note && (
+        <span style={{ fontSize: '0.62rem', color: yes ? 'var(--accent)' : 'var(--muted)', opacity: 0.8 }}>
+          {note}
+        </span>
+      )}
     </div>
   );
 }
@@ -66,6 +71,105 @@ function SectionCard({ children, title, subtitle, delay = 0 }: {
       </div>
       {children}
     </motion.div>
+  );
+}
+
+/* ── Global Upload Permission Card ── */
+function GlobalUploadSettingsCard({
+  allowed,
+  onSettingChange,
+}: {
+  allowed: boolean;
+  onSettingChange: (newVal: boolean) => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [statusMsg, setStatusMsg] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+
+  const handleToggle = async () => {
+    const nextVal = !allowed;
+    setSaving(true);
+    setStatusMsg(null);
+    try {
+      await updateGlobalUploadSetting(nextVal);
+      onSettingChange(nextVal);
+      setStatusMsg({
+        msg: nextVal
+          ? 'Global upload enabled for standard users.'
+          : 'Global upload disabled for standard users (Admins only).',
+        type: 'success',
+      });
+    } catch (err) {
+      setStatusMsg({ msg: parseApiError(err), type: 'error' });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <SectionCard
+      title="Global Upload Policy"
+      subtitle="Configure whether standard users in your organisation can upload documents to the permanent Global Index"
+      delay={0.07}
+    >
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <AnimatePresence>
+          {statusMsg && <StatusMsg msg={statusMsg.msg} type={statusMsg.type} />}
+        </AnimatePresence>
+
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '1.25rem 1.5rem',
+          borderRadius: 14,
+          background: 'rgba(255,255,255,0.038)',
+          border: '1px solid rgba(0,210,200,0.12)',
+          borderTopColor: 'rgba(255,255,255,0.12)',
+          gap: 16,
+          flexWrap: 'wrap',
+        }}>
+          <div style={{ flex: 1, minWidth: 240 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+              <span style={{ fontSize: '1rem', color: 'var(--accent)' }}>🌐</span>
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)' }}>
+                Allow Standard Users Global Upload
+              </span>
+              <span style={{
+                fontSize: '0.68rem',
+                fontWeight: 600,
+                padding: '2px 8px',
+                borderRadius: 999,
+                background: allowed ? 'var(--success-dim)' : 'var(--danger-dim)',
+                color: allowed ? 'var(--success)' : 'var(--danger)',
+                border: `1px solid ${allowed ? 'rgba(52,211,153,0.3)' : 'rgba(248,113,113,0.3)'}`,
+              }}>
+                {allowed ? 'Enabled' : 'Disabled (Admin Only)'}
+              </span>
+            </div>
+            <p style={{ fontSize: '0.75rem', color: 'var(--muted)', lineHeight: 1.5, margin: 0 }}>
+              {allowed
+                ? 'Standard users can index documents globally into Neon DB. All organisation members can search and query these documents.'
+                : 'Only Admins and Super Admins can upload to the Global Org Index. Standard users can only upload to private 1-hour session index (Redis).'}
+            </p>
+          </div>
+
+          <Button
+            variant={allowed ? 'ghost' : 'primary'}
+            size="sm"
+            loading={saving || loading}
+            onClick={handleToggle}
+            style={{
+              flexShrink: 0,
+              minWidth: 145,
+              ...(allowed ? { color: 'var(--danger)', borderColor: 'rgba(248,113,113,0.35)' } : {}),
+            }}
+          >
+            {allowed ? 'Disable for Users' : 'Enable for Users'}
+          </Button>
+        </div>
+      </div>
+    </SectionCard>
   );
 }
 
@@ -151,6 +255,13 @@ function ConfirmDialog({
 ════════════════════════════════════════════════════════════════════════ */
 function OverviewTab() {
   const { user, role } = useAuth();
+  const [globalUploadAllowed, setGlobalUploadAllowed] = useState(false);
+
+  useEffect(() => {
+    getGlobalUploadSetting()
+      .then(res => setGlobalUploadAllowed(res.allow_user_global_upload))
+      .catch(() => {});
+  }, []);
 
   const orgCards = [
     { label: 'Organisation', value: user?.org_id ?? '—', icon: '⊞' },
@@ -161,6 +272,17 @@ function OverviewTab() {
       icon: '⌖',
     },
   ];
+
+  const roleMatrix = BASE_ROLE_MATRIX.map(row => {
+    if (row.configurable) {
+      return {
+        ...row,
+        user: globalUploadAllowed,
+        userNote: globalUploadAllowed ? '(Enabled)' : '(Disabled)',
+      };
+    }
+    return { ...row, userNote: undefined };
+  });
 
   const systemInfo = [
     { label: 'Vector Store',     value: 'pgvector on Neon (global) · Redis (session)',              icon: '◆' },
@@ -192,6 +314,12 @@ function OverviewTab() {
         </div>
       </SectionCard>
 
+      {/* Global Upload Policy Config */}
+      <GlobalUploadSettingsCard
+        allowed={globalUploadAllowed}
+        onSettingChange={setGlobalUploadAllowed}
+      />
+
       {/* Role matrix */}
       <SectionCard title="Role Capability Matrix" subtitle="What each role is permitted to do" delay={0.09}>
         <div style={{ overflowX: 'auto' }}>
@@ -207,14 +335,14 @@ function OverviewTab() {
               </tr>
             </thead>
             <tbody>
-              {ROLE_MATRIX.map((row, i) => (
+              {roleMatrix.map((row, i) => (
                 <tr key={row.capability}
-                  style={{ borderBottom: i < ROLE_MATRIX.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', background: i % 2 === 0 ? 'rgba(255,255,255,0.012)' : 'transparent', transition: 'background 0.15s' }}
+                  style={{ borderBottom: i < roleMatrix.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', background: i % 2 === 0 ? 'rgba(255,255,255,0.012)' : 'transparent', transition: 'background 0.15s' }}
                   onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(0,210,200,0.04)'}
                   onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = i % 2 === 0 ? 'rgba(255,255,255,0.012)' : 'transparent'}
                 >
                   <td style={{ padding: '13px 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{row.capability}</td>
-                  <td style={{ padding: '13px 8px' }}><Tick yes={row.user} /></td>
+                  <td style={{ padding: '13px 8px' }}><Tick yes={row.user} note={row.userNote} /></td>
                   <td style={{ padding: '13px 8px' }}><Tick yes={row.admin} /></td>
                   <td style={{ padding: '13px 8px' }}><Tick yes={row.superAdmin} /></td>
                 </tr>

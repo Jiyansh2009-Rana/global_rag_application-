@@ -3,6 +3,7 @@ import io
 import json
 import hashlib
 import base64
+import mimetypes
 from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import List, Optional, Dict,Literal, Any,Union
@@ -123,12 +124,19 @@ class UploadMode(str, Enum):
     GLOBAL = "global"
     LOCAL = "local"    
 
+class OrgSettingsUpdate(BaseModel):
+    allow_user_global_upload: bool
+
+class OrgSettingsResponse(BaseModel):
+    org_id: str
+    allow_user_global_upload: bool
+
 class UserSignup(BaseModel):
     email: EmailStr
     password: str = Field(..., min_length=8)
-    org_id: Optional[str] = None
+    org_id: str
     tenant_id: Optional[str] = None
-    Role: Optional[str] = None 
+    Role : str 
 
 class UserLogin(BaseModel):
     email: EmailStr
@@ -298,6 +306,23 @@ def recursive_chunking(text: str) -> List[str]:
     )
     chunks = recursive_splitter.split_text(text)
     return chunks 
+
+def check_org_global_upload_setting(org_id: str) -> bool:
+    if not supabase_client:
+        return False
+    try:
+        response = (
+            supabase_client.table("organization_settings")
+            .select("allow_user_global_upload")
+            .eq("org_id", org_id)
+            .execute()
+        )
+        if response.data:
+            return response.data[0].get("allow_user_global_upload", False)
+    except Exception as e:
+        print(f"Error checking org settings: {e}")
+    return False
+
 
 def docx_chunking(text: str, max_chunk_size: int = 1500) -> List[str]:
     chunks = []
@@ -504,13 +529,25 @@ def extract_plainfile_text(file_bytes : bytes):
         
 ALLOWED_IMAGE_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/gif", "image/webp"}
 
-def read_image_to_base64(file_bytes: bytes, content_type: str) -> str:
+IMAGE_EXTENSIONS = {
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+}
+
+def get_image_mime_type(filename: str) -> str:
+    ext = os.path.splitext(filename.lower())[1]
+    return IMAGE_EXTENSIONS.get(ext, mimetypes.guess_type(filename)[0] or "image/jpeg")
+
+def read_image_to_base64(file_bytes: bytes, content_type: str) -> tuple[str, int]:
     if content_type not in ALLOWED_IMAGE_TYPES:
         raise HTTPException(status_code=400, detail=f"Unsupported image type: {content_type}. Allowed: {ALLOWED_IMAGE_TYPES}")
     try:
         base64_encoded = base64.b64encode(file_bytes).decode("utf-8")
         data_url = f"data:{content_type};base64,{base64_encoded}"
-        return data_url ,1
+        return data_url, 1
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Image encoding failed: {str(e)}")    
 
@@ -528,13 +565,16 @@ def extract_text_by_type(doc_type: DocumentType, file_bytes: bytes, filename: st
     elif doc_type == DocumentType.HTML:
         return extract_html_text(file_bytes)
     elif doc_type == DocumentType.IMAGE:
-        return read_image_to_base64(file_bytes , doc_type)
+        mime_type = get_image_mime_type(filename)
+        return read_image_to_base64(file_bytes, mime_type)
     else:
         text = file_bytes.decode('utf-8', errors='ignore')
         return text, 1
 
 def chunk_by_type(doc_type: DocumentType, text: str) -> List[str]:
-    if doc_type == DocumentType.PLAIN_TEXT:
+    if doc_type == DocumentType.IMAGE:
+        return [text]
+    elif doc_type == DocumentType.PLAIN_TEXT:
         return sentence_chunking(text)
     elif doc_type in [DocumentType.PDF_TEXT, DocumentType.PDF_SCANNED]:
         return recursive_chunking(text)
@@ -911,8 +951,9 @@ def run_delta_management(
                 pages_skipped += 1
                 continue
 
-            page_chunks = chunk_by_type(doc_type, page_text)
-            embeddings = get_jina_embeddings(page_chunks)
+            is_image = doc_type == DocumentType.IMAGE
+            page_chunks = [page_text] if is_image else chunk_by_type(doc_type, page_text)
+            embeddings = get_jina_embeddings(page_chunks, is_image=is_image)
 
             conn = get_neon_connection()
             if conn:
@@ -979,8 +1020,9 @@ def run_delta_management(
                     
                     for page_num, page_text in enumerate(pages, start=1):
                         p_hash = page_hash(page_text)
-                        page_chunks = chunk_by_type(doc_type, page_text)
-                        embeddings = get_jina_embeddings(page_chunks)
+                        is_image = doc_type == DocumentType.IMAGE
+                        page_chunks = [page_text] if is_image else chunk_by_type(doc_type, page_text)
+                        embeddings = get_jina_embeddings(page_chunks, is_image=is_image)
                         page_chunk_ids: List[str] = []
 
                         for idx, (chunk_text, embedding) in enumerate(
@@ -1243,9 +1285,15 @@ def generate_llm_answer(
         )
     context_parts = []
     for i, chunk in enumerate(context_chunks, start=1):
-        context_parts.append(
-            f"[Source {i} | {chunk['document_name']} | Page {chunk['page_number']}]\n{chunk['text']}"
-        )
+        chunk_text = chunk.get('text', '')
+        if isinstance(chunk_text, str) and chunk_text.startswith('data:image/'):
+            context_parts.append(
+                f"[Source {i} | Image: {chunk['document_name']}]\n(Image document matched via multimodal visual embedding: {chunk['document_name']})"
+            )
+        else:
+            context_parts.append(
+                f"[Source {i} | {chunk['document_name']} | Page {chunk['page_number']}]\n{chunk_text}"
+            )
     context_text = "\n\n---\n\n".join(context_parts)
     lang_instruction = LANGUAGE_INSTRUCTION.get(language, "Answer in English.")
     base_prompt      = system_prompt or DEFAULT_SYSTEM_PROMPT
@@ -1416,10 +1464,11 @@ async def get_upload_consent(
 ):
     if upload_mode == UploadMode.GLOBAL:
         if current_user.role not in [Role.ADMIN, Role.SUPER_ADMIN]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Only Admins and Super Admins can perform Global uploads."
-            )
+            if not check_org_global_upload_setting(current_user.org_id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Global uploads are disabled for standard users. Contact your Admin."
+                )
         return ConsentMessage(
             upload_mode=UploadMode.GLOBAL, title="Global Upload Selected",
             message=("You have selected Global Upload. Your document will be permanently stored and made available to all authorised users within your organisation. It will remain accessible until manually removed by an Admin. Please ensure the document complies with your organisation's data retention and compliance policies."),
@@ -1444,9 +1493,11 @@ async def upload_document(
 
     if upload_mode == UploadMode.GLOBAL:
         if current_user.role not in [Role.ADMIN, Role.SUPER_ADMIN]:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, detail="Global uploads require Admin or Super Admin role."
-            )
+            if not check_org_global_upload_setting(current_user.org_id):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN, 
+                    detail="Global uploads are disabled for standard users. Contact your Admin."
+                )
 
     org_id = current_user.org_id
     if not org_id:
@@ -1549,8 +1600,10 @@ async def get_global_document(doc_id: str, current_user: TokenClaims = Depends(g
     path = f"{org_id}/{doc_id}/{filename}"
     try:
         file_data = supabase_client.storage.from_("global_documents").download(path)
+        media_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
         return Response(
             content=file_data, 
+            media_type=media_type,
             headers={"Content-Disposition": f'inline; filename="{filename}"'}
         )
     except Exception as e:
@@ -1568,9 +1621,11 @@ async def get_local_document(doc_id: str, current_user: TokenClaims = Depends(ge
     data = json.loads(raw)
     file_bytes = base64.b64decode(data["data"])
     filename = data["filename"]
+    media_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
     
     return Response(
         content=file_bytes, 
+        media_type=media_type,
         headers={"Content-Disposition": f'inline; filename="{filename}"'}
     )
 
@@ -1666,6 +1721,12 @@ async def query_rag(
         if c["document_name"].lower().endswith(".pdf"):
             doc_url += f"#page={c['page_number']}"
 
+        raw_chunk_text = c.get("text", "")
+        if isinstance(raw_chunk_text, str) and raw_chunk_text.startswith("data:image/"):
+            preview_text = f"[Image Document: {c['document_name']}]"
+        else:
+            preview_text = raw_chunk_text[:200]
+
         sources.append(
             SourceResult(
                 chunk_id=c["chunk_id"], 
@@ -1674,7 +1735,7 @@ async def query_rag(
                 page_number=c["page_number"], 
                 chunk_index=c["chunk_index"], 
                 similarity_score=round(c["similarity_score"], 4),
-                text_preview=c["text"][:200], 
+                text_preview=preview_text, 
                 org_id=c["org_id"], 
                 upload_mode=c["upload_mode"],
                 document_url=doc_url
@@ -1709,6 +1770,38 @@ async def get_organization_users(current_user: TokenClaims = Depends(admin_only)
         raise HTTPException(status_code=500, detail=f"Failed to fetch users: {e}")
 
 
+@app.get("/api/v1/admin/settings/global-upload", response_model=OrgSettingsResponse, tags=["Admin"])
+async def get_global_upload_setting(current_user: TokenClaims = Depends(any_auth_user)):
+
+    is_allowed = check_org_global_upload_setting(current_user.org_id)
+    return OrgSettingsResponse(
+        org_id=current_user.org_id, 
+        allow_user_global_upload=is_allowed
+    )
+
+@app.post("/api/v1/admin/settings/global-upload", tags=["Admin"])
+async def configure_global_upload(
+    payload: OrgSettingsUpdate,
+    current_user: TokenClaims = Depends(admin_only)
+):
+    """Allows an Admin to toggle global upload access for standard users."""
+    if not supabase_client:
+        raise HTTPException(status_code=500, detail="Supabase client not initialized")
+    
+    try:
+        supabase_client.table("organization_settings").upsert({
+            "org_id": current_user.org_id,
+            "allow_user_global_upload": payload.allow_user_global_upload,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }).execute()
+        
+        return {
+            "message": "Global upload configuration updated successfully.", 
+            "allow_user_global_upload": payload.allow_user_global_upload
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update global upload settings: {e}")
+    
 @app.delete("/api/v1/admin/users/{target_user_id}", tags=["Admin"])
 async def delete_organization_user(
     target_user_id: str, 

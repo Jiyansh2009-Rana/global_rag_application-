@@ -84,10 +84,22 @@ export const SignupPayloadSchema = z.object({
   email: z.string().email('Enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   Role: z.enum(['User', 'Admin', 'Super Admin']).default('User'),
-  org_id: z.string().optional(),
+  org_id: z.string().min(1, 'Organisation ID is required'),
   tenant_id: z.string().optional(),
 });
 export type SignupPayload = z.infer<typeof SignupPayloadSchema>;
+
+/* ── Org Settings ── */
+export const OrgSettingsResponseSchema = z.object({
+  org_id: z.string(),
+  allow_user_global_upload: z.boolean(),
+});
+export type OrgSettingsResponse = z.infer<typeof OrgSettingsResponseSchema>;
+
+export const OrgSettingsUpdateSchema = z.object({
+  allow_user_global_upload: z.boolean(),
+});
+export type OrgSettingsUpdate = z.infer<typeof OrgSettingsUpdateSchema>;
 
 /* ── Login ── */
 export const LoginPayloadSchema = z.object({

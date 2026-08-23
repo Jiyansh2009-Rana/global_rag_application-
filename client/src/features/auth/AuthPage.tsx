@@ -85,7 +85,7 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
     setApiError(null); setRoleError(null);
     const payload = {
       ...data,
-      org_id:    data.org_id?.trim()    || undefined,
+      org_id:    data.org_id.trim(),
       tenant_id: data.tenant_id?.trim() || undefined,
     };
     try {
@@ -108,7 +108,7 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
         autoComplete="email" error={errors.email?.message} {...register('email')} />
       <Input label="Password" type="password" placeholder="At least 8 characters"
         autoComplete="new-password" error={errors.password?.message} {...register('password')} />
-      <Input label="Organisation ID" type="text" placeholder="acme-corp (optional)"
+      <Input label="Organisation ID" type="text" placeholder="e.g. acme-corp"
         error={errors.org_id?.message} {...register('org_id')} />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <Select label="Role" error={roleError ?? errors.Role?.message} {...register('Role')}>

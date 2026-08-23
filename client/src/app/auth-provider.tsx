@@ -17,7 +17,7 @@ interface AuthContextValue {
     email: string;
     password: string;
     Role: Role;
-    org_id?: string;
+    org_id: string;
     tenant_id?: string;
   }) => Promise<void>;
   signOut: () => Promise<void>;
@@ -92,7 +92,7 @@ export function AuthProvider({
     email: string;
     password: string;
     Role: Role;
-    org_id?: string;
+    org_id: string;
     tenant_id?: string;
   }) => {
     await authApi.signup(payload);

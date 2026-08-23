@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useContextHooks';
 import { getConsent, uploadDocumentXHR } from '@/api/upload';
+import { getGlobalUploadSetting } from '@/api/admin';
 import { parseApiError, tokenStore } from '@/api/client';
 import type { ConsentResponse, UploadReport } from '@/api/types';
 import { Button } from '@/components/ui/Button';
@@ -183,7 +184,7 @@ function Dropzone({ file, onFile }: { file: File | null; onFile: (f: File) => vo
         type="file"
         style={{ position: 'absolute', inset: 0, opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
         onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); }}
-        accept=".pdf,.docx,.xlsx,.pptx,.txt,.html,.png,.jpg,.jpeg"
+        accept=".pdf,.docx,.xlsx,.pptx,.txt,.html,.png,.jpg,.jpeg,.gif,.webp"
       />
 
       {/* Icon */}
@@ -201,7 +202,7 @@ function Dropzone({ file, onFile }: { file: File | null; onFile: (f: File) => vo
       <div style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.5 }}>
         {file
           ? `${(file.size / 1024).toFixed(1)} KB · ${file.type || 'unknown type'}`
-          : 'PDF, DOCX, XLSX, PPTX, TXT, HTML, PNG, JPG'
+          : 'PDF, DOCX, XLSX, PPTX, TXT, HTML, PNG, JPG, GIF, WEBP'
         }
       </div>
 
@@ -222,6 +223,7 @@ export function UploadPage() {
   const { isAdmin } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [mode, setMode] = useState<UploadMode>('local');
+  const [canUserGlobalUpload, setCanUserGlobalUpload] = useState(false);
   const [consent, setConsent] = useState<ConsentResponse | null>(null);
   const [consentLoading, setConsentLoading] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
@@ -229,6 +231,20 @@ export function UploadPage() {
   const [progress, setProgress] = useState(0);
   const [report, setReport] = useState<UploadReport | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    getGlobalUploadSetting()
+      .then(res => setCanUserGlobalUpload(res.allow_user_global_upload))
+      .catch(() => setCanUserGlobalUpload(false));
+  }, []);
+
+  const isGlobalAllowed = isAdmin || canUserGlobalUpload;
+
+  useEffect(() => {
+    if (mode === 'global' && !isGlobalAllowed) {
+      setMode('local');
+    }
+  }, [mode, isGlobalAllowed]);
 
   const fetchConsent = useCallback(async (m: UploadMode) => {
     setConsentLoading(true); setConsent(null); setConfirmed(false); setError(null);
@@ -254,9 +270,27 @@ export function UploadPage() {
     }
   };
 
-  const MODES: { key: UploadMode; title: string; desc: string; icon: string; adminOnly?: boolean }[] = [
-    { key: 'local',  icon: '💾', title: 'Local Session',  desc: 'Private to you · 1-hour TTL · Redis' },
-    { key: 'global', icon: '🌐', title: 'Global Org',     desc: 'Shared with org · Permanent · Neon DB', adminOnly: true },
+  const MODES: {
+    key: UploadMode;
+    title: string;
+    desc: string;
+    icon: string;
+    disabled?: boolean;
+    badge?: { text: string; type: 'admin' | 'enabled' };
+  }[] = [
+    { key: 'local', icon: '💾', title: 'Local Session', desc: 'Private to you · 1-hour TTL · Redis' },
+    {
+      key: 'global',
+      icon: '🌐',
+      title: 'Global Org',
+      desc: 'Shared with org · Permanent · Neon DB',
+      disabled: !isGlobalAllowed,
+      badge: !isGlobalAllowed
+        ? { text: 'Admin only', type: 'admin' }
+        : !isAdmin
+        ? { text: 'Enabled by Admin', type: 'enabled' }
+        : undefined,
+    },
   ];
 
   return (
@@ -315,14 +349,13 @@ export function UploadPage() {
           initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.09 }}
           style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}
         >
-          {MODES.map(({ key, icon, title, desc, adminOnly }) => {
-            const disabled = adminOnly && !isAdmin;
+          {MODES.map(({ key, icon, title, desc, disabled, badge }) => {
             const selected = mode === key;
             return (
               <div
                 key={key}
                 onClick={() => !disabled && setMode(key)}
-                title={disabled ? 'Requires Admin or Super Admin role' : undefined}
+                title={disabled ? 'Global upload is disabled for standard users by your Admin.' : undefined}
                 style={{
                   padding: '1.5rem 1.75rem',
                   textAlign: 'center',
@@ -369,16 +402,17 @@ export function UploadPage() {
                   {title}
                 </div>
                 <div style={{ fontSize: '0.75rem', color: 'var(--muted)', lineHeight: 1.5 }}>{desc}</div>
-                {disabled && (
+                {badge && (
                   <div style={{
                     marginTop: 10, fontSize: '0.68rem',
-                    color: 'var(--danger)', fontWeight: 600,
+                    fontWeight: 600,
                     padding: '3px 10px', borderRadius: 999,
                     display: 'inline-block',
-                    background: 'var(--danger-dim)',
-                    border: '1px solid rgba(248,113,113,0.20)',
+                    background: badge.type === 'admin' ? 'var(--danger-dim)' : 'var(--accent-dim)',
+                    color: badge.type === 'admin' ? 'var(--danger)' : 'var(--accent)',
+                    border: `1px solid ${badge.type === 'admin' ? 'rgba(248,113,113,0.20)' : 'var(--border-accent)'}`,
                   }}>
-                    Admin only
+                    {badge.text}
                   </div>
                 )}
               </div>
