@@ -35,7 +35,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor 
 from dotenv import load_dotenv
 from langchain_groq import ChatGroq
-from langchain.schema import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage
 from fastapi.responses import StreamingResponse
 import asyncio
 
@@ -1849,14 +1849,22 @@ async def upload_document(
     else:
         store_raw_file_local_redis(current_user.user_id, doc_id, filename, file_bytes)
 
+    # 2. Move EVERYTHING else inside the generator
     async def process_and_stream_upload():
-        
         yield f"data: {json.dumps({'status': 'extracting_text', 'message': 'Running OCR and extracting text. This may take a moment for large files...'})}\n\n"
         
+        # 3. Wrap the synchronous extraction in an asyncio Task
+        extraction_task = asyncio.create_task(
+            asyncio.to_thread(extract_text_by_type, doc_type, file_bytes, filename)
+        )
+
+        # 4. Heartbeat Loop: Yield empty comments to keep Nginx alive
+        while not extraction_task.done():
+            yield ": heartbeat\n\n" # The browser ignores this, but it prevents the 110 timeout
+            await asyncio.sleep(15)
+
         try:
-            raw_text, total_pages = await asyncio.to_thread(
-                extract_text_by_type, doc_type, file_bytes, filename
-            )
+            raw_text, total_pages = extraction_task.result()
         except Exception as e:
             yield f"data: {json.dumps({'status': 'error', 'message': f'Extraction failed: {e}'})}\n\n"
             return
@@ -1865,6 +1873,7 @@ async def upload_document(
         
         yield f"data: {json.dumps({'status': 'extraction_complete', 'total_pages': len(pages), 'filename': filename})}\n\n"
         
+        # --- LOCAL DELTA MANAGEMENT (Alias Tracking) ---
         if upload_mode == UploadMode.LOCAL:
             existing_doc_raw = check_file_hash_local_redis(current_user.user_id, file_hash_val)
             if existing_doc_raw:
@@ -1879,6 +1888,7 @@ async def upload_document(
             else:
                 store_file_hash_local_redis(current_user.user_id, file_hash_val, doc_id, filename)
 
+        # Process Sets
         page_sets = split_pages_into_sets(pages, PAGES_PER_SET)
         total_chunks = 0
         
@@ -1905,7 +1915,16 @@ async def upload_document(
             
         yield f"data: {json.dumps({'status': 'upload_complete', 'doc_id': doc_id, 'total_chunks': total_chunks})}\n\n"
 
-    return StreamingResponse(process_and_stream_upload(), media_type="text/event-stream")                                                                                                                                                                                                                         
+    # 5. Add headers to disable Nginx buffering
+    return StreamingResponse(
+        process_and_stream_upload(), 
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )                                                                                                                                                                                                                         
 
 
 @app.get("/api/v1/documents/global/{doc_id}", tags=["Documents"])

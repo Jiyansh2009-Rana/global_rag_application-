@@ -1271,9 +1271,9 @@ export function ChatPage() {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 60px)', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 60px - var(--bottom-tab-h, 0px))', fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
       {/* Thread */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem 1rem 1rem' }}>
+      <div style={{ flex: 1, overflowY: 'auto', padding: '1rem 0.75rem 0.75rem' }}>
         <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
           {/* ── History View Banner ── */}
@@ -1307,7 +1307,7 @@ export function ChatPage() {
               <motion.div key={msg.id} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }}>
                 {msg.type === 'user' && (
                   <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <div style={{ maxWidth: '74%', padding: '10px 16px', borderRadius: '18px 18px 4px 18px', fontSize: '0.88rem', lineHeight: 1.6, background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', color: 'var(--accent-fg)', fontWeight: 500 }}>
+                    <div style={{ maxWidth: '82%', padding: '10px 16px', borderRadius: '18px 18px 4px 18px', fontSize: '0.88rem', lineHeight: 1.6, background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', color: 'var(--accent-fg)', fontWeight: 500 }}>
                       {msg.content}
                     </div>
                   </div>
@@ -1345,7 +1345,7 @@ export function ChatPage() {
           borderRadius: 0,
           borderLeft: 'none', borderRight: 'none', borderBottom: 'none',
           borderTop: '1px solid var(--border)',
-          padding: '1rem 1.25rem 1.25rem',
+          padding: '0.75rem 1rem 1rem',
           backdropFilter: 'var(--glass-blur)',
           WebkitBackdropFilter: 'var(--glass-blur)',
         }}
@@ -1357,17 +1357,17 @@ export function ChatPage() {
           }}
           style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 10 }}
         >
-          {/* Mode pills + settings + history */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {/* Mode pills + settings + history (horizontally scrollable on small screens) */}
+          <div className="mode-pills-scrollable" style={{ display: 'flex', alignItems: 'center', gap: 6, width: '100%' }}>
             {(['global', 'local', 'both'] as const).map((m) => (
               <button
                 key={m}
                 type="button"
                 onClick={() => setMode(m)}
                 style={{
-                  padding: '5px 14px', borderRadius: 999, fontSize: '0.74rem', fontWeight: 500,
+                  padding: '5px 12px', borderRadius: 999, fontSize: '0.74rem', fontWeight: 500,
                   cursor: 'pointer', transition: 'all 0.18s',
-                  fontFamily: 'inherit',
+                  fontFamily: 'inherit', flexShrink: 0,
                   background: mode === m ? 'var(--accent)' : 'var(--surface-2)',
                   color: mode === m ? 'var(--accent-fg)' : 'var(--muted)',
                   border: mode === m ? 'none' : '1px solid var(--border)',
@@ -1377,7 +1377,7 @@ export function ChatPage() {
                 {m === 'global' ? '🌐 Global' : m === 'local' ? '💾 Local' : '🔀 Both'}
               </button>
             ))}
-            <div style={{ flex: 1 }} />
+            <div style={{ flex: 1, minWidth: 8 }} />
 
             {/* New Chat Button */}
             {messages.length > 0 && (
@@ -1385,17 +1385,17 @@ export function ChatPage() {
                 type="button"
                 onClick={handleNewChat}
                 style={{
-                  display: 'flex', alignItems: 'center', gap: 6,
-                  padding: '5px 12px', borderRadius: 10,
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  padding: '5px 10px', borderRadius: 10,
                   fontSize: '0.74rem', color: 'var(--muted)',
                   background: 'transparent', border: '1px solid var(--border)',
                   cursor: 'pointer', transition: 'all 0.18s',
-                  fontFamily: 'inherit',
+                  fontFamily: 'inherit', flexShrink: 0,
                 }}
                 onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text)'; (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)'; }}
                 onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
               >
-                ✏ New Chat
+                ✏ <span className="hide-mobile">New Chat</span>
               </button>
             )}
 
@@ -1404,17 +1404,17 @@ export function ChatPage() {
               type="button"
               onClick={() => setHistoryOpen(true)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '5px 12px', borderRadius: 10,
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '5px 10px', borderRadius: 10,
                 fontSize: '0.74rem', color: 'var(--muted)',
                 background: 'transparent', border: '1px solid var(--border)',
                 cursor: 'pointer', transition: 'all 0.18s',
-                fontFamily: 'inherit',
+                fontFamily: 'inherit', flexShrink: 0,
               }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text)'; (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
-              📜 History
+              📜 <span className="hide-mobile">History</span>
             </button>
 
             {/* Settings Button */}
@@ -1422,17 +1422,17 @@ export function ChatPage() {
               type="button"
               onClick={() => setSettingsOpen(true)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                padding: '5px 12px', borderRadius: 10,
+                display: 'flex', alignItems: 'center', gap: 5,
+                padding: '5px 10px', borderRadius: 10,
                 fontSize: '0.74rem', color: 'var(--muted)',
                 background: 'transparent', border: '1px solid var(--border)',
                 cursor: 'pointer', transition: 'all 0.18s',
-                fontFamily: 'inherit',
+                fontFamily: 'inherit', flexShrink: 0,
               }}
               onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = 'var(--text)'; (e.currentTarget as HTMLElement).style.background = 'var(--surface-2)'; }}
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = 'var(--muted)'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}
             >
-              ⚙ Settings
+              ⚙ <span className="hide-mobile">Settings</span>
             </button>
           </div>
 

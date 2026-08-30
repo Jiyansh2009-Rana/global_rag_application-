@@ -218,6 +218,10 @@ h1, h2, h3, h4, h5, h6 {
 @keyframes pulseOpacity { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
 @keyframes fadeSlideUp  { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
 @keyframes zigZagPulse  { 0%,100% { stroke-dashoffset: 0; } 50% { stroke-dashoffset: -20; } }
+@keyframes orbFloat     { 0%,100% { transform: translateY(0px);   } 50% { transform: translateY(-12px); } }
+@keyframes orbPulse     { 0%,100% { opacity: 0.7; transform: scale(1);    } 50% { opacity: 1; transform: scale(1.08); } }
+@keyframes ringOrbit    { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+@keyframes ringOrbitRev { from { transform: rotate(0deg); } to { transform: rotate(-360deg); } }
 
 /* ── ZIG-ZAG CONNECTOR LINE ── */
 .zigzag-line {
@@ -295,5 +299,94 @@ h1, h2, h3, h4, h5, h6 {
   color: var(--muted);
 }
 
-/* ── RESPONSIVE ── */
-@media (max-width: 768px) { .hide-mobile { display: none !important; } }
+/* ═══════════════════════════════════════════════════════════════════════════
+   CSS VARIABLES FOR RESPONSIVE LAYOUT
+═══════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Height of mobile bottom tab bar — used in calc() throughout components */
+  --bottom-tab-h: 0px;
+  /* Safe area padding for notched phones */
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* ── Mobile bottom tab bar: hidden on desktop, shown on mobile ── */
+.mobile-bottom-tab { display: none !important; }
+/* Shown-only-on-mobile utility (opposite of hide-mobile) */
+.show-mobile-only   { display: none !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE — 768px (Tablets & Mobile)
+═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 768px) {
+  :root {
+    --bottom-tab-h: calc(64px + env(safe-area-inset-bottom, 0px));
+  }
+
+  html { font-size: 15px; }
+
+  /* Utility classes */
+  .hide-mobile       { display: none !important; }
+  .mobile-bottom-tab { display: flex !important; }
+  .show-mobile-only  { display: flex !important; }
+
+  /* Prevent all horizontal overflow */
+  body { overflow-x: hidden; }
+
+  /* Main content: reserve space for the fixed bottom tab bar */
+  main {
+    padding-bottom: var(--bottom-tab-h) !important;
+  }
+
+  /* Touch targets — all interactive elements at least 44px tall */
+  button, [role="button"], a {
+    min-height: 36px;
+  }
+
+  /* CRITICAL: prevent iOS Safari auto-zoom on input focus (font < 16px triggers zoom) */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+
+  /* Thinner scrollbar on mobile */
+  ::-webkit-scrollbar { width: 2px; height: 2px; }
+
+  /* Prose: slightly smaller on mobile */
+  .prose { font-size: 0.875rem; line-height: 1.72; }
+
+  /* Glass cards: smaller radius on mobile */
+  .glass      { border-radius: 12px; }
+  .glass-card { border-radius: 12px; }
+  .glass-deep { border-radius: 16px; }
+
+  /* Mode pills row: horizontally scrollable, no wrapping */
+  .mode-pills-scrollable {
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    flex-wrap: nowrap !important;
+    padding-bottom: 4px;
+  }
+  .mode-pills-scrollable::-webkit-scrollbar { display: none; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   RESPONSIVE — 480px (Small phones)
+═══════════════════════════════════════════════════════════════════════════ */
+@media (max-width: 480px) {
+  html { font-size: 14px; }
+
+  /* Stack 2-column grids vertically on small phones */
+  .mobile-stack {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Tighter glass padding */
+  .glass      { border-radius: 10px; }
+  .glass-deep { border-radius: 14px; }
+}

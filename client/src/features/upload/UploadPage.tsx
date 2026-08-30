@@ -117,7 +117,7 @@ function FileProgressCard({ state, index }: { state: FileUploadState; index: num
 
       {/* ── Done stats ── */}
       {phase === 'done' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6 }}>
+        <div className="mobile-stack" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6 }}>
           {[
             { label: 'Doc ID',        value: docId ?? '—',           mono: true  },
             { label: 'Chunks Created', value: String(chunksCreated), accent: true },
@@ -270,19 +270,7 @@ export function UploadPage() {
   useEffect(() => { void fetchConsent(mode); }, [mode, fetchConsent]);
 
   const handleFiles = (incoming: File[]) => {
-    setOverLimitWarning(incoming.length >= MAX_FILES && files.length > MAX_FILES - 1); // set if user tried to add too many
-    // We already sliced to MAX_FILES in Dropzone, just track if they exceeded
-    const raw = incoming; // already capped at MAX_FILES by Dropzone
-    setOverLimitWarning(false); // reset; check original selection length via onFiles
-    setFiles(raw);
-    setFileStates([]);
-    setGlobalError(null);
-  };
-
-  // Separate handler that also detects over-limit selections
-  const handleFilesWithWarning = (incoming: File[]) => {
-    // incoming is already sliced to MAX_FILES by Dropzone
-    // We need to know original count — so we check by DataTransfer length via a ref
+    setOverLimitWarning(false);
     setFiles(incoming);
     setFileStates([]);
     setGlobalError(null);
@@ -410,7 +398,7 @@ export function UploadPage() {
   ];
 
   return (
-    <div style={{ minHeight: 'calc(100vh - 60px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '3rem 1.5rem 4rem', overflowY: 'auto' }}>
+    <div style={{ minHeight: 'calc(100vh - 60px)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '2rem 1rem calc(4rem + var(--bottom-tab-h, 0px))', overflowY: 'auto' }}>
       <div style={{ width: '100%', maxWidth: 740, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
         {/* PAGE HEADER */}
@@ -458,13 +446,7 @@ export function UploadPage() {
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
           <Dropzone
             files={files}
-            onFiles={(incoming) => {
-              // If they originally had more than MAX_FILES, detect it here by comparing
-              setOverLimitWarning(false);
-              setFiles(incoming);
-              setFileStates([]);
-              setGlobalError(null);
-            }}
+            onFiles={handleFiles}
             disabled={isUploading}
           />
         </motion.div>
@@ -472,6 +454,7 @@ export function UploadPage() {
         {/* MODE SELECTOR */}
         <motion.div
           initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.09 }}
+          className="mobile-stack"
           style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}
         >
           {MODES.map(({ key, icon, title, desc, disabled, badge }) => {
