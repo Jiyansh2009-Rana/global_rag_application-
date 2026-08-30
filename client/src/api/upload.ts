@@ -1,61 +1,91 @@
-import { tokenStore, apiFetch, BASE_URL } from './client';
-import type { ConsentResponse, UploadReport } from './types';
+import { tokenStore, apiFetch, BASE_URL, onUnauthorized } from './client';
+import type { ConsentResponse, UploadSSEEvent } from './types';
 
 export const getConsent = (upload_mode: 'global' | 'local') =>
   apiFetch<ConsentResponse>(`/upload/consent?upload_mode=${upload_mode}`, { method: 'GET' });
 
-// XHR-based upload with real progress
-export function uploadDocumentXHR(
+/**
+ * Fire an SSE upload request.
+ * Returns the raw Response — the caller must stream it via parseUploadSSEStream().
+ */
+export async function uploadDocumentSSE(
   file: File,
   upload_mode: 'global' | 'local',
   token: string | null,
-  onProgress: (pct: number) => void,
-): Promise<UploadReport> {
-  return new Promise((resolve, reject) => {
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('upload_mode', upload_mode);
-    fd.append('confirmed', 'true');
-
-    const xhr = new XMLHttpRequest();
-    xhr.open('POST', `${BASE_URL}/upload/document`);
-    if (token) xhr.setRequestHeader('Authorization', `Bearer ${token}`);
-
-    xhr.upload.onprogress = (e) => {
-      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
-    };
-
-    xhr.onload = () => {
-      try {
-        const data = JSON.parse(xhr.responseText) as unknown;
-        if (xhr.status >= 200 && xhr.status < 300) {
-          resolve(data as UploadReport);
-        } else {
-          const detail =
-            data && typeof data === 'object' && 'detail' in data
-              ? String((data as Record<string, unknown>)['detail'])
-              : `HTTP ${xhr.status}`;
-          reject(new Error(detail));
-        }
-      } catch {
-        reject(new Error('Failed to parse server response.'));
-      }
-    };
-    xhr.onerror = () => reject(new Error('Network error during upload.'));
-    xhr.send(fd);
-  });
-}
-
-// Simpler fetch-based upload without progress (fallback)
-export const uploadDocumentFetch = (file: File, upload_mode: 'global' | 'local') => {
+): Promise<Response> {
   const fd = new FormData();
   fd.append('file', file);
   fd.append('upload_mode', upload_mode);
   fd.append('confirmed', 'true');
-  const token = tokenStore.get();
-  return apiFetch<UploadReport>('/upload/document', {
+
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE_URL}/upload/document`, {
     method: 'POST',
+    headers,
     body: fd,
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
   });
-};
+
+  if (res.status === 401) {
+    tokenStore.clear();
+    onUnauthorized.notify();
+    throw new Error('Session expired. Please sign in again.');
+  }
+
+  if (!res.ok) {
+    let detail = `HTTP ${res.status}`;
+    try {
+      const text = await res.text();
+      const data = JSON.parse(text) as Record<string, unknown>;
+      if (typeof data['detail'] === 'string') detail = data['detail'];
+    } catch { /* ignore parse errors */ }
+    throw new Error(detail);
+  }
+
+  return res;
+}
+
+/**
+ * Async generator that reads an upload SSE response body and yields
+ * parsed UploadSSEEvent objects. Events are delimited by double newlines
+ * and prefixed with "data: ".
+ */
+export async function* parseUploadSSEStream(
+  res: Response,
+): AsyncGenerator<UploadSSEEvent> {
+  if (!res.body) return;
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      // SSE events are separated by blank lines (\n\n)
+      const chunks = buffer.split('\n\n');
+      buffer = chunks.pop() ?? '';
+      for (const chunk of chunks) {
+        const line = chunk.trim();
+        if (!line.startsWith('data:')) continue;
+        const jsonStr = line.slice(5).trim(); // strip "data:" prefix
+        if (!jsonStr) continue;
+        try {
+          yield JSON.parse(jsonStr) as UploadSSEEvent;
+        } catch { /* skip malformed events */ }
+      }
+    }
+    // Flush any remaining buffer content
+    const remaining = buffer.trim();
+    if (remaining.startsWith('data:')) {
+      const jsonStr = remaining.slice(5).trim();
+      if (jsonStr) {
+        try { yield JSON.parse(jsonStr) as UploadSSEEvent; } catch { /* ignore */ }
+      }
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}

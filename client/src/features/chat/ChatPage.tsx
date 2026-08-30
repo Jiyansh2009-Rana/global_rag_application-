@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
-import { queryApi, downloadFile } from '@/api/query';
+import { queryApi, downloadFile, streamQuery, parseQuerySSEStream } from '@/api/query';
 import { parseApiError } from '@/api/client';
 import type { QueryResponse, Source, QueryRequest, ChatHistoryItem } from '@/api/types';
 import { Button } from '@/components/ui/Button';
@@ -379,6 +379,12 @@ interface Message {
   response?: QueryResponse;
   timestamp: Date;
   animate?: boolean;
+  /** True while the SSE stream for this message is still open. */
+  isStreaming?: boolean;
+  /** Accumulated token text during streaming. */
+  streamingAnswer?: string;
+  /** Sources received from the 'sources' SSE event (arrive before tokens). */
+  streamingSources?: Source[];
 }
 interface RetrievalSettings {
   topK: number;
@@ -692,44 +698,81 @@ function AnswerBubble({
   isLoading,
   stage,
   animate = false,
+  isStreaming,
+  streamingAnswer,
+  streamingSources,
 }: {
   response?: QueryResponse;
   isLoading: boolean;
   stage: Stage;
   animate?: boolean;
+  /** True while the SSE stream is still open (live streaming path). */
+  isStreaming?: boolean;
+  /** Accumulated token string built character-by-character during streaming. */
+  streamingAnswer?: string;
+  /** Sources from the 'sources' SSE event — arrive before tokens. */
+  streamingSources?: Source[];
 }) {
   const [typeDone, setTypeDone] = useState(!animate);
-
-  const handleDone = useCallback(() => {
-    setTypeDone(true);
-  }, []);
+  const handleDone = useCallback(() => setTypeDone(true), []);
 
   const parsed = useMemo(() => {
     return response ? parseThoughtAndAnswer(response.answer) : { thought: null, answer: '' };
   }, [response]);
-
   const textToRender = parsed.answer || (parsed.thought ? '' : (response?.answer || ''));
 
-  return (
-    <div
-      className="glass"
-      style={{
-        padding: '1.25rem 1.5rem',
-        borderRadius: 16,
-        borderColor: 'rgba(0,210,200,0.18)',
-        boxShadow: '0 8px 32px rgba(0,0,0,0.32), 0 0 0 1px rgba(0,210,200,0.07)',
-      }}
-    >
-      {isLoading && (
-        <>
-          <StatusStepper stage={stage} />
-          <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {[100, 90, 85, 72, 55].map((w, i) => (
-              <div key={i} className="skeleton" style={{ height: 12, width: `${w}%` }} />
-            ))}
+  const bubbleStyle = {
+    padding: '1.25rem 1.5rem',
+    borderRadius: 16,
+    borderColor: 'rgba(0,210,200,0.18)',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.32), 0 0 0 1px rgba(0,210,200,0.07)',
+  };
+
+  /* ── Live SSE streaming view ── */
+  if (isStreaming) {
+    const hasTokens = (streamingAnswer?.length ?? 0) > 0;
+    return (
+      <div className="glass" style={bubbleStyle}>
+        {/* StatusStepper only while waiting for first token */}
+        {!hasTokens && <StatusStepper stage={stage} />}
+
+        {/* Streaming text with blinking cursor */}
+        {hasTokens && (
+          <div className="prose" style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+            <ReactMarkdown>{streamingAnswer ?? ''}</ReactMarkdown>
+            <span style={{
+              display: 'inline-block', width: 2, height: '1em',
+              background: 'var(--accent)', animation: 'pulseOpacity 0.6s infinite',
+              verticalAlign: 'text-bottom', marginLeft: 2, borderRadius: 1,
+            }} />
           </div>
-        </>
-      )}
+        )}
+
+        {/* Sources rail — shown immediately when 'sources' event fires */}
+        {(streamingSources?.length ?? 0) > 0 && (
+          <SourcesRail sources={streamingSources!} />
+        )}
+      </div>
+    );
+  }
+
+  /* ── Fallback loading skeleton (no stream, just boolean isLoading) ── */
+  if (isLoading) {
+    return (
+      <div className="glass" style={bubbleStyle}>
+        <StatusStepper stage={stage} />
+        <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[100, 90, 85, 72, 55].map((w, i) => (
+            <div key={i} className="skeleton" style={{ height: 12, width: `${w}%` }} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Final / history response view (unchanged behaviour) ── */
+  return (
+    <div className="glass" style={bubbleStyle}>
       {response && (
         <>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 16 }}>
@@ -738,12 +781,10 @@ function AnswerBubble({
             ))}
           </div>
 
-          {/* Thinking Process Accordion */}
           {parsed.thought && (
             <ThinkingBlock thought={parsed.thought} defaultExpanded={false} />
           )}
 
-          {/* Clean Main Answer */}
           {textToRender && (
             animate && !typeDone ? (
               <TypewriterText text={textToRender} onDone={handleDone} />
@@ -762,6 +803,7 @@ function AnswerBubble({
     </div>
   );
 }
+
 
 /* ── Settings Content ── */
 function SettingsContent({ settings, onChange }: { settings: RetrievalSettings; onChange: (s: RetrievalSettings) => void }) {
@@ -1104,12 +1146,23 @@ export function ChatPage() {
 
     const userMsg: Message = { id: safeUUID(), type: 'user', content: q, timestamp: new Date() };
     const assistantId = safeUUID();
-    setMessages((m) => [...m, userMsg]);
+
+    setMessages(m => [...m, userMsg]);
     setQuery('');
     setIsLoading(true);
     setStage('embedding');
-    const t1 = setTimeout(() => setStage('retrieving'), 900);
-    const t2 = setTimeout(() => setStage('generating'), 2000);
+
+    // Add the streaming placeholder — renders immediately with the StatusStepper
+    setMessages(m => [...m, {
+      id: assistantId,
+      type: 'assistant',
+      content: '',
+      isStreaming: true,
+      streamingAnswer: '',
+      streamingSources: [],
+      timestamp: new Date(),
+    }]);
+
     try {
       const payload: QueryRequest = {
         query: q,
@@ -1121,20 +1174,59 @@ export function ChatPage() {
         system_prompt: settings.systemPrompt || undefined,
         session_id: activeSessionId || undefined,
       };
-      const response = await queryApi.ask(payload);
-      clearTimeout(t1); clearTimeout(t2);
 
-      // Track active session_id for future follow-up queries
-      if (response.session_id && !activeSessionId) {
-        setActiveSessionId(response.session_id);
+      const res = await streamQuery(payload);
+
+      for await (const event of parseQuerySSEStream(res)) {
+        if (event.event === 'sources') {
+          // Sources arrived → retrieval is done, generation is starting
+          setStage('generating');
+          setMessages(m => m.map(msg =>
+            msg.id === assistantId ? { ...msg, streamingSources: event.data } : msg
+          ));
+        } else if (event.event === 'token') {
+          setMessages(m => m.map(msg =>
+            msg.id === assistantId
+              ? { ...msg, streamingAnswer: (msg.streamingAnswer ?? '') + event.data }
+              : msg
+          ));
+        } else if (event.event === 'done') {
+          if (!activeSessionId && event.session_id) {
+            setActiveSessionId(event.session_id);
+          }
+          // Promote the streaming message to a final response message
+          setMessages(m => m.map(msg => {
+            if (msg.id !== assistantId) return msg;
+            const finalResponse: QueryResponse = {
+              answer: msg.streamingAnswer ?? '',
+              query_mode: mode,
+              total_sources_found: (msg.streamingSources ?? []).length,
+              language: settings.language,
+              session_id: event.session_id,
+              sources: msg.streamingSources ?? [],
+            };
+            return {
+              ...msg,
+              isStreaming: false,
+              content: msg.streamingAnswer ?? '',
+              response: finalResponse,
+              animate: false, // already streamed in real time
+            };
+          }));
+        }
       }
-
-      setMessages((m) => [...m, { id: assistantId, type: 'assistant', content: response.answer, response, timestamp: new Date(), animate: true }]);
     } catch (err) {
-      clearTimeout(t1); clearTimeout(t2);
-      setMessages((m) => [...m, { id: assistantId, type: 'error', content: parseApiError(err), timestamp: new Date() }]);
-    } finally { setIsLoading(false); }
+      // Replace the placeholder with an error entry
+      setMessages(m => m.map(msg =>
+        msg.id === assistantId
+          ? { id: assistantId, type: 'error' as const, content: parseApiError(err), timestamp: new Date() }
+          : msg
+      ));
+    } finally {
+      setIsLoading(false);
+    }
   };
+
 
   const handleNewChat = () => {
     setMessages([]);
@@ -1220,12 +1312,15 @@ export function ChatPage() {
                     </div>
                   </div>
                 )}
-                {msg.type === 'assistant' && msg.response && (
+                {msg.type === 'assistant' && (msg.response || msg.isStreaming) && (
                   <AnswerBubble
                     response={msg.response}
                     isLoading={false}
-                    stage="generating"
+                    stage={stage}
                     animate={msg.animate ?? false}
+                    isStreaming={msg.isStreaming}
+                    streamingAnswer={msg.streamingAnswer}
+                    streamingSources={msg.streamingSources}
                   />
                 )}
                 {msg.type === 'error' && (
@@ -1236,11 +1331,8 @@ export function ChatPage() {
               </motion.div>
             ))}
           </AnimatePresence>
-          {isLoading && (
-            <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}>
-              <AnswerBubble isLoading stage={stage} />
-            </motion.div>
-          )}
+          {/* Note: no separate loading bubble — the streaming placeholder message
+              renders its own StatusStepper via AnswerBubble's isStreaming path. */}
           <div ref={bottomRef} />
         </div>
       </div>

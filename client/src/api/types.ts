@@ -189,5 +189,31 @@ export interface PlatformGuide {
   contact: string;
 }
 
+/* ── Upload SSE Event Types ── */
+export type UploadSSEEvent =
+  | { status: 'extracting_text' }
+  | { status: 'extraction_complete'; total_pages: number }
+  | { status: 'processing_set'; set_id: string; pages: number[] }
+  | { status: 'set_complete'; report: { chunks_created: number } }
+  | { status: 'alias_detected'; message?: string }
+  | { status: 'upload_complete'; doc_id: string };
 
+/* ── Query SSE Event Types ── */
+export type QuerySSEEvent =
+  | { event: 'sources'; data: Source[] }
+  | { event: 'token'; data: string }
+  | { event: 'done'; session_id: string };
 
+/* ── Per-file Upload Progress State (used in UploadPage) ── */
+export interface FileUploadState {
+  file: File;
+  phase: 'pending' | 'uploading' | 'ocr' | 'processing' | 'done' | 'error';
+  totalPages: number;
+  processedPages: number;
+  chunksCreated: number;
+  progress: number;           // 0–100
+  docId: string | null;
+  aliasDetected: boolean;
+  aliasMessage: string | null;
+  error: string | null;
+}
