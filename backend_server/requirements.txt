@@ -23,3 +23,6 @@ pytesseract
 Pillow
 psycopg2-binary
 python-dotenv
+langchain
+langchain-groq
+langchain-core
