@@ -24,6 +24,7 @@ from service.upload.helper import (
     detect_document_type,
     extract_text_by_type,
     check_file_in_registry,
+    store_file_in_registry,
     store_raw_file_global_supabase,
     store_raw_file_local_redis,
     process_set_global,
@@ -158,8 +159,11 @@ async def upload_document(
                                 "alias_filename": filename,
                                 "original_filename": original_filename,
                                 "file_hash": file_hash_val,
+                                "file_name": filename,
+                                "doc_type": doc_type.value,
                                 "user_id": current_user.user_id,
                                 "org_id": org_id,
+                                "role": current_user.role.value,
                                 "timestamp": datetime.now(timezone.utc).isoformat()
                             }).execute()
                         )
@@ -214,6 +218,17 @@ async def upload_document(
                 )
 
             total_chunks += report.get("chunks_created", 0)
+            if upload_mode == UploadMode.GLOBAL and not existing_global_doc:
+
+                await asyncio.to_thread(
+                store_file_in_registry,
+                file_hash_val=file_hash_val,
+                org_id=org_id,
+                doc_id=doc_id,
+                file_name=filename,
+                total_pages=len(pages),
+                uploaded_by=current_user.user_id
+            )
             yield f"data: {json.dumps({'status': 'set_complete', 'set_id': set_id, 'report': report})}\n\n"
 
         yield f"data: {json.dumps({'status': 'upload_complete', 'doc_id': doc_id, 'total_chunks': total_chunks})}\n\n"

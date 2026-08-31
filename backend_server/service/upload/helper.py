@@ -400,27 +400,27 @@ def check_file_in_registry(file_hash_val: str, org_id: str) -> Optional[Dict[str
         logger.error(f"Registry lookup error: {e}")
     return None
 
+
 def store_file_in_registry(
     file_hash_val: str, org_id: str, doc_id: str,
-    file_name: str, total_pages: int,
-    upload_mode: str, uploaded_by: str
+    file_name: str, total_pages: int, uploaded_by: str
 ) -> None:
     if not supabase_client:
         return
     try:
         supabase_client.table("document_registry").insert({
             "id": doc_id,
-            "file_hash": file_hash_val,
             "org_id": org_id,
             "file_name": file_name,
-            "total_pages": total_pages,
-            "upload_mode": upload_mode,
+            "file_hash": file_hash_val,
             "uploaded_by": uploaded_by,
+            "total_pages": total_pages,
             "status": "ready",
             "uploaded_at": datetime.now(timezone.utc).isoformat()
         }).execute()
     except Exception as e:
         logger.error(f"Registry store error: {e}")
+
 
 def check_page_hash_in_registry(doc_id: str, page_num: int, page_hash_val: str) -> bool:
     if not supabase_client:
