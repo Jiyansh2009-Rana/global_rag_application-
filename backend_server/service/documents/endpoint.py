@@ -27,10 +27,12 @@ async def get_global_document(
     file_data = download_global_file(org_id, doc_id, filename)
     media_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
 
+    is_browser_viewable = filename.lower().endswith(('.pdf', '.txt', '.png', '.jpg', '.jpeg', '.webp', '.html'))
+    disposition = "inline" if is_browser_viewable else "attachment"
     return Response(
         content=file_data,
         media_type=media_type,
-        headers={"Content-Disposition": f'inline; filename="{filename}"'}
+        headers={"Content-Disposition": f'{disposition}; filename="{filename}"'}
     )
 
 @router.get("/local/{doc_id}")

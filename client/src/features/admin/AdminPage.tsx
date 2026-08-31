@@ -4,7 +4,7 @@ import { useAuth } from '@/hooks/useContextHooks';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { getOrgUsers, deleteOrgUser, getOrgDocuments, deleteOrgDocument, getGlobalUploadSetting, updateGlobalUploadSetting } from '@/api/admin';
-import { parseApiError } from '@/api/client';
+import { parseApiError, BASE_URL, tokenStore } from '@/api/client';
 import type { OrgUser, OrgDocument } from '@/api/types';
 
 /* ─── shared glass card style ─── */
@@ -61,9 +61,9 @@ function SectionCard({ children, title, subtitle, delay = 0 }: {
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay, duration: 0.38 }}
-      style={{ ...glassPanel, padding: '2rem 2.25rem' }}
+      style={{ ...glassPanel, padding: '1.5rem 1.5rem' }}
     >
-      <div style={{ marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(0,210,200,0.10)' }}>
+      <div style={{ marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(0,210,200,0.10)' }}>
         <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: subtitle ? 4 : 0 }}>
           {title}
         </h2>
@@ -120,7 +120,7 @@ function GlobalUploadSettingsCard({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '1.25rem 1.5rem',
+          padding: '1.1rem 1.25rem',
           borderRadius: 14,
           background: 'rgba(255,255,255,0.038)',
           border: '1px solid rgba(0,210,200,0.12)',
@@ -128,10 +128,10 @@ function GlobalUploadSettingsCard({
           gap: 16,
           flexWrap: 'wrap',
         }}>
-          <div style={{ flex: 1, minWidth: 240 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <div style={{ flex: 1, minWidth: 220 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
               <span style={{ fontSize: '1rem', color: 'var(--accent)' }}>🌐</span>
-              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)' }}>
+              <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text)' }}>
                 Allow Standard Users Global Upload
               </span>
               <span style={{
@@ -160,7 +160,7 @@ function GlobalUploadSettingsCard({
             onClick={handleToggle}
             style={{
               flexShrink: 0,
-              minWidth: 145,
+              minWidth: 140,
               ...(allowed ? { color: 'var(--danger)', borderColor: 'rgba(248,113,113,0.35)' } : {}),
             }}
           >
@@ -212,6 +212,7 @@ function ConfirmDialog({
         position: 'fixed', inset: 0, zIndex: 9999,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         background: 'rgba(0,0,0,0.70)', backdropFilter: 'blur(6px)',
+        padding: '1rem',
       }}
       onClick={onCancel}
     >
@@ -219,27 +220,27 @@ function ConfirmDialog({
         onClick={e => e.stopPropagation()}
         style={{
           ...glassPanel,
-          padding: '2rem 2.25rem',
-          maxWidth: 440, width: '90%',
+          padding: '1.75rem 1.75rem',
+          maxWidth: 440, width: '100%',
           borderColor: 'rgba(248,113,113,0.25)',
         }}
       >
-        <div style={{ fontSize: '1.5rem', marginBottom: 14 }}>⚠️</div>
-        <h3 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 10 }}>
+        <div style={{ fontSize: '1.5rem', marginBottom: 12 }}>⚠️</div>
+        <h3 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
           Confirm Delete
         </h3>
-        <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.65, marginBottom: 22 }}>
+        <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: 20 }}>
           {message}
         </p>
-        <div style={{ display: 'flex', gap: 12 }}>
-          <Button variant="ghost" size="md" onClick={onCancel} style={{ flex: 1 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <Button variant="ghost" size="md" onClick={onCancel} style={{ flex: 1, minWidth: 100 }}>
             Cancel
           </Button>
           <Button
             variant="primary" size="md"
             loading={loading}
             onClick={onConfirm}
-            style={{ flex: 1, background: 'var(--danger)', borderColor: 'var(--danger)' }}
+            style={{ flex: 1, minWidth: 100, background: 'var(--danger)', borderColor: 'var(--danger)' }}
           >
             Delete
           </Button>
@@ -294,20 +295,18 @@ function OverviewTab() {
   ];
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       {/* Org context */}
       <SectionCard title="Organisation Context" subtitle="Your active session identity and role" delay={0.04}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.85rem' }}>
           {orgCards.map(({ label, value, icon }) => (
             <div key={label}
-              style={{ padding: '1.1rem 1.25rem', borderRadius: 14, background: 'rgba(255,255,255,0.038)', border: '1px solid rgba(0,210,200,0.12)', borderTopColor: 'rgba(255,255,255,0.12)', boxShadow: '0 2px 12px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05)', transition: 'all 0.2s ease' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(0,210,200,0.07)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(-2px)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.038)'; (e.currentTarget as HTMLElement).style.transform = 'translateY(0)'; }}
+              style={{ padding: '1rem 1.1rem', borderRadius: 14, background: 'rgba(255,255,255,0.038)', border: '1px solid rgba(0,210,200,0.12)', borderTopColor: 'rgba(255,255,255,0.12)', boxShadow: '0 2px 12px rgba(0,0,0,0.3)', transition: 'all 0.2s ease' }}
             >
-              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.10em', color: 'var(--muted)', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.10em', color: 'var(--muted)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ color: 'var(--accent)' }}>{icon}</span>{label}
               </div>
-              <div style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.4 }}>{value}</div>
+              <div style={{ fontSize: '0.86rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.4, wordBreak: 'break-word' }}>{value}</div>
             </div>
           ))}
         </div>
@@ -321,13 +320,13 @@ function OverviewTab() {
 
       {/* Role matrix */}
       <SectionCard title="Role Capability Matrix" subtitle="What each role is permitted to do" delay={0.09}>
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
+          <table style={{ width: '100%', minWidth: 480, borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid rgba(0,210,200,0.15)' }}>
-                <th style={{ textAlign: 'left', padding: '0 0 14px 0', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.10em', color: 'var(--muted)', fontWeight: 500, width: '52%' }}>Capability</th>
+                <th style={{ textAlign: 'left', padding: '0 0 12px 0', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.10em', color: 'var(--muted)', fontWeight: 500, width: '48%' }}>Capability</th>
                 {['User', 'Admin', 'Super Admin'].map(r => (
-                  <th key={r} style={{ padding: '0 8px 14px', textAlign: 'center', minWidth: 90 }}>
+                  <th key={r} style={{ padding: '0 8px 12px', textAlign: 'center', minWidth: 85 }}>
                     <Badge role={r}>{r}</Badge>
                   </th>
                 ))}
@@ -336,14 +335,12 @@ function OverviewTab() {
             <tbody>
               {roleMatrix.map((row, i) => (
                 <tr key={row.capability}
-                  style={{ borderBottom: i < roleMatrix.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', background: i % 2 === 0 ? 'rgba(255,255,255,0.012)' : 'transparent', transition: 'background 0.15s' }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(0,210,200,0.04)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = i % 2 === 0 ? 'rgba(255,255,255,0.012)' : 'transparent'}
+                  style={{ borderBottom: i < roleMatrix.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', background: i % 2 === 0 ? 'rgba(255,255,255,0.012)' : 'transparent' }}
                 >
-                  <td style={{ padding: '13px 0', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{row.capability}</td>
-                  <td style={{ padding: '13px 8px' }}><Tick yes={row.user} note={row.userNote} /></td>
-                  <td style={{ padding: '13px 8px' }}><Tick yes={row.admin} /></td>
-                  <td style={{ padding: '13px 8px' }}><Tick yes={row.superAdmin} /></td>
+                  <td style={{ padding: '11px 0', fontSize: '0.80rem', color: 'var(--text-secondary)' }}>{row.capability}</td>
+                  <td style={{ padding: '11px 8px' }}><Tick yes={row.user} note={row.userNote} /></td>
+                  <td style={{ padding: '11px 8px' }}><Tick yes={row.admin} /></td>
+                  <td style={{ padding: '11px 8px' }}><Tick yes={row.superAdmin} /></td>
                 </tr>
               ))}
             </tbody>
@@ -356,15 +353,13 @@ function OverviewTab() {
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {systemInfo.map(({ label, value, icon }, i) => (
             <div key={label}
-              style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem', padding: '13px 0', borderBottom: i < systemInfo.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', transition: 'background 0.15s' }}
-              onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(0,210,200,0.03)'}
-              onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'transparent'}
+              style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', padding: '11px 0', borderBottom: i < systemInfo.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none', flexWrap: 'wrap' }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 160, flexShrink: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 7, minWidth: 140, flexShrink: 0 }}>
                 <span style={{ color: 'var(--accent)', fontSize: '0.72rem' }}>{icon}</span>
-                <span style={{ fontSize: '0.75rem', color: 'var(--muted)', fontWeight: 500 }}>{label}</span>
+                <span style={{ fontSize: '0.74rem', color: 'var(--muted)', fontWeight: 500 }}>{label}</span>
               </div>
-              <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.6, flex: 1 }}>{value}</span>
+              <span style={{ fontSize: '0.80rem', color: 'var(--text-secondary)', lineHeight: 1.5, flex: 1, minWidth: 200 }}>{value}</span>
             </div>
           ))}
         </div>
@@ -425,10 +420,10 @@ function UsersTab() {
       </AnimatePresence>
 
       <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38 }}
-        style={{ ...glassPanel, padding: '2rem 2.25rem' }}>
+        style={{ ...glassPanel, padding: '1.5rem 1.5rem' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(0,210,200,0.10)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(0,210,200,0.10)', flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Organisation Users
@@ -437,7 +432,7 @@ function UsersTab() {
               {loading ? 'Loading…' : `${users.length} member${users.length !== 1 ? 's' : ''} in your org`}
             </p>
           </div>
-          <Button variant="ghost" size="md" onClick={() => void load()} disabled={loading}>
+          <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
             {loading ? 'Refreshing…' : '↻ Refresh'}
           </Button>
         </div>
@@ -471,87 +466,85 @@ function UsersTab() {
         )}
 
         {!loading && users.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {/* Table header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 140px 1fr 80px', gap: 12, padding: '0 14px', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--muted)', marginBottom: 4 }}>
-              <span>Email</span>
-              <span>Role</span>
-              <span>Joined</span>
-              <span style={{ textAlign: 'right' }}>Action</span>
-            </div>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
+            <div style={{ minWidth: 480, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {/* Table header */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 110px 1fr 80px', gap: 12, padding: '0 14px', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--muted)', marginBottom: 2 }}>
+                <span>Email</span>
+                <span>Role</span>
+                <span>Joined</span>
+                <span style={{ textAlign: 'right' }}>Action</span>
+              </div>
 
-            {users.map((u, i) => {
-              const isSelf = u.id === me?.user_id;
-              return (
-                <motion.div
-                  key={u.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.04 }}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 140px 1fr 80px',
-                    gap: 12,
-                    alignItems: 'center',
-                    padding: '13px 14px',
-                    borderRadius: 13,
-                    background: isSelf ? 'rgba(0,210,200,0.06)' : 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${isSelf ? 'rgba(0,210,200,0.20)' : 'rgba(255,255,255,0.06)'}`,
-                    transition: 'background 0.18s',
-                  }}
-                  onMouseEnter={e => !isSelf && ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.055)')}
-                  onMouseLeave={e => !isSelf && ((e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)')}
-                >
-                  {/* Email */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.78rem', fontWeight: 700, color: 'var(--accent-fg)', background: 'linear-gradient(135deg, rgba(0,210,200,0.28), rgba(168,85,247,0.22))', border: '1px solid rgba(0,210,200,0.22)' }}>
-                      {u.email.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '0.83rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.2 }}>
-                        {u.email}
-                        {isSelf && <span style={{ marginLeft: 6, fontSize: '0.62rem', color: 'var(--accent)', fontWeight: 500 }}>(you)</span>}
+              {users.map((u, i) => {
+                const isSelf = u.id === me?.user_id;
+                return (
+                  <motion.div
+                    key={u.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1.4fr 110px 1fr 80px',
+                      gap: 12,
+                      alignItems: 'center',
+                      padding: '12px 14px',
+                      borderRadius: 13,
+                      background: isSelf ? 'rgba(0,210,200,0.06)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${isSelf ? 'rgba(0,210,200,0.20)' : 'rgba(255,255,255,0.06)'}`,
+                      transition: 'background 0.18s',
+                    }}
+                  >
+                    {/* Email */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                      <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-fg)', background: 'linear-gradient(135deg, rgba(0,210,200,0.28), rgba(168,85,247,0.22))', border: '1px solid rgba(0,210,200,0.22)' }}>
+                        {u.email.charAt(0).toUpperCase()}
                       </div>
-                      <div style={{ fontSize: '0.65rem', color: 'var(--muted)', fontFamily: 'monospace' }}>{u.id.slice(0, 16)}…</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {u.email}
+                          {isSelf && <span style={{ marginLeft: 6, fontSize: '0.62rem', color: 'var(--accent)', fontWeight: 500 }}>(you)</span>}
+                        </div>
+                        <div style={{ fontSize: '0.64rem', color: 'var(--muted)', fontFamily: 'monospace' }}>{u.id.slice(0, 14)}…</div>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Role badge */}
-                  <div><Badge role={u.role}>{u.role}</Badge></div>
+                    {/* Role badge */}
+                    <div><Badge role={u.role}>{u.role}</Badge></div>
 
-                  {/* Joined */}
-                  <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-                    {new Date(u.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
-                  </div>
+                    {/* Joined */}
+                    <div style={{ fontSize: '0.73rem', color: 'var(--muted)' }}>
+                      {new Date(u.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </div>
 
-                  {/* Delete */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                    <button
-                      disabled={isSelf}
-                      onClick={() => setConfirmId(u.id)}
-                      title={isSelf ? 'Cannot remove your own account' : 'Remove user'}
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: 8,
-                        border: '1px solid rgba(248,113,113,0.22)',
-                        background: 'var(--danger-dim)',
-                        color: 'var(--danger)',
-                        fontSize: '0.72rem',
-                        fontWeight: 600,
-                        cursor: isSelf ? 'not-allowed' : 'pointer',
-                        opacity: isSelf ? 0.35 : 1,
-                        transition: 'all 0.18s',
-                        fontFamily: 'inherit',
-                      }}
-                      onMouseEnter={e => !isSelf && ((e.currentTarget as HTMLElement).style.background = 'rgba(248,113,113,0.18)')}
-                      onMouseLeave={e => !isSelf && ((e.currentTarget as HTMLElement).style.background = 'var(--danger-dim)')}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </motion.div>
-              );
-            })}
+                    {/* Delete */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <button
+                        disabled={isSelf}
+                        onClick={() => setConfirmId(u.id)}
+                        title={isSelf ? 'Cannot remove your own account' : 'Remove user'}
+                        style={{
+                          padding: '6px 10px',
+                          borderRadius: 8,
+                          border: '1px solid rgba(248,113,113,0.22)',
+                          background: 'var(--danger-dim)',
+                          color: 'var(--danger)',
+                          fontSize: '0.72rem',
+                          fontWeight: 600,
+                          cursor: isSelf ? 'not-allowed' : 'pointer',
+                          opacity: isSelf ? 0.35 : 1,
+                          transition: 'all 0.18s',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
         )}
       </motion.div>
@@ -563,12 +556,13 @@ function UsersTab() {
    TAB 3 — DOCUMENTS
 ════════════════════════════════════════════════════════════════════════ */
 function DocumentsTab() {
-  const [docs, setDocs]         = useState<OrgDocument[]>([]);
-  const [loading, setLoading]   = useState(true);
-  const [error, setError]       = useState<string | null>(null);
-  const [statusMsg, setStatusMsg] = useState<{ msg: string; type: 'error' | 'success' } | null>(null);
-  const [confirmId, setConfirmId] = useState<string | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [docs, setDocs]               = useState<OrgDocument[]>([]);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState<string | null>(null);
+  const [statusMsg, setStatusMsg]     = useState<{ msg: string; type: 'error' | 'success' } | null>(null);
+  const [confirmId, setConfirmId]     = useState<string | null>(null);
+  const [deleting, setDeleting]       = useState(false);
+  const [viewingId, setViewingId]     = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true); setError(null);
@@ -594,6 +588,60 @@ function DocumentsTab() {
     }
   };
 
+  const handleViewDocument = async (docId: string, filename: string) => {
+    const isBrowserViewable = /\.(pdf|txt|png|jpe?g|webp|html)$/i.test(filename);
+    const isOfficeDoc = /\.(docx?|xlsx?|pptx?|csv)$/i.test(filename);
+
+    if (isOfficeDoc) {
+      setStatusMsg({
+        msg: `Office file "${filename}" cannot be previewed in a browser tab. Downloading directly to your device...`,
+        type: 'success',
+      });
+    }
+
+    setViewingId(docId);
+    try {
+      const token = tokenStore.get();
+      const res = await fetch(`${BASE_URL}/documents/global/${docId}`, {
+        method: 'GET',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+
+      if (!res.ok) {
+        let errDetail = 'Failed to load document';
+        try {
+          const errJson = await res.json();
+          errDetail = errJson.detail || errDetail;
+        } catch {
+          errDetail = `HTTP ${res.status}: ${res.statusText}`;
+        }
+        throw new Error(errDetail);
+      }
+
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      if (isBrowserViewable) {
+        window.open(blobUrl, '_blank');
+      } else {
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 10000);
+      }
+    } catch (err) {
+      setStatusMsg({
+        msg: `Could not view/download "${filename}": ${String(err instanceof Error ? err.message : err)}`,
+        type: 'error',
+      });
+    } finally {
+      setViewingId(null);
+    }
+  };
+
   const confirmDoc = docs.find(d => d.id === confirmId);
 
   const fileExt = (name: string) => name.split('.').pop()?.toUpperCase() ?? 'FILE';
@@ -613,10 +661,10 @@ function DocumentsTab() {
       </AnimatePresence>
 
       <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38 }}
-        style={{ ...glassPanel, padding: '2rem 2.25rem' }}>
+        style={{ ...glassPanel, padding: '1.5rem 1.5rem' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid rgba(0,210,200,0.10)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(0,210,200,0.10)', flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Organisation Documents
@@ -625,7 +673,7 @@ function DocumentsTab() {
               {loading ? 'Loading…' : `${docs.length} global document${docs.length !== 1 ? 's' : ''} indexed`}
             </p>
           </div>
-          <Button variant="ghost" size="md" onClick={() => void load()} disabled={loading}>
+          <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
             {loading ? 'Refreshing…' : '↻ Refresh'}
           </Button>
         </div>
@@ -645,7 +693,7 @@ function DocumentsTab() {
         {loading && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {[1, 2, 3].map(i => (
-              <div key={i} style={{ height: 64, borderRadius: 12, background: 'rgba(255,255,255,0.04)', animation: 'pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.1}s` }} />
+              <div key={i} style={{ height: 60, borderRadius: 12, background: 'rgba(255,255,255,0.04)', animation: 'pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.1}s` }} />
             ))}
           </div>
         )}
@@ -659,123 +707,126 @@ function DocumentsTab() {
 
         {/* Doc rows */}
         {!loading && docs.length > 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {/* Column header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 120px 130px 140px', gap: 12, padding: '0 14px', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--muted)', marginBottom: 4 }}>
-              <span>Document</span>
-              <span>Pages</span>
-              <span>Uploaded by</span>
-              <span>Date</span>
-              <span style={{ textAlign: 'right' }}>Actions</span>
-            </div>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
+            <div style={{ minWidth: 540, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {/* Column header */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 70px 110px 110px 140px', gap: 12, padding: '0 14px', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--muted)', marginBottom: 2 }}>
+                <span>Document</span>
+                <span>Pages</span>
+                <span>Uploaded by</span>
+                <span>Date</span>
+                <span style={{ textAlign: 'right' }}>Actions</span>
+              </div>
 
-            {docs.map((doc, i) => {
-              const ext = fileExt(doc.file_name);
-              const col = extColor[ext] ?? '#94a3b8';
-              return (
-                <motion.div
-                  key={doc.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.04 }}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 80px 120px 130px 140px',
-                    gap: 12,
-                    alignItems: 'center',
-                    padding: '13px 14px',
-                    borderRadius: 13,
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.06)',
-                    transition: 'background 0.18s',
-                  }}
-                  onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.055)'}
-                  onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)'}
-                >
-                  {/* File name + ext badge */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                    <div style={{
-                      flexShrink: 0, width: 36, height: 36, borderRadius: 9,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '0.6rem', fontWeight: 800, letterSpacing: '0.05em',
-                      color: col,
-                      background: `${col}18`,
-                      border: `1px solid ${col}30`,
-                    }}>
-                      {ext}
-                    </div>
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ fontSize: '0.83rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        {doc.file_name}
+              {docs.map((doc, i) => {
+                const ext = fileExt(doc.file_name);
+                const col = extColor[ext] ?? '#94a3b8';
+                const isViewable = /\.(pdf|txt|png|jpe?g|webp|html)$/i.test(doc.file_name);
+                const isCurrentViewing = viewingId === doc.id;
+
+                return (
+                  <motion.div
+                    key={doc.id}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: i * 0.04 }}
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1.4fr 70px 110px 110px 140px',
+                      gap: 12,
+                      alignItems: 'center',
+                      padding: '12px 14px',
+                      borderRadius: 13,
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.06)',
+                      transition: 'background 0.18s',
+                    }}
+                  >
+                    {/* File name + ext badge */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                      <div style={{
+                        flexShrink: 0, width: 34, height: 34, borderRadius: 9,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        fontSize: '0.58rem', fontWeight: 800, letterSpacing: '0.05em',
+                        color: col,
+                        background: `${col}18`,
+                        border: `1px solid ${col}30`,
+                      }}>
+                        {ext}
                       </div>
-                      <div style={{ fontSize: '0.65rem', color: 'var(--muted)', fontFamily: 'monospace' }}>{doc.id}</div>
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {doc.file_name}
+                        </div>
+                        <div style={{ fontSize: '0.64rem', color: 'var(--muted)', fontFamily: 'monospace' }}>{doc.id}</div>
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Pages */}
-                  <div style={{ fontSize: '0.83rem', color: 'var(--text)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
-                    {doc.total_pages ?? '—'}
-                  </div>
+                    {/* Pages */}
+                    <div style={{ fontSize: '0.82rem', color: 'var(--text)', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>
+                      {doc.total_pages ?? '—'}
+                    </div>
 
-                  {/* Uploaded by */}
-                  <div style={{ fontSize: '0.72rem', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {doc.uploaded_by ?? '—'}
-                  </div>
+                    {/* Uploaded by */}
+                    <div style={{ fontSize: '0.70rem', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {doc.uploaded_by ?? '—'}
+                    </div>
 
-                  {/* Date */}
-                  <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-                    {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
-                  </div>
+                    {/* Date */}
+                    <div style={{ fontSize: '0.73rem', color: 'var(--muted)' }}>
+                      {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
+                    </div>
 
-                  {/* Actions (View + Delete) */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6 }}>
-                    <a
-                      href={`/api/v1/documents/global/${doc.id}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      title="View / Download Document"
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: 8,
-                        border: '1px solid rgba(0,210,200,0.22)',
-                        background: 'rgba(0,210,200,0.08)',
-                        color: 'var(--accent)',
-                        fontSize: '0.72rem',
-                        fontWeight: 600,
-                        textDecoration: 'none',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                        transition: 'all 0.18s',
-                        fontFamily: 'inherit',
-                      }}
-                    >
-                      View ↗
-                    </a>
-                    <button
-                      onClick={() => setConfirmId(doc.id)}
-                      title="Delete document and all chunks"
-                      style={{
-                        padding: '6px 10px',
-                        borderRadius: 8,
-                        border: '1px solid rgba(248,113,113,0.22)',
-                        background: 'var(--danger-dim)',
-                        color: 'var(--danger)',
-                        fontSize: '0.72rem',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        transition: 'all 0.18s',
-                        fontFamily: 'inherit',
-                      }}
-                      onMouseEnter={e => (e.currentTarget as HTMLElement).style.background = 'rgba(248,113,113,0.18)'}
-                      onMouseLeave={e => (e.currentTarget as HTMLElement).style.background = 'var(--danger-dim)'}
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </motion.div>
-              );
-            })}
+                    {/* Actions (View + Delete) */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6 }}>
+                      <button
+                        type="button"
+                        disabled={isCurrentViewing}
+                        onClick={() => void handleViewDocument(doc.id, doc.file_name)}
+                        title={isViewable ? 'Open document in new tab' : 'Download document to your computer'}
+                        style={{
+                          padding: '5px 9px',
+                          borderRadius: 8,
+                          border: '1px solid rgba(0,210,200,0.22)',
+                          background: 'rgba(0,210,200,0.08)',
+                          color: 'var(--accent)',
+                          fontSize: '0.70rem',
+                          fontWeight: 600,
+                          cursor: isCurrentViewing ? 'wait' : 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: 4,
+                          transition: 'all 0.18s',
+                          fontFamily: 'inherit',
+                          opacity: isCurrentViewing ? 0.6 : 1,
+                        }}
+                      >
+                        {isCurrentViewing ? '⏳…' : isViewable ? 'View ↗' : 'Download ↓'}
+                      </button>
+
+                      <button
+                        onClick={() => setConfirmId(doc.id)}
+                        title="Delete document and all chunks"
+                        style={{
+                          padding: '5px 9px',
+                          borderRadius: 8,
+                          border: '1px solid rgba(248,113,113,0.22)',
+                          background: 'var(--danger-dim)',
+                          color: 'var(--danger)',
+                          fontSize: '0.70rem',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          transition: 'all 0.18s',
+                          fontFamily: 'inherit',
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           </div>
         )}
       </motion.div>
@@ -803,19 +854,19 @@ export function AdminPage() {
         display: 'flex',
         alignItems: 'flex-start',
         justifyContent: 'center',
-        padding: '3rem 1.5rem 4rem',
+        padding: '2rem 1rem calc(4rem + var(--bottom-tab-h, 0px))',
         overflowY: 'auto',
       }}
     >
-      <div style={{ width: '100%', maxWidth: 900, display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+      <div style={{ width: '100%', maxWidth: 900, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
         {/* ── PAGE HEADER ── */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
-            <div style={{ width: 42, height: 42, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', background: 'linear-gradient(135deg, rgba(0,210,200,0.18), rgba(168,85,247,0.14))', border: '1px solid rgba(0,210,200,0.22)', boxShadow: '0 4px 16px rgba(0,210,200,0.14)' }}>⊞</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4, flexWrap: 'wrap' }}>
+            <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', background: 'linear-gradient(135deg, rgba(0,210,200,0.18), rgba(168,85,247,0.14))', border: '1px solid rgba(0,210,200,0.22)', boxShadow: '0 4px 16px rgba(0,210,200,0.14)' }}>⊞</div>
             <div>
-              <h1 style={{ fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif', fontSize: '1.65rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', lineHeight: 1.15 }}>Admin Panel</h1>
-              <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 3 }}>Manage users, documents, roles and system configuration.</p>
+              <h1 style={{ fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif', fontSize: '1.5rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', lineHeight: 1.15 }}>Admin Panel</h1>
+              <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 3 }}>Manage users, documents, roles and system configuration.</p>
             </div>
           </div>
         </motion.div>
@@ -823,17 +874,17 @@ export function AdminPage() {
         {/* ── TABS ── */}
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-          style={{ display: 'flex', gap: 6, padding: 5, borderRadius: 16, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(0,210,200,0.10)', boxShadow: '0 2px 10px rgba(0,0,0,0.35) inset', width: 'fit-content' }}
+          style={{ display: 'flex', gap: 6, padding: 5, borderRadius: 16, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(0,210,200,0.10)', boxShadow: '0 2px 10px rgba(0,0,0,0.35) inset', width: 'fit-content', flexWrap: 'wrap' }}
         >
           {TABS.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 7,
-                padding: '9px 18px', borderRadius: 12,
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '8px 16px', borderRadius: 12,
                 border: 'none', cursor: 'pointer', fontFamily: 'inherit',
-                fontSize: '0.82rem', fontWeight: 500, transition: 'all 0.2s ease',
+                fontSize: '0.80rem', fontWeight: 500, transition: 'all 0.2s ease',
                 background: activeTab === tab.id
                   ? 'linear-gradient(135deg, rgba(0,210,200,0.16), rgba(168,85,247,0.12))'
                   : 'transparent',
@@ -844,7 +895,7 @@ export function AdminPage() {
                   : 'none',
               }}
             >
-              <span style={{ fontSize: '0.85rem', color: activeTab === tab.id ? 'var(--accent)' : 'var(--muted)' }}>{tab.icon}</span>
+              <span style={{ fontSize: '0.82rem', color: activeTab === tab.id ? 'var(--accent)' : 'var(--muted)' }}>{tab.icon}</span>
               {tab.label}
             </button>
           ))}
