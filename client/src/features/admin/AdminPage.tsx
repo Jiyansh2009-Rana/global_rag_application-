@@ -661,12 +661,12 @@ function DocumentsTab() {
         {!loading && docs.length > 0 && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {/* Column header */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 90px 130px 140px 80px', gap: 12, padding: '0 14px', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--muted)', marginBottom: 4 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 120px 130px 140px', gap: 12, padding: '0 14px', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--muted)', marginBottom: 4 }}>
               <span>Document</span>
               <span>Pages</span>
               <span>Uploaded by</span>
               <span>Date</span>
-              <span style={{ textAlign: 'right' }}>Action</span>
+              <span style={{ textAlign: 'right' }}>Actions</span>
             </div>
 
             {docs.map((doc, i) => {
@@ -680,7 +680,7 @@ function DocumentsTab() {
                   transition={{ delay: i * 0.04 }}
                   style={{
                     display: 'grid',
-                    gridTemplateColumns: '1fr 90px 130px 140px 80px',
+                    gridTemplateColumns: '1fr 80px 120px 130px 140px',
                     gap: 12,
                     alignItems: 'center',
                     padding: '13px 14px',
@@ -727,8 +727,31 @@ function DocumentsTab() {
                     {doc.uploaded_at ? new Date(doc.uploaded_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                   </div>
 
-                  {/* Delete */}
-                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                  {/* Actions (View + Delete) */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 6 }}>
+                    <a
+                      href={`/api/v1/documents/global/${doc.id}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="View / Download Document"
+                      style={{
+                        padding: '6px 10px',
+                        borderRadius: 8,
+                        border: '1px solid rgba(0,210,200,0.22)',
+                        background: 'rgba(0,210,200,0.08)',
+                        color: 'var(--accent)',
+                        fontSize: '0.72rem',
+                        fontWeight: 600,
+                        textDecoration: 'none',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: 4,
+                        transition: 'all 0.18s',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      View ↗
+                    </a>
                     <button
                       onClick={() => setConfirmId(doc.id)}
                       title="Delete document and all chunks"

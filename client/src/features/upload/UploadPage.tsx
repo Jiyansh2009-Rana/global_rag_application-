@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useContextHooks';
 import { getConsent, uploadDocumentSSE, parseUploadSSEStream } from '@/api/upload';
@@ -149,84 +149,206 @@ function FileProgressCard({ state, index }: { state: FileUploadState; index: num
 }
 
 /* ── Multi-file Dropzone ── */
-function Dropzone({ files, onFiles, disabled }: { files: File[]; onFiles: (f: File[]) => void; disabled?: boolean }) {
+function Dropzone({
+  files,
+  onAddFiles,
+  onRemoveFile,
+  onClearAll,
+  disabled,
+}: {
+  files: File[];
+  onAddFiles: (f: File[]) => void;
+  onRemoveFile: (index: number) => void;
+  onClearAll: () => void;
+  disabled?: boolean;
+}) {
   const [drag, setDrag] = useState(false);
-  const inputRef = { current: null as HTMLInputElement | null };
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   const handleRaw = (raw: FileList | null) => {
     if (!raw || disabled) return;
-    onFiles(Array.from(raw).slice(0, MAX_FILES));
+    onAddFiles(Array.from(raw));
+  };
+
+  const getFileIcon = (name: string) => {
+    if (/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name)) return '🖼';
+    if (/\.pdf$/i.test(name)) return '📕';
+    if (/\.(docx?|txt|rtf)$/i.test(name)) return '📄';
+    if (/\.(xlsx?|csv)$/i.test(name)) return '📊';
+    if (/\.(pptx?)$/i.test(name)) return '📑';
+    return '📁';
+  };
+
+  const formatSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const openPicker = () => {
+    if (disabled || files.length >= MAX_FILES) return;
+    if (inputRef.current) {
+      inputRef.current.value = '';
+      inputRef.current.click();
+    }
   };
 
   const borderColor = drag ? 'var(--accent)' : 'rgba(0,210,200,0.22)';
-  const bg = drag ? 'rgba(0,210,200,0.07)' : files.length > 0 ? 'rgba(0,210,200,0.04)' : 'rgba(255,255,255,0.025)';
+  const bg = drag ? 'rgba(0,210,200,0.07)' : files.length > 0 ? 'rgba(0,210,200,0.03)' : 'rgba(255,255,255,0.025)';
 
   return (
-    <div
-      onClick={() => !disabled && inputRef.current?.click()}
-      onDragOver={(e) => { e.preventDefault(); if (!disabled) setDrag(true); }}
-      onDragLeave={() => setDrag(false)}
-      onDrop={(e) => { e.preventDefault(); setDrag(false); handleRaw(e.dataTransfer.files); }}
-      style={{
-        position: 'relative', border: `2px dashed ${borderColor}`,
-        borderRadius: 18, padding: '3rem 2.5rem', textAlign: 'center',
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.55 : 1,
-        background: bg, backdropFilter: 'blur(18px)',
-        transition: 'all 0.25s ease',
-        boxShadow: drag ? '0 0 50px rgba(0,210,200,0.18), inset 0 0 40px rgba(0,210,200,0.06)' : '0 4px 24px rgba(0,0,0,0.3)',
-      }}
-      onMouseEnter={e => {
-        if (!disabled && !drag) {
-          (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,210,200,0.45)';
-          (e.currentTarget as HTMLElement).style.background = 'rgba(0,210,200,0.05)';
-        }
-      }}
-      onMouseLeave={e => {
-        if (!disabled && !drag) {
-          (e.currentTarget as HTMLElement).style.borderColor = borderColor;
-          (e.currentTarget as HTMLElement).style.background = bg;
-        }
-      }}
-    >
-      <input
-        ref={(el) => { inputRef.current = el; }}
-        type="file"
-        multiple
-        accept=".pdf,.docx,.xlsx,.pptx,.txt,.html,.png,.jpg,.jpeg,.gif,.webp"
-        style={{ position: 'absolute', inset: 0, opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
-        onChange={e => handleRaw(e.target.files)}
-      />
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div
+        onClick={openPicker}
+        onDragOver={(e) => { e.preventDefault(); if (!disabled) setDrag(true); }}
+        onDragLeave={() => setDrag(false)}
+        onDrop={(e) => { e.preventDefault(); setDrag(false); handleRaw(e.dataTransfer.files); }}
+        style={{
+          position: 'relative', border: `2px dashed ${borderColor}`,
+          borderRadius: 18, padding: files.length > 0 ? '1.75rem 1.5rem' : '3rem 2rem', textAlign: 'center',
+          cursor: disabled ? 'not-allowed' : files.length >= MAX_FILES ? 'default' : 'pointer',
+          opacity: disabled ? 0.55 : 1,
+          background: bg, backdropFilter: 'blur(18px)',
+          transition: 'all 0.25s ease',
+          boxShadow: drag ? '0 0 50px rgba(0,210,200,0.18), inset 0 0 40px rgba(0,210,200,0.06)' : '0 4px 24px rgba(0,0,0,0.3)',
+        }}
+        onMouseEnter={e => {
+          if (!disabled && !drag && files.length < MAX_FILES) {
+            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,210,200,0.45)';
+            (e.currentTarget as HTMLElement).style.background = 'rgba(0,210,200,0.05)';
+          }
+        }}
+        onMouseLeave={e => {
+          if (!disabled && !drag) {
+            (e.currentTarget as HTMLElement).style.borderColor = borderColor;
+            (e.currentTarget as HTMLElement).style.background = bg;
+          }
+        }}
+      >
+        <input
+          ref={inputRef}
+          type="file"
+          multiple
+          accept=".pdf,.docx,.xlsx,.pptx,.txt,.html,.png,.jpg,.jpeg,.gif,.webp"
+          style={{ position: 'absolute', inset: 0, opacity: 0, width: 0, height: 0, pointerEvents: 'none' }}
+          onClick={(e) => { (e.target as HTMLInputElement).value = ''; }}
+          onChange={e => handleRaw(e.target.files)}
+        />
 
-      {/* Icon */}
-      <div style={{ fontSize: '3rem', marginBottom: 14, filter: `drop-shadow(0 0 16px rgba(0,210,200,${drag ? 0.6 : 0.35}))`, transition: 'filter 0.3s' }}>
-        {files.length > 0 ? '📋' : '📁'}
+        {/* Icon */}
+        <div style={{ fontSize: files.length > 0 ? '2.2rem' : '3rem', marginBottom: 10, filter: `drop-shadow(0 0 16px rgba(0,210,200,${drag ? 0.6 : 0.35}))`, transition: 'filter 0.3s' }}>
+          {files.length > 0 ? '📋' : '📁'}
+        </div>
+
+        {files.length === 0 ? (
+          <>
+            <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 8, color: 'var(--text)' }}>
+              Drop files or click to browse
+            </div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.5 }}>
+              Select up to {MAX_FILES} files (one by one or all at once) · PDF, DOCX, XLSX, PPTX, TXT, HTML, Images
+            </div>
+          </>
+        ) : (
+          <>
+            <div style={{ fontWeight: 700, fontSize: '0.95rem', marginBottom: 4, color: 'var(--accent)' }}>
+              {files.length} of {MAX_FILES} files selected
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+              {files.length < MAX_FILES ? (
+                <span>Click or drop files to add more ({MAX_FILES - files.length} slots remaining)</span>
+              ) : (
+                <span>Maximum limit reached ({MAX_FILES} files queued)</span>
+              )}
+            </div>
+          </>
+        )}
       </div>
 
-      {files.length === 0 ? (
-        <>
-          <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 8, color: 'var(--text)' }}>
-            Drop files or click to browse
+      {/* Selected files list chips */}
+      {files.length > 0 && !disabled && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 4px', fontSize: '0.72rem', color: 'var(--muted)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+            <span>Queued Files ({files.length}/{MAX_FILES})</span>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onClearAll(); }}
+              style={{
+                background: 'none', border: 'none', color: 'var(--danger)',
+                fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer',
+                fontFamily: 'inherit', padding: '2px 6px', borderRadius: 6,
+                transition: 'opacity 0.15s',
+              }}
+              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'underline'; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.textDecoration = 'none'; }}
+            >
+              Clear all
+            </button>
           </div>
-          <div style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.5 }}>
-            Up to {MAX_FILES} files · PDF, DOCX, XLSX, PPTX, TXT, HTML, PNG, JPG, GIF, WEBP
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {files.map((file, idx) => (
+              <motion.div
+                key={`${file.name}-${file.size}-${file.lastModified}-${idx}`}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                transition={{ duration: 0.18 }}
+                style={{
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                  gap: 10, padding: '8px 12px', borderRadius: 10,
+                  background: 'rgba(255,255,255,0.035)',
+                  border: '1px solid rgba(0,210,200,0.15)',
+                  backdropFilter: 'blur(12px)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, flex: 1 }}>
+                  <span style={{ fontSize: '1.1rem', flexShrink: 0 }}>{getFileIcon(file.name)}</span>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{
+                      fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)',
+                      overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                    }}>
+                      {file.name}
+                    </div>
+                    <div style={{ fontSize: '0.66rem', color: 'var(--muted)' }}>
+                      {formatSize(file.size)}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Remove single file */}
+                <button
+                  type="button"
+                  title="Remove file"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveFile(idx);
+                  }}
+                  style={{
+                    width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.12)',
+                    color: 'var(--muted)', fontSize: '0.75rem', cursor: 'pointer',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={e => {
+                    (e.currentTarget as HTMLElement).style.background = 'var(--danger-dim)';
+                    (e.currentTarget as HTMLElement).style.borderColor = 'rgba(248,113,113,0.3)';
+                    (e.currentTarget as HTMLElement).style.color = 'var(--danger)';
+                  }}
+                  onMouseLeave={e => {
+                    (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.05)';
+                    (e.currentTarget as HTMLElement).style.borderColor = 'rgba(255,255,255,0.12)';
+                    (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
+                  }}
+                >
+                  ✕
+                </button>
+              </motion.div>
+            ))}
           </div>
-        </>
-      ) : (
-        <>
-          <div style={{ fontWeight: 700, fontSize: '1rem', marginBottom: 6, color: 'var(--accent)' }}>
-            {files.length} file{files.length !== 1 ? 's' : ''} selected
-            <span style={{ color: 'var(--muted)', fontWeight: 500, fontSize: '0.82rem', marginLeft: 8 }}>
-              ({files.length} / {MAX_FILES} slots used)
-            </span>
-          </div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--muted)', lineHeight: 1.6, maxWidth: 480, margin: '0 auto' }}>
-            {files.map(f => f.name).join(' · ')}
-          </div>
-          <div style={{ marginTop: 10, fontSize: '0.72rem', color: 'var(--accent)', opacity: 0.7 }}>
-            Click or drop to change selection
-          </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -269,11 +391,36 @@ export function UploadPage() {
 
   useEffect(() => { void fetchConsent(mode); }, [mode, fetchConsent]);
 
-  const handleFiles = (incoming: File[]) => {
-    setOverLimitWarning(false);
-    setFiles(incoming);
+  const handleAddFiles = (incoming: File[]) => {
+    if (isUploading) return;
+    setFiles(prev => {
+      const existingKeys = new Set(prev.map(f => `${f.name}-${f.size}-${f.lastModified}`));
+      const uniqueIncoming = incoming.filter(f => !existingKeys.has(`${f.name}-${f.size}-${f.lastModified}`));
+      
+      const combined = [...prev, ...uniqueIncoming];
+      if (combined.length > MAX_FILES) {
+        setOverLimitWarning(true);
+        return combined.slice(0, MAX_FILES);
+      }
+      setOverLimitWarning(false);
+      return combined;
+    });
     setFileStates([]);
     setGlobalError(null);
+  };
+
+  const handleRemoveFile = (index: number) => {
+    if (isUploading) return;
+    setFiles(prev => prev.filter((_, i) => i !== index));
+    setFileStates([]);
+    setOverLimitWarning(false);
+  };
+
+  const handleClearAll = () => {
+    if (isUploading) return;
+    setFiles([]);
+    setFileStates([]);
+    setOverLimitWarning(false);
   };
 
   const handleUpload = async () => {
@@ -446,7 +593,9 @@ export function UploadPage() {
         <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}>
           <Dropzone
             files={files}
-            onFiles={handleFiles}
+            onAddFiles={handleAddFiles}
+            onRemoveFile={handleRemoveFile}
+            onClearAll={handleClearAll}
             disabled={isUploading}
           />
         </motion.div>
@@ -580,6 +729,33 @@ export function UploadPage() {
 
         {/* FILE PROGRESS QUEUE */}
         <AnimatePresence>
+          {isUploading && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 12,
+                padding: '12px 16px',
+                borderRadius: 14,
+                background: 'linear-gradient(135deg, rgba(0,210,200,0.12) 0%, rgba(168,85,247,0.10) 100%)',
+                border: '1px solid rgba(0,210,200,0.30)',
+                boxShadow: '0 4px 20px rgba(0,210,200,0.10)',
+              }}
+            >
+              <div style={{
+                width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                background: 'rgba(0,210,200,0.18)', border: '1px solid rgba(0,210,200,0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem'
+              }}>ℹ</div>
+              <div style={{ fontSize: '0.82rem', color: 'var(--text)', lineHeight: 1.45 }}>
+                <strong style={{ color: 'var(--accent)' }}>Processing files:</strong> If you upload large files, it takes time to process (OCR text extraction & chunk indexing). Please keep this window open.
+              </div>
+            </motion.div>
+          )}
+
           {fileStates.length > 0 && (
             <motion.div
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
