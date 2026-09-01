@@ -19,6 +19,7 @@ from service.auth.helper import (
     fetch_user_by_email,
     blacklist_user_session,
 )
+from core.database import supabase_client
 
 router = APIRouter(prefix="/api/v1/auth", tags=["Authentication"])
 
@@ -35,6 +36,22 @@ async def login(payload: UserLogin, response: Response):
     if not user or not verify_password(payload.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    if user.get("role") != "Super Admin" and user.get("org_id"):
+        if supabase_client:
+            org_check = (
+                supabase_client.table("organization_settings")
+                .select("is_disabled, disabled_reason")
+                .eq("org_id", user["org_id"])
+                .execute()
+            )
+            if org_check.data and org_check.data[0].get("is_disabled"):
+                reason = org_check.data[0].get("disabled_reason") or "Please contact your Super Administrator. or this email rag1agentsuperadmin@gmail.com"
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Your organisation '{user['org_id']}' has been suspended. Reason: {reason}"
+                )
+        
+
     token = create_jwt_token(
         claims={
             "user_id": user["id"],
@@ -45,6 +62,8 @@ async def login(payload: UserLogin, response: Response):
         },
         expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
     )
+
+    
 
     response.set_cookie(
         key="access_token",
@@ -71,6 +90,7 @@ async def logout(response: Response, current_user: TokenClaims = Depends(get_cur
 async def get_me(current_user: TokenClaims = Depends(get_current_user)):
     return UserInfo(
         user_id=current_user.user_id,
+        username=current_user.username,
         email=current_user.email,
         role=current_user.role,
         org_id=current_user.org_id,

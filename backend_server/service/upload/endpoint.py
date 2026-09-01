@@ -44,10 +44,14 @@ async def get_upload_consent(
 ):
     if upload_mode == UploadMode.GLOBAL:
         if current_user.role not in [Role.ADMIN, Role.SUPER_ADMIN]:
-            if not check_org_global_upload_setting(current_user.org_id):
+            org_allowed = check_org_global_upload_setting(current_user.org_id)
+            user_allowed = getattr(current_user, "allow_global_upload", False)
+        
+        # Allowed if either org-wide setting is ON OR this specific user was granted permission
+            if not (org_allowed or user_allowed):
                 raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="Global uploads are disabled for standard users. Contact your Admin."
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Global upload permission is disabled for your account. Contact your administrator."
                 )
         return ConsentMessage(
             upload_mode=UploadMode.GLOBAL,

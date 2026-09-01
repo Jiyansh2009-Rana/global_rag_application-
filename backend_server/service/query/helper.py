@@ -156,6 +156,7 @@ Be concise, accurate, and professional."""
 async def stream_llm_answer(
     user_query: str,
     context_chunks: List[Dict[str, Any]],
+    user_name: str ="user",
     language: str = "English",
     system_prompt: Optional[str] = None,
 ):
@@ -165,6 +166,10 @@ async def stream_llm_answer(
             "Please try rephrasing or upload relevant documents."
         )
         return
+    user_identity_prompt = (
+        f"You are speaking with {user_name}. "
+        f"If the user greets you or asks for their name/identity, address them warmly as {user_name}."
+    )
 
     context_parts = []
     for i, chunk in enumerate(context_chunks, start=1):
@@ -183,8 +188,10 @@ async def stream_llm_answer(
     lang_instruction = LANGUAGE_INSTRUCTION.get(language, "Answer in English.")
     base_prompt = system_prompt or DEFAULT_SYSTEM_PROMPT
     full_system = (
-        f"{base_prompt}\n\nLanguage instruction: {lang_instruction}"
-        f"\n\nContext from documents:\n{context_text}"
+        f"{base_prompt}\n\n"
+        f"User Identity: {user_identity_prompt}\n"
+        f"Language instruction: {LANGUAGE_INSTRUCTION.get(language, 'Answer in English.')}\n\n"
+        f"Context from documents:\n{context_text}"
     )
 
     models_to_try = [

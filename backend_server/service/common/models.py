@@ -36,6 +36,7 @@ class OrgSettingsResponse(BaseModel):
 
 class UserSignup(BaseModel):
     email: EmailStr
+    username: str = Field(..., min_length=4, max_length=50)
     password: str = Field(..., min_length=8)
     org_id: str
     tenant_id: Optional[str] = None
@@ -48,8 +49,10 @@ class UserLogin(BaseModel):
 class TokenClaims(BaseModel):
     user_id: str
     email: str
+    username: Optional[str] = None
     role: Role
     org_id: Optional[str] = None
+    allow_global_upload: bool = False
     tenant_id: Optional[str] = None
     exp: Optional[int] = None
     iat: Optional[int] = None
@@ -147,3 +150,6 @@ class UploadReport(BaseModel):
     chunks_created: int
     status: str
     uploaded_at: str
+
+class UserPermissionUpdate(BaseModel):
+    allow_global_upload: bool

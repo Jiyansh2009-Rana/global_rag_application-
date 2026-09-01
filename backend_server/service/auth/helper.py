@@ -35,10 +35,12 @@ def register_user(payload: UserSignup) -> Dict[str, Any]:
         try:
             supabase_client.table("users").insert({
                 "id": user_id,
+                "username":payload.username,
                 "email": payload.email,
                 "password_hash": hashed_pw,
                 "role": payload.Role or Role.USER,
                 "org_id": org_id,
+                "allow_global_upload": False,       
                 "tenant_id": payload.tenant_id,
                 "created_at": created_at,
             }).execute()

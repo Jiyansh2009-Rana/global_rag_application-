@@ -4,8 +4,9 @@ from typing import Dict, Any, Optional, List
 from fastapi import HTTPException, status, Header, Cookie, Depends
 from passlib.context import CryptContext
 from jose import JWTError, jwt
-from core.config import SECRET_KEY, ALGORITHM
+from core.config import SECRET_KEY, ALGORITHM , ACCESS_TOKEN_EXPIRE_MINUTES 
 from service.common.models import Role, TokenClaims
+from core.database import supabase_client
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -15,12 +16,24 @@ def hash_password(password: str) -> str:
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
-def create_jwt_token(claims: Dict[str, Any], expires_delta: timedelta) -> str:
-    to_encode = claims.copy()
-    expire = datetime.now(timezone.utc) + expires_delta
-    to_encode.update({"exp": int(expire.timestamp())})
-    to_encode.setdefault("iat", int(datetime.now(timezone.utc).timestamp()))
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+def create_access_token(
+    user_id: str, email: str, role: Role, 
+    org_id: Optional[str] = None, 
+    username: Optional[str] = None,                      
+    allow_global_upload: bool = False                    
+) -> str:
+    payload = {
+        "sub": user_id,
+        "user_id": user_id,
+        "username": username or email.split("@")[0],     
+        "email": email,
+        "role": role.value,
+        "org_id": org_id,
+        "allow_global_upload": allow_global_upload,
+        "exp": datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        "iat": datetime.now(timezone.utc),
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
 def decode_jwt_token(token: str) -> Dict[str, Any]:
     try:
@@ -60,6 +73,8 @@ async def get_current_user(
     return TokenClaims(
         user_id=payload.get("user_id"),
         email=payload.get("email"),
+        username=payload.get("username"),
+        allow_global_upload=payload.get("allow_global_upload="),
         role=Role(payload.get("role", "User")),
         org_id=payload.get("org_id"),
         tenant_id=payload.get("tenant_id"),
@@ -81,6 +96,25 @@ class RoleChecker:
 def enforce_tenant_access(requested_org_id: str, current_user: TokenClaims):
     if current_user.role == Role.SUPER_ADMIN:
         return True
+
+    if supabase_client and requested_org_id:
+        try:
+            org_check = (
+                supabase_client.table("organization_settings")
+                .select("is_disabled")
+                .eq("org_id", requested_org_id)
+                .execute()
+            )
+            if org_check.data and org_check.data[0].get("is_disabled"):
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="Organisation access is currently suspended by Platform Administrator."
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
+        
     if current_user.org_id != requested_org_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

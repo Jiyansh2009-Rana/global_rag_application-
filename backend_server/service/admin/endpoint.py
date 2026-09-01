@@ -6,6 +6,7 @@ from service.common.models import (
     TokenClaims,
     OrgSettingsResponse,
     OrgSettingsUpdate,
+    UserPermissionUpdate,
 )
 from service.admin.helper import (
     check_org_global_upload_setting,
@@ -25,7 +26,7 @@ async def get_organization_users(current_user: TokenClaims = Depends(admin_only)
         raise HTTPException(status_code=500, detail="Supabase client not initialized")
 
     try:
-        query = supabase_client.table("users").select("id, email, role, org_id, created_at")
+        query = supabase_client.table("users").select("id, username, email, role, org_id, allow_global_upload, created_at")
         if current_user.org_id:
             query = query.eq("org_id", current_user.org_id)
         response = query.order("created_at", desc=True).execute()
@@ -51,6 +52,31 @@ async def configure_global_upload(
         "message": "Global upload configuration updated successfully.",
         "allow_user_global_upload": payload.allow_user_global_upload
     }
+
+@router.patch("/users/{target_user_id}/permissions")
+async def update_user_upload_permission(
+    target_user_id: str,
+    payload: UserPermissionUpdate,
+    current_user: TokenClaims = Depends(admin_only)
+):
+    # Verify user belongs to same org
+    user_check = supabase_client.table("users").select("id, org_id").eq("id", target_user_id).execute()
+    if not user_check.data:
+        raise HTTPException(status_code=404, detail="User not found.")
+    
+    if current_user.role != Role.SUPER_ADMIN and user_check.data[0]["org_id"] != current_user.org_id:
+        raise HTTPException(status_code=403, detail="Access denied.")
+
+    supabase_client.table("users").update({
+        "allow_global_upload": payload.allow_global_upload
+    }).eq("id", target_user_id).execute()
+
+    return {
+        "message": f"Global upload permission {'enabled' if payload.allow_global_upload else 'disabled'}.",
+        "user_id": target_user_id,
+        "allow_global_upload": payload.allow_global_upload
+    }
+
 
 @router.delete("/users/{target_user_id}")
 async def delete_organization_user(
