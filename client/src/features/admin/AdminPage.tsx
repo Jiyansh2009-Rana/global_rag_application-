@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useContextHooks';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { getOrgUsers, deleteOrgUser, getOrgDocuments, deleteOrgDocument, getGlobalUploadSetting, updateGlobalUploadSetting } from '@/api/admin';
+import { getOrgUsers, deleteOrgUser, getOrgDocuments, deleteOrgDocument, getGlobalUploadSetting, updateGlobalUploadSetting, updateUserUploadPermission } from '@/api/admin';
 import { parseApiError, BASE_URL, tokenStore } from '@/api/client';
 import type { OrgUser, OrgDocument } from '@/api/types';
 
@@ -404,6 +404,17 @@ function UsersTab() {
     }
   };
 
+  const handleTogglePermission = async (userId: string, currentVal: boolean) => {
+    const nextVal = !currentVal;
+    try {
+      await updateUserUploadPermission(userId, nextVal);
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, allow_global_upload: nextVal } : u));
+      setStatusMsg({ msg: `Global upload permission ${nextVal ? 'granted' : 'revoked'} for user.`, type: 'success' });
+    } catch (err) {
+      setStatusMsg({ msg: parseApiError(err), type: 'error' });
+    }
+  };
+
   const confirmUser = users.find(u => u.id === confirmId);
 
   return (
@@ -411,7 +422,7 @@ function UsersTab() {
       <AnimatePresence>
         {confirmId && (
           <ConfirmDialog
-            message={`Remove ${confirmUser?.email ?? 'this user'} (${confirmUser?.role}) from your organisation? This action cannot be undone.`}
+            message={`Remove ${confirmUser?.username || confirmUser?.email || 'this user'} (${confirmUser?.role}) from your organisation? This action cannot be undone.`}
             onConfirm={() => void handleDelete()}
             onCancel={() => setConfirmId(null)}
             loading={deleting}
@@ -467,17 +478,19 @@ function UsersTab() {
 
         {!loading && users.length > 0 && (
           <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
-            <div style={{ minWidth: 480, display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ minWidth: 540, display: 'flex', flexDirection: 'column', gap: 8 }}>
               {/* Table header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 110px 1fr 80px', gap: 12, padding: '0 14px', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--muted)', marginBottom: 2 }}>
-                <span>Email</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 100px 90px 120px 70px', gap: 12, padding: '0 14px', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--muted)', marginBottom: 2 }}>
+                <span>User</span>
                 <span>Role</span>
                 <span>Joined</span>
+                <span>Global Upload</span>
                 <span style={{ textAlign: 'right' }}>Action</span>
               </div>
 
               {users.map((u, i) => {
                 const isSelf = u.id === me?.user_id;
+                const displayName = u.username || u.email.split('@')[0];
                 return (
                   <motion.div
                     key={u.id}
@@ -486,7 +499,7 @@ function UsersTab() {
                     transition={{ delay: i * 0.04 }}
                     style={{
                       display: 'grid',
-                      gridTemplateColumns: '1.4fr 110px 1fr 80px',
+                      gridTemplateColumns: '1.4fr 100px 90px 120px 70px',
                       gap: 12,
                       alignItems: 'center',
                       padding: '12px 14px',
@@ -496,17 +509,17 @@ function UsersTab() {
                       transition: 'background 0.18s',
                     }}
                   >
-                    {/* Email */}
+                    {/* User info (Name + Email) */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                       <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-fg)', background: 'linear-gradient(135deg, rgba(0,210,200,0.28), rgba(168,85,247,0.22))', border: '1px solid rgba(0,210,200,0.22)' }}>
-                        {u.email.charAt(0).toUpperCase()}
+                        {displayName.charAt(0).toUpperCase()}
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', lineHeight: 1.2, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {u.email}
+                          {displayName}
                           {isSelf && <span style={{ marginLeft: 6, fontSize: '0.62rem', color: 'var(--accent)', fontWeight: 500 }}>(you)</span>}
                         </div>
-                        <div style={{ fontSize: '0.64rem', color: 'var(--muted)', fontFamily: 'monospace' }}>{u.id.slice(0, 14)}…</div>
+                        <div style={{ fontSize: '0.66rem', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.email}</div>
                       </div>
                     </div>
 
@@ -518,6 +531,33 @@ function UsersTab() {
                       {new Date(u.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                     </div>
 
+                    {/* Global Upload Permission Toggle */}
+                    <div>
+                      {u.role === 'User' ? (
+                        <button
+                          type="button"
+                          onClick={() => void handleTogglePermission(u.id, !!u.allow_global_upload)}
+                          title={u.allow_global_upload ? 'Revoke global upload permission' : 'Grant global upload permission'}
+                          style={{
+                            padding: '4px 8px',
+                            borderRadius: 8,
+                            fontSize: '0.68rem',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            background: u.allow_global_upload ? 'var(--success-dim)' : 'rgba(255,255,255,0.06)',
+                            color: u.allow_global_upload ? 'var(--success)' : 'var(--muted)',
+                            border: `1px solid ${u.allow_global_upload ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                            transition: 'all 0.18s',
+                            fontFamily: 'inherit',
+                          }}
+                        >
+                          {u.allow_global_upload ? '✓ Allowed' : '✕ Disabled'}
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '0.68rem', color: 'var(--accent)', fontWeight: 500 }}>Always Allowed</span>
+                      )}
+                    </div>
+
                     {/* Delete */}
                     <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
                       <button
@@ -525,12 +565,12 @@ function UsersTab() {
                         onClick={() => setConfirmId(u.id)}
                         title={isSelf ? 'Cannot remove your own account' : 'Remove user'}
                         style={{
-                          padding: '6px 10px',
+                          padding: '5px 9px',
                           borderRadius: 8,
                           border: '1px solid rgba(248,113,113,0.22)',
                           background: 'var(--danger-dim)',
                           color: 'var(--danger)',
-                          fontSize: '0.72rem',
+                          fontSize: '0.70rem',
                           fontWeight: 600,
                           cursor: isSelf ? 'not-allowed' : 'pointer',
                           opacity: isSelf ? 0.35 : 1,

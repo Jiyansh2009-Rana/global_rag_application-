@@ -7,6 +7,18 @@ export async function getOrgUsers(): Promise<OrgUser[]> {
   return res.users ?? [];
 }
 
+/* ── PATCH /api/v1/admin/users/:id/permissions ── */
+export async function updateUserUploadPermission(
+  userId: string,
+  allow_global_upload: boolean
+): Promise<{ message: string; allow_global_upload: boolean }> {
+  return apiFetch<{ message: string; allow_global_upload: boolean }>(`/admin/users/${userId}/permissions`, {
+    method: 'PATCH',
+    body: JSON.stringify({ allow_global_upload }),
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
 /* ── DELETE /api/v1/admin/users/:id ── */
 export async function deleteOrgUser(userId: string): Promise<{ message: string }> {
   return apiFetch<{ message: string }>(`/admin/users/${userId}`, { method: 'DELETE' });

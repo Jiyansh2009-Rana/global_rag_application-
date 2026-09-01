@@ -74,7 +74,7 @@ async def get_current_user(
         user_id=payload.get("user_id"),
         email=payload.get("email"),
         username=payload.get("username"),
-        allow_global_upload=payload.get("allow_global_upload="),
+        allow_global_upload=bool(payload.get("allow_global_upload",False)),
         role=Role(payload.get("role", "User")),
         org_id=payload.get("org_id"),
         tenant_id=payload.get("tenant_id"),
@@ -132,3 +132,6 @@ def decode_base64_to_image(data_url: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Could not decode stored image: {e}")
     return media_type, image_bytes
+
+# Alias for backwards compatibility
+create_jwt_token = create_access_token

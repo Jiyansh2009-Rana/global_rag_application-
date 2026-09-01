@@ -3,9 +3,11 @@ import { z } from 'zod';
 /* ── User ── */
 export const UserMeSchema = z.object({
   user_id: z.string(),
+  username: z.string().optional(),
   email: z.string(),
   role: z.enum(['User', 'Admin', 'Super Admin']),
   org_id: z.string().nullable().optional(),
+  allow_global_upload: z.boolean().optional(),
   created_at: z.string().optional(),
 });
 export type UserMe = z.infer<typeof UserMeSchema>;
@@ -87,6 +89,7 @@ export type QueryRequest = z.infer<typeof QueryRequestSchema>;
 
 /* ── Signup ── */
 export const SignupPayloadSchema = z.object({
+  username: z.string().min(2, 'Username must be at least 2 characters'),
   email: z.string().email('Enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
   Role: z.enum(['User', 'Admin', 'Super Admin']).default('User'),
@@ -116,10 +119,13 @@ export type LoginPayload = z.infer<typeof LoginPayloadSchema>;
 
 /* ── Admin — Org User ── */
 export const OrgUserSchema = z.object({
-  id:         z.string(),
-  email:      z.string(),
-  role:       z.string(),
-  created_at: z.string(),
+  id:                  z.string(),
+  username:            z.string().optional(),
+  email:               z.string(),
+  role:                z.string(),
+  org_id:              z.string().optional(),
+  allow_global_upload: z.boolean().optional(),
+  created_at:          z.string(),
 });
 export type OrgUser = z.infer<typeof OrgUserSchema>;
 
@@ -138,11 +144,13 @@ export type OrgDocument = z.infer<typeof OrgDocumentSchema>;
 
 /* ── Super Admin — Global User ── */
 export const SuperAdminUserSchema = z.object({
-  id:         z.string(),
-  email:      z.string(),
-  role:       z.string(),
-  org_id:     z.string().nullable().optional(),
-  created_at: z.string(),
+  id:                  z.string(),
+  username:            z.string().optional(),
+  email:               z.string(),
+  role:                z.string(),
+  org_id:              z.string().nullable().optional(),
+  allow_global_upload: z.boolean().optional(),
+  created_at:          z.string(),
 });
 export type SuperAdminUser = z.infer<typeof SuperAdminUserSchema>;
 
@@ -158,6 +166,17 @@ export const SuperAdminDocumentSchema = z.object({
   org_id:       z.string().nullable().optional(),
 });
 export type SuperAdminDocument = z.infer<typeof SuperAdminDocumentSchema>;
+
+/* ── Super Admin — Organisation ── */
+export const SuperAdminOrgSchema = z.object({
+  org_id:          z.string(),
+  admin_email:     z.string().nullable().optional(),
+  total_users:     z.number(),
+  is_disabled:     z.boolean().default(false),
+  disabled_at:     z.string().nullable().optional(),
+  disabled_reason: z.string().nullable().optional(),
+});
+export type SuperAdminOrg = z.infer<typeof SuperAdminOrgSchema>;
 
 /* ── Chat History ── */
 export const ChatHistoryItemSchema = z.object({

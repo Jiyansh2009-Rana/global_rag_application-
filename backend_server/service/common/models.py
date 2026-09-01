@@ -52,7 +52,7 @@ class TokenClaims(BaseModel):
     username: Optional[str] = None
     role: Role
     org_id: Optional[str] = None
-    allow_global_upload: bool = False
+    allow_global_upload: Optional[bool]= False
     tenant_id: Optional[str] = None
     exp: Optional[int] = None
     iat: Optional[int] = None

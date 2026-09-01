@@ -8,9 +8,11 @@ import {
   deleteSuperAdminUser,
   getSuperAdminDocuments,
   deleteSuperAdminDocument,
+  getSuperAdminOrgs,
+  toggleOrgStatus,
 } from '@/api/super-admin';
 import { parseApiError, BASE_URL, tokenStore } from '@/api/client';
-import type { SuperAdminUser, SuperAdminDocument } from '@/api/types';
+import type { SuperAdminUser, SuperAdminDocument, SuperAdminOrg } from '@/api/types';
 
 /* ─── shared glass card style ─── */
 const glassPanel = {
@@ -284,7 +286,310 @@ function GlobalOverviewTab({
 }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   TAB 2 — ALL USERS & ADMINS
+   TAB 2 — ORGANISATIONS MANAGEMENT & GOVERNANCE
+════════════════════════════════════════════════════════════════════════ */
+function OrganisationsTab({
+  orgs,
+  loading,
+  onRefresh,
+}: {
+  orgs: SuperAdminOrg[];
+  loading: boolean;
+  onRefresh: () => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'SUSPENDED'>('ALL');
+  const [statusMsg, setStatusMsg] = useState<{ msg: string; type: 'error' | 'success' } | null>(null);
+  const [actionOrg, setActionOrg] = useState<SuperAdminOrg | null>(null);
+  const [customReason, setCustomReason] = useState('Administrative policy enforcement');
+  const [updating, setUpdating] = useState(false);
+
+  const filteredOrgs = useMemo(() => {
+    return orgs.filter(o => {
+      const matchSearch =
+        o.org_id.toLowerCase().includes(search.toLowerCase()) ||
+        (o.admin_email && o.admin_email.toLowerCase().includes(search.toLowerCase()));
+      const matchStatus =
+        statusFilter === 'ALL'
+          ? true
+          : statusFilter === 'SUSPENDED'
+          ? o.is_disabled
+          : !o.is_disabled;
+      return matchSearch && matchStatus;
+    });
+  }, [orgs, search, statusFilter]);
+
+  const handleToggle = async () => {
+    if (!actionOrg) return;
+    setUpdating(true);
+    const nextDisabled = !actionOrg.is_disabled;
+    try {
+      await toggleOrgStatus(actionOrg.org_id, nextDisabled, customReason);
+      setStatusMsg({
+        msg: `Organisation '${actionOrg.org_id}' access ${nextDisabled ? 'SUSPENDED (Notification email sent to admin)' : 'ACTIVATED'}.`,
+        type: 'success',
+      });
+      setActionOrg(null);
+      onRefresh();
+    } catch (err) {
+      setStatusMsg({ msg: parseApiError(err), type: 'error' });
+    } finally {
+      setUpdating(false);
+      setTimeout(() => setStatusMsg(null), 5000);
+    }
+  };
+
+  return (
+    <>
+      {/* Confirm Action Dialog */}
+      <AnimatePresence>
+        {actionOrg && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            style={{
+              position: 'fixed', inset: 0, zIndex: 9999,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)',
+              padding: '1rem',
+            }}
+            onClick={() => setActionOrg(null)}
+          >
+            <div
+              onClick={e => e.stopPropagation()}
+              style={{
+                ...glassPanel,
+                padding: '1.75rem',
+                maxWidth: 480, width: '100%',
+                borderColor: actionOrg.is_disabled ? 'rgba(52,211,153,0.30)' : 'rgba(248,113,113,0.30)',
+                boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
+              }}
+            >
+              <div style={{ fontSize: '1.6rem', marginBottom: 12 }}>
+                {actionOrg.is_disabled ? '🔓' : '⚠️'}
+              </div>
+              <h3 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
+                {actionOrg.is_disabled ? `Activate Organisation: ${actionOrg.org_id}` : `Suspend Organisation: ${actionOrg.org_id}`}
+              </h3>
+              <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: 14 }}>
+                {actionOrg.is_disabled
+                  ? `Reactivating this organisation will immediately allow all ${actionOrg.total_users} member(s) to log in, search, and upload documents.`
+                  : `Suspending will block all members from logging in and accessing APIs. An automated security email will be sent to the admin (${actionOrg.admin_email || 'No admin email found'}).`}
+              </p>
+
+              {!actionOrg.is_disabled && (
+                <div style={{ marginBottom: 18 }}>
+                  <label style={{ display: 'block', fontSize: '0.72rem', color: 'var(--muted)', marginBottom: 6 }}>
+                    Reason for Suspension (included in email notice):
+                  </label>
+                  <input
+                    type="text"
+                    value={customReason}
+                    onChange={e => setCustomReason(e.target.value)}
+                    style={{
+                      width: '100%', padding: '8px 12px', borderRadius: 10,
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(248,113,113,0.25)',
+                      color: 'var(--text)', fontSize: '0.80rem', outline: 'none',
+                    }}
+                  />
+                </div>
+              )}
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <Button variant="ghost" size="md" onClick={() => setActionOrg(null)} style={{ flex: 1 }}>
+                  Cancel
+                </Button>
+                <Button
+                  variant="primary" size="md"
+                  loading={updating}
+                  onClick={() => void handleToggle()}
+                  style={{
+                    flex: 1,
+                    background: actionOrg.is_disabled ? 'var(--success)' : 'var(--danger)',
+                    borderColor: actionOrg.is_disabled ? 'var(--success)' : 'var(--danger)',
+                  }}
+                >
+                  {actionOrg.is_disabled ? 'Confirm Activation' : 'Confirm Suspension'}
+                </Button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <motion.div initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.38 }}
+        style={{ ...glassPanel, padding: '1.5rem 1.5rem' }}>
+
+        {/* Header */}
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(168,85,247,0.12)', flexWrap: 'wrap', gap: 10 }}>
+          <div>
+            <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
+              Organisation Access Governance
+            </h2>
+            <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
+              {loading ? 'Loading…' : `${filteredOrgs.length} of ${orgs.length} organisations registered`}
+            </p>
+          </div>
+          <Button variant="ghost" size="sm" onClick={onRefresh} disabled={loading}>
+            {loading ? 'Refreshing…' : '↻ Refresh'}
+          </Button>
+        </div>
+
+        {/* Status */}
+        <AnimatePresence>
+          {statusMsg && <div style={{ marginBottom: 14 }}><StatusMsg {...statusMsg} /></div>}
+        </AnimatePresence>
+
+        {/* Search & Filter */}
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: '1.25rem' }}>
+          <input
+            type="text"
+            placeholder="Search organisation ID or Admin email..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{
+              flex: 1, minWidth: 200, padding: '8px 12px', borderRadius: 10,
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(168,85,247,0.20)',
+              color: 'var(--text)', fontSize: '0.78rem', outline: 'none',
+              fontFamily: 'inherit',
+            }}
+          />
+
+          <select
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value as any)}
+            style={{
+              padding: '8px 12px', borderRadius: 10,
+              background: 'rgba(20,20,30,0.85)', border: '1px solid rgba(168,85,247,0.20)',
+              color: 'var(--text)', fontSize: '0.78rem', outline: 'none',
+              cursor: 'pointer', fontFamily: 'inherit',
+            }}
+          >
+            <option value="ALL">All Statuses</option>
+            <option value="ACTIVE">Active Only</option>
+            <option value="SUSPENDED">Suspended Only</option>
+          </select>
+        </div>
+
+        {/* Loading skeleton */}
+        {loading && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {[1, 2, 3].map(i => (
+              <div key={i} style={{ height: 56, borderRadius: 12, background: 'rgba(255,255,255,0.04)', animation: 'pulse 1.5s ease-in-out infinite', animationDelay: `${i * 0.1}s` }} />
+            ))}
+          </div>
+        )}
+
+        {/* Empty */}
+        {!loading && filteredOrgs.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '3.5rem 0', color: 'var(--muted)', fontSize: '0.85rem' }}>
+            No organisations found.
+          </div>
+        )}
+
+        {/* Organisations list */}
+        {!loading && filteredOrgs.length > 0 && (
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
+            <div style={{ minWidth: 600, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {/* Header row */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.5fr 80px 110px 110px', gap: 12, padding: '0 14px', fontSize: '0.65rem', textTransform: 'uppercase', letterSpacing: '0.09em', color: 'var(--muted)', marginBottom: 2 }}>
+                <span>Organisation</span>
+                <span>Admin Email</span>
+                <span>Members</span>
+                <span>Status</span>
+                <span style={{ textAlign: 'right' }}>Action</span>
+              </div>
+
+              {filteredOrgs.map((org, i) => (
+                <motion.div
+                  key={org.org_id}
+                  initial={{ opacity: 0, x: -8 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.03 }}
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: '1.2fr 1.5fr 80px 110px 110px',
+                    gap: 12,
+                    alignItems: 'center',
+                    padding: '12px 14px',
+                    borderRadius: 13,
+                    background: org.is_disabled ? 'rgba(248,113,113,0.06)' : 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${org.is_disabled ? 'rgba(248,113,113,0.25)' : 'rgba(255,255,255,0.06)'}`,
+                    transition: 'background 0.18s',
+                  }}
+                >
+                  {/* Org ID */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+                    <div style={{
+                      width: 28, height: 28, borderRadius: 8, flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: '0.75rem', fontWeight: 700,
+                      background: org.is_disabled ? 'rgba(248,113,113,0.2)' : 'rgba(0,210,200,0.15)',
+                      color: org.is_disabled ? 'var(--danger)' : 'var(--accent)',
+                    }}>
+                      🏢
+                    </div>
+                    <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {org.org_id}
+                    </div>
+                  </div>
+
+                  {/* Admin Email */}
+                  <div style={{ fontSize: '0.78rem', color: org.admin_email ? 'var(--text)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {org.admin_email || 'No Admin Assigned'}
+                  </div>
+
+                  {/* Members */}
+                  <div style={{ fontSize: '0.80rem', fontWeight: 600, color: 'var(--text)' }}>
+                    {org.total_users}
+                  </div>
+
+                  {/* Status Badge */}
+                  <div>
+                    <span style={{
+                      padding: '3px 8px', borderRadius: 999, fontSize: '0.68rem', fontWeight: 600,
+                      background: org.is_disabled ? 'var(--danger-dim)' : 'var(--success-dim)',
+                      color: org.is_disabled ? 'var(--danger)' : 'var(--success)',
+                      border: `1px solid ${org.is_disabled ? 'rgba(248,113,113,0.3)' : 'rgba(52,211,153,0.3)'}`,
+                      display: 'inline-block',
+                    }}>
+                      {org.is_disabled ? 'SUSPENDED' : 'ACTIVE'}
+                    </span>
+                  </div>
+
+                  {/* Action Button */}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={() => setActionOrg(org)}
+                      style={{
+                        padding: '5px 10px',
+                        borderRadius: 8,
+                        fontSize: '0.70rem',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        background: org.is_disabled ? 'var(--success-dim)' : 'var(--danger-dim)',
+                        color: org.is_disabled ? 'var(--success)' : 'var(--danger)',
+                        border: `1px solid ${org.is_disabled ? 'rgba(52,211,153,0.3)' : 'rgba(248,113,113,0.3)'}`,
+                        transition: 'all 0.18s',
+                        fontFamily: 'inherit',
+                      }}
+                    >
+                      {org.is_disabled ? 'Activate Org' : 'Disable Org'}
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
+      </motion.div>
+    </>
+  );
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   TAB 3 — ALL USERS & ADMINS
 ════════════════════════════════════════════════════════════════════════ */
 function AllUsersTab({
   users,
@@ -446,6 +751,7 @@ function AllUsersTab({
               {filteredUsers.map((u, i) => {
                 const isSelf = u.id === me?.user_id;
                 const isSuper = u.role === 'Super Admin';
+                const displayName = u.username || u.email.split('@')[0];
                 return (
                   <motion.div
                     key={u.id}
@@ -464,7 +770,7 @@ function AllUsersTab({
                       transition: 'background 0.18s',
                     }}
                   >
-                    {/* Email & ID */}
+                    {/* User display name & email */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 9, minWidth: 0 }}>
                       <div style={{
                         width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
@@ -475,14 +781,14 @@ function AllUsersTab({
                           : 'linear-gradient(135deg, rgba(0,210,200,0.35), rgba(168,85,247,0.25))',
                         border: `1px solid ${isSuper ? '#ec4899' : 'rgba(0,210,200,0.3)'}`,
                       }}>
-                        {u.email.charAt(0).toUpperCase()}
+                        {displayName.charAt(0).toUpperCase()}
                       </div>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {u.email}
+                          {displayName}
                           {isSelf && <span style={{ marginLeft: 6, fontSize: '0.62rem', color: '#a855f7', fontWeight: 600 }}>(you)</span>}
                         </div>
-                        <div style={{ fontSize: '0.64rem', color: 'var(--muted)', fontFamily: 'monospace' }}>{u.id.slice(0, 14)}…</div>
+                        <div style={{ fontSize: '0.66rem', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.email}</div>
                       </div>
                     </div>
 
@@ -877,14 +1183,16 @@ function AllDocumentsTab({
    SUPER ADMIN PAGE — ROOT COMPONENT
 ════════════════════════════════════════════════════════════════════════ */
 const TABS = [
-  { id: 'overview',   label: 'Global Overview', icon: '⊞' },
-  { id: 'users',      label: 'All Users & Admins', icon: '◈' },
-  { id: 'documents',  label: 'All Documents',  icon: '◆' },
+  { id: 'overview',      label: 'Global Overview',  icon: '⊞' },
+  { id: 'organisations', label: 'Organisations',    icon: '🏢' },
+  { id: 'users',         label: 'All Users & Admins', icon: '◈' },
+  { id: 'documents',     label: 'All Documents',    icon: '◆' },
 ] as const;
 type TabId = typeof TABS[number]['id'];
 
 export function SuperAdminPage() {
   const [activeTab, setActiveTab] = useState<TabId>('overview');
+  const [orgs, setOrgs] = useState<SuperAdminOrg[]>([]);
   const [users, setUsers] = useState<SuperAdminUser[]>([]);
   const [documents, setDocuments] = useState<SuperAdminDocument[]>([]);
   const [loading, setLoading] = useState(true);
@@ -893,10 +1201,12 @@ export function SuperAdminPage() {
   const loadAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [u, d] = await Promise.all([
+      const [o, u, d] = await Promise.all([
+        getSuperAdminOrgs(),
         getSuperAdminUsers(),
         getSuperAdminDocuments(),
       ]);
+      setOrgs(o);
       setUsers(u);
       setDocuments(d);
     } catch (err) {
@@ -1044,6 +1354,13 @@ export function SuperAdminPage() {
                 users={users}
                 documents={documents}
                 loading={loading}
+              />
+            )}
+            {activeTab === 'organisations' && (
+              <OrganisationsTab
+                orgs={orgs}
+                loading={loading}
+                onRefresh={() => void loadAllData()}
               />
             )}
             {activeTab === 'users'     && (

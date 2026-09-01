@@ -278,6 +278,8 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
       style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       {apiError   && <AlertBox type="error">{apiError}</AlertBox>}
       {successMsg && <AlertBox type="success">{successMsg}</AlertBox>}
+      <Input label="Username" type="text" placeholder="e.g. alex_doe"
+        autoComplete="username" error={errors.username?.message} {...register('username')} />
       <Input label="Work email" type="email" placeholder="you@company.com"
         autoComplete="email" error={errors.email?.message} {...register('email')} />
       <Input label="Password" type="password" placeholder="At least 8 characters"

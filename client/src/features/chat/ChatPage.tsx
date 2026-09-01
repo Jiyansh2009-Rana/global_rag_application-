@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
+import { useAuth } from '@/hooks/useContextHooks';
 import { queryApi, downloadFile, streamQuery, parseQuerySSEStream } from '@/api/query';
 import { parseApiError } from '@/api/client';
 import type { QueryResponse, Source, QueryRequest, ChatHistoryItem } from '@/api/types';
@@ -1067,6 +1068,9 @@ function HistoryContent({
 
 /* ── Empty State ── */
 function EmptyState({ onSelectSuggestion }: { onSelectSuggestion: (q: string) => void }) {
+  const { user } = useAuth();
+  const displayName = user?.username || user?.email?.split('@')[0] || 'there';
+
   const suggestions = [
     'Summarise Q3 results',
     'What is the refund policy?',
@@ -1079,10 +1083,10 @@ function EmptyState({ onSelectSuggestion }: { onSelectSuggestion: (q: string) =>
       <div className="glass" style={{ width: 68, height: 68, borderRadius: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.65rem', marginBottom: 20, boxShadow: '0 0 32px rgba(0,210,200,0.18)' }}>
         ◆
       </div>
-      <h2 style={{ fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif', fontSize: '1.25rem', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 8, color: 'var(--text)' }}>
-        Ask anything
+      <h2 style={{ fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif', fontSize: '1.35rem', fontWeight: 600, letterSpacing: '-0.02em', marginBottom: 8, color: 'var(--text)' }}>
+        Hello {displayName}! How can I help you today?
       </h2>
-      <p style={{ fontSize: '0.84rem', color: 'var(--muted)', maxWidth: 360, lineHeight: 1.65, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
+      <p style={{ fontSize: '0.84rem', color: 'var(--muted)', maxWidth: 420, lineHeight: 1.65, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>
         Query your organisation's indexed documents. Use the mode pills to switch between your global org index, local session index, or both.
       </p>
       <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: 8, marginTop: 24 }}>

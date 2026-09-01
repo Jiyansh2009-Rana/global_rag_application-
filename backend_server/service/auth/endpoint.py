@@ -3,10 +3,11 @@ from fastapi import APIRouter, HTTPException, status, Response, Depends
 from core.config import ACCESS_TOKEN_EXPIRE_MINUTES
 from core.security import (
     verify_password,
-    create_jwt_token,
+    create_access_token,      
     get_current_user,
 )
 from service.common.models import (
+    Role,                     
     UserSignup,
     UserLogin,
     TokenResponse,
@@ -52,15 +53,13 @@ async def login(payload: UserLogin, response: Response):
                 )
         
 
-    token = create_jwt_token(
-        claims={
-            "user_id": user["id"],
-            "email": user["email"],
-            "role": user["role"],
-            "org_id": user.get("org_id"),
-            "tenant_id": user.get("tenant_id"),
-        },
-        expires_delta=timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+    token = create_access_token(
+        user_id=user["id"],
+        email=user["email"],
+        username=user.get("username"),
+        role=Role(user["role"]),
+        org_id=user.get("org_id"),
+        allow_global_upload=user.get("allow_global_upload", False),
     )
 
     

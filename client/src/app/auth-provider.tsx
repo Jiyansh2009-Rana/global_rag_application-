@@ -1,7 +1,7 @@
 import { createContext, useCallback, useEffect, useRef, useState } from 'react';
 import { authApi } from '@/api/auth';
 import { onUnauthorized, tokenStore } from '@/api/client';
-import type { UserMe } from '@/api/types';
+import type { UserMe, SignupPayload } from '@/api/types';
 
 type Role = 'User' | 'Admin' | 'Super Admin';
 
@@ -13,13 +13,7 @@ interface AuthContextValue {
   isLoading: boolean;
   token: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (payload: {
-    email: string;
-    password: string;
-    Role: Role;
-    org_id: string;
-    tenant_id?: string;
-  }) => Promise<void>;
+  signUp: (payload: SignupPayload) => Promise<void>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -46,7 +40,7 @@ export function AuthProvider({
 }) {
   const [user, setUser] = useState<UserMe | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [tokenState, setTokenState] = useState<string | null>(tokenStore.get());
+  const [_tokenState, setTokenState] = useState<string | null>(tokenStore.get());
   const logoutRef = useRef(onLogout);
   logoutRef.current = onLogout;
 
@@ -88,35 +82,36 @@ export function AuthProvider({
     await refreshUser();
   }, [refreshUser]);
 
-  const signUp = useCallback(async (payload: {
-    email: string;
-    password: string;
-    Role: Role;
-    org_id: string;
-    tenant_id?: string;
-  }) => {
+  const signUp = useCallback(async (payload: SignupPayload) => {
     await authApi.signup(payload);
   }, []);
 
   const signOut = useCallback(async () => {
-    try { await authApi.logout(); } catch { /* ignore */ }
-    tokenStore.clear();
-    setTokenState(null);
-    setUser(null);
-    logoutRef.current?.();
+    try {
+      await authApi.logout();
+    } catch {
+      // ignore network errors on logout
+    } finally {
+      tokenStore.clear();
+      setTokenState(null);
+      setUser(null);
+      logoutRef.current?.();
+    }
   }, []);
 
-  const role = (user?.role ?? null) as Role | null;
+  const role = (user?.role as Role) ?? null;
+  const isAdmin = role === 'Admin' || role === 'Super Admin';
+  const isSuperAdmin = role === 'Super Admin';
 
   return (
     <AuthContext.Provider
       value={{
         user,
         role,
-        isAdmin: role === 'Admin' || role === 'Super Admin',
-        isSuperAdmin: role === 'Super Admin',
+        isAdmin,
+        isSuperAdmin,
         isLoading,
-        token: tokenState,
+        token: tokenStore.get(),
         signIn,
         signUp,
         signOut,
