@@ -358,7 +358,7 @@ function Dropzone({
    UPLOAD PAGE
 ─────────────────────────────────────────────────────────────────────────────── */
 export function UploadPage() {
-  const { isAdmin } = useAuth();
+  const { isAdmin, user, refreshUser } = useAuth();
   const [files, setFiles] = useState<File[]>([]);
   const [mode, setMode] = useState<UploadMode>('local');
   const [canUserGlobalUpload, setCanUserGlobalUpload] = useState(false);
@@ -371,12 +371,13 @@ export function UploadPage() {
   const [globalError, setGlobalError] = useState<string | null>(null);
 
   useEffect(() => {
+    void refreshUser();
     getGlobalUploadSetting()
       .then(res => setCanUserGlobalUpload(res.allow_user_global_upload))
       .catch(() => setCanUserGlobalUpload(false));
-  }, []);
+  }, [refreshUser]);
 
-  const isGlobalAllowed = isAdmin || canUserGlobalUpload;
+  const isGlobalAllowed = isAdmin || !!user?.allow_global_upload || canUserGlobalUpload;
 
   useEffect(() => {
     if (mode === 'global' && !isGlobalAllowed) setMode('local');
@@ -534,12 +535,14 @@ export function UploadPage() {
       key: 'global',
       icon: '🌐',
       title: 'Global Org',
-      desc: 'Shared with org · Permanent · Neon DB',
+      desc: isGlobalAllowed && !isAdmin && user?.allow_global_upload
+        ? 'Permission granted by Admin · Permanent Neon DB'
+        : 'Shared with org · Permanent · Neon DB',
       disabled: !isGlobalAllowed,
       badge: !isGlobalAllowed
         ? { text: 'Admin only', type: 'admin' }
         : !isAdmin
-        ? { text: 'Enabled by Admin', type: 'enabled' }
+        ? { text: 'Allowed by Admin', type: 'enabled' }
         : undefined,
     },
   ];

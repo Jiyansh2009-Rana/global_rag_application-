@@ -37,22 +37,40 @@ from service.admin.helper import check_org_global_upload_setting
 
 router = APIRouter(prefix="/api/v1/upload", tags=["Upload"])
 
+
+def is_user_allowed_global_upload(user_id: str, org_id: str, role: Role) -> bool:
+    """Checks live in DB if the user or org has global upload enabled."""
+    if role in [Role.ADMIN, Role.SUPER_ADMIN]:
+        return True
+    
+    
+    if check_org_global_upload_setting(org_id):
+        return True
+        
+    
+    if supabase_client and user_id:
+        try:
+            res = supabase_client.table("users").select("allow_global_upload").eq("id", user_id).execute()
+            if res.data and res.data[0].get("allow_global_upload"):
+                return True
+        except Exception:
+            pass
+            
+    return False
+
+
 @router.get("/consent", response_model=ConsentMessage)
 async def get_upload_consent(
     upload_mode: UploadMode = Query(...),
     current_user: TokenClaims = Depends(get_current_user)
 ):
     if upload_mode == UploadMode.GLOBAL:
-        if current_user.role not in [Role.ADMIN, Role.SUPER_ADMIN]:
-            org_allowed = check_org_global_upload_setting(current_user.org_id)
-            user_allowed = getattr(current_user, "allow_global_upload", False)
-        
-        # Allowed if either org-wide setting is ON OR this specific user was granted permission
-            if not (org_allowed or user_allowed):
-                raise HTTPException(
+        # LIVE PERMISSION CHECK
+        if not is_user_allowed_global_upload(current_user.user_id, current_user.org_id, current_user.role):
+            raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Global upload permission is disabled for your account. Contact your administrator."
-                )
+            )
         return ConsentMessage(
             upload_mode=UploadMode.GLOBAL,
             title="Global Upload Selected",
@@ -77,6 +95,8 @@ async def get_upload_consent(
         confirm_label="Got it, Upload Locally",
         warning_label="⚠️ Data will be erased after session ends (1 hour).",
     )
+
+
 
 @router.post("/document")
 async def upload_document(
@@ -114,7 +134,6 @@ async def upload_document(
         doc_id = generate_document_id()
 
     if upload_mode == UploadMode.GLOBAL:
-        await asyncio.to_thread(store_raw_file_global_supabase, org_id, doc_id, filename, file_bytes)
         if supabase_client:
             await asyncio.to_thread(
                 lambda: supabase_client.table("audit_log").insert({
@@ -222,19 +241,35 @@ async def upload_document(
                 )
 
             total_chunks += report.get("chunks_created", 0)
-            if upload_mode == UploadMode.GLOBAL and not existing_global_doc:
-
-                await asyncio.to_thread(
-                store_file_in_registry,
-                file_hash_val=file_hash_val,
-                org_id=org_id,
-                doc_id=doc_id,
-                file_name=filename,
-                total_pages=len(pages),
-                uploaded_by=current_user.user_id
-            )
             yield f"data: {json.dumps({'status': 'set_complete', 'set_id': set_id, 'report': report})}\n\n"
 
+            if upload_mode == UploadMode.GLOBAL:
+                is_new_document = existing_global_doc is None
+                has_new_pages_indexed = total_chunks > 0
+                if is_new_document or has_new_pages_indexed:
+                # 1. Upload to Supabase Storage (deleting old file if updating existing doc)
+                    await asyncio.to_thread(
+                        store_raw_file_global_supabase,
+                        org_id=org_id,
+                        doc_id=doc_id,
+                        filename=filename,
+                        file_bytes=file_bytes,
+                        delete_old=not is_new_document  # Delete previous file if delta updating
+                    )
+                # 2. Store or update Document Registry
+                    if is_new_document:
+                        await asyncio.to_thread(
+                            store_file_in_registry,
+                            file_hash_val=file_hash_val,
+                            org_id=org_id,
+                            doc_id=doc_id,
+                            file_name=filename,
+                            total_pages=len(pages),
+                            uploaded_by=current_user.user_id
+                        )
+                else:
+                # 0 new pages and document already exists in registry -> Skip storage upload!
+                    logger.info(f"Skipping Supabase Storage upload for duplicate/fully-indexed file: {filename}")
         yield f"data: {json.dumps({'status': 'upload_complete', 'doc_id': doc_id, 'total_chunks': total_chunks})}\n\n"
 
     return StreamingResponse(

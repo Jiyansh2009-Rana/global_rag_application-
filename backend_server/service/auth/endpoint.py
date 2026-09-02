@@ -89,9 +89,10 @@ async def logout(response: Response, current_user: TokenClaims = Depends(get_cur
 async def get_me(current_user: TokenClaims = Depends(get_current_user)):
     return UserInfo(
         user_id=current_user.user_id,
-        username=current_user.username,
+        username=current_user.username or current_user.email.split("@")[0],
         email=current_user.email,
         role=current_user.role,
         org_id=current_user.org_id,
+        allow_global_upload=bool(current_user.allow_global_upload),
         created_at=datetime.now(timezone.utc).isoformat(),
     )

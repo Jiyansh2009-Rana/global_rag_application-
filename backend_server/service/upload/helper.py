@@ -731,3 +731,45 @@ def process_set_local(
         "pages_newly_indexed": pages_newly_indexed,
         "pages_skipped": pages_skipped,
     }
+
+
+
+def delete_raw_files_global_supabase(org_id: str, doc_id: str) -> None:
+    """Deletes existing raw files for a specific document in Supabase Storage before uploading an updated version."""
+    if not supabase_client:
+        return
+    try:
+        folder_path = f"{org_id}/{doc_id}"
+        existing_files = supabase_client.storage.from_("global_documents").list(folder_path)
+        if existing_files:
+            file_paths = [f"{folder_path}/{f['name']}" for f in existing_files if f.get("name")]
+            if file_paths:
+                supabase_client.storage.from_("global_documents").remove(file_paths)
+                logger.info(f"Deleted {len(file_paths)} old raw file(s) for doc {doc_id} from Supabase Storage.")
+    except Exception as e:
+        logger.warning(f"Failed to delete old file in Supabase Storage: {e}")
+
+
+def store_raw_file_global_supabase(
+    org_id: str, 
+    doc_id: str, 
+    filename: str, 
+    file_bytes: bytes, 
+    delete_old: bool = False
+) -> None:
+    """Stores raw file in Supabase Storage, optionally cleaning up previous versions."""
+    if not supabase_client:
+        return
+    try:
+        if delete_old:
+            delete_raw_files_global_supabase(org_id, doc_id)
+
+        path = f"{org_id}/{doc_id}/{filename}"
+        supabase_client.storage.from_("global_documents").upload(
+            file=file_bytes,
+            path=path,
+            file_options={"x-upsert": "true", "content-type": "application/octet-stream"}
+        )
+        logger.info(f"Stored raw file '{path}' in Supabase Storage.")
+    except Exception as e:
+        logger.error(f"Failed to store raw file in Supabase: {e}")

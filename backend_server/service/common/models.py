@@ -122,9 +122,11 @@ class RAGResponse(BaseModel):
 
 class UserInfo(BaseModel):
     user_id: str
+    username: Optional[str] = None
     email: str
     role: Role
     org_id: Optional[str] = None
+    allow_global_upload: Optional[bool] = False
     created_at: str
 
 class UploadConsent(BaseModel):

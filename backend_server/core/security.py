@@ -70,13 +70,35 @@ async def get_current_user(
             detail="No token provided"
         )
     payload = decode_jwt_token(token)
+
+    role = Role(payload.get("role", "User"))
+    org_id = payload.get("org_id")
+
+    if role != Role.SUPER_ADMIN and org_id and supabase_client:
+        try:
+            org_check = (
+                supabase_client.table("organization_settings")
+                .select("is_disabled, disabled_reason")
+                .eq("org_id", org_id)
+                .execute()
+            )
+            if org_check.data and org_check.data[0].get("is_disabled"):
+                reason = org_check.data[0].get("disabled_reason") or "Please contact your Administrator."
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail=f"Your organisation '{org_id}' has been suspended. Reason: {reason}"
+                )
+        except HTTPException:
+            raise
+        except Exception:
+            pass
     return TokenClaims(
         user_id=payload.get("user_id"),
         email=payload.get("email"),
         username=payload.get("username"),
-        allow_global_upload=bool(payload.get("allow_global_upload",False)),
-        role=Role(payload.get("role", "User")),
-        org_id=payload.get("org_id"),
+        allow_global_upload=bool(payload.get("allow_global_upload", False)),
+        role=role,
+        org_id=org_id,
         tenant_id=payload.get("tenant_id"),
         exp=payload.get("exp")
     )
