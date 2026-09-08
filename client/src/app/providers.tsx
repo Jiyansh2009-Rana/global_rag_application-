@@ -78,6 +78,7 @@ function PreAuthNav({ activePage, onNavigate }: { activePage: Page; onNavigate: 
 function AppShell() {
   const { user, isAdmin, isSuperAdmin, isLoading } = useAuth();
   const [page, setPage] = useState<Page>('overview');
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   // When user logs in, bypass Overview and default directly to Chat
   useEffect(() => {
@@ -105,7 +106,6 @@ function AppShell() {
 
   // 2. Authenticated user workspace: Overview is bypassed. Responsive Hover-reveal sidebar + content
   const activeAuthPage = page === 'overview' ? 'chat' : page;
-  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#07080a', color: '#e8e6e0', position: 'relative' }}>
