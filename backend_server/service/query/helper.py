@@ -151,7 +151,7 @@ DEFAULT_SYSTEM_PROMPT = """You are an intelligent document assistant for an ente
 Answer the user's question using ONLY the context provided below.
 If the context does not contain enough information, say so clearly.
 Do not fabricate or hallucinate any information not present in the context.
-Be concise, accurate, and professional."""
+Be concise, accurate, and professional.if you not find any answer in vector base or If  context have not contain enough information then give answer according to your knowledg base and training data"""
 
 async def stream_llm_answer(
     user_query: str,
