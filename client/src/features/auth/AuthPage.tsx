@@ -15,15 +15,15 @@ import { Select } from '@/components/ui/Input';
    FEATURE DATA — alternating teal / purple
 ─────────────────────────────────────────────────────────────────────────────── */
 const FEATURES = [
-  { icon: '⬡', title: 'Global & Session Indexes',  color: '#00d2c8',
+  { icon: '⬡', title: 'Agent Knowledge & Session Indexes',  color: '#46b7ff',
     desc: 'Permanent org index on Neon · session index on Redis with 1-hour TTL' },
-  { icon: '◈', title: 'LangChain Chunking',         color: '#a855f7',
+  { icon: '◈', title: 'LangChain Chunking',         color: '#46b7ff',
     desc: 'Recursive, doc-aware, slide-aware strategies with OCR fallback for scanned PDFs' },
-  { icon: '⌖', title: 'Hybrid Retrieval',            color: '#00d2c8',
+  { icon: '⌖', title: 'Hybrid Retrieval',            color: '#46b7ff',
     desc: 'Vector + BM25 keyword search with configurable weights per query' },
-  { icon: '◆', title: 'Page-Level Citations',        color: '#a855f7',
+  { icon: '◆', title: 'Page-Level Citations',        color: '#46b7ff',
     desc: 'Every answer links directly to source pages with similarity scores' },
-  { icon: '⊞', title: 'RBAC · Tenant Isolation',    color: '#00d2c8',
+  { icon: '⊞', title: 'RBAC · Tenant Isolation',    color: '#22c55e',
     desc: 'Super Admin → Admin → User roles with full per-org data isolation' },
 ];
 
@@ -42,7 +42,7 @@ function FloatingOrb({ size = 180 }: { size?: number }) {
         style={{
           position: 'absolute', inset: -s * 0.25,
           borderRadius: '50%',
-          background: `radial-gradient(circle, rgba(0,210,200,0.22) 0%, rgba(168,85,247,0.10) 50%, transparent 75%)`,
+          background: `radial-gradient(circle, rgba(70,183,255,0.22) 0%, rgba(168,85,247,0.10) 50%, transparent 75%)`,
           pointerEvents: 'none',
         }}
       />
@@ -53,8 +53,8 @@ function FloatingOrb({ size = 180 }: { size?: number }) {
         style={{
           position: 'absolute', inset: '22%',
           borderRadius: '50%',
-          background: 'radial-gradient(circle at 38% 35%, rgba(0,255,240,0.95) 0%, rgba(0,210,200,0.7) 30%, rgba(0,180,180,0.2) 65%, transparent 100%)',
-          boxShadow: `0 0 ${s * 0.22}px rgba(0,210,200,0.7), 0 0 ${s * 0.50}px rgba(0,210,200,0.35), 0 0 ${s * 0.80}px rgba(0,210,200,0.14)`,
+          background: 'radial-gradient(circle at 38% 35%, rgba(0,255,240,0.95) 0%, rgba(70,183,255,0.7) 30%, rgba(0,180,180,0.2) 65%, transparent 100%)',
+          boxShadow: `0 0 ${s * 0.22}px rgba(70,183,255,0.7), 0 0 ${s * 0.50}px rgba(70,183,255,0.35), 0 0 ${s * 0.80}px rgba(70,183,255,0.14)`,
         }}
       />
       {/* Inner bright core */}
@@ -69,8 +69,8 @@ function FloatingOrb({ size = 180 }: { size?: number }) {
         style={{
           position: 'absolute', inset: '6%',
           borderRadius: '50%',
-          border: '1px solid rgba(0,210,200,0.5)',
-          boxShadow: '0 0 8px rgba(0,210,200,0.2)',
+          border: '1px solid rgba(70,183,255,0.5)',
+          boxShadow: '0 0 8px rgba(70,183,255,0.2)',
         }}
         animate={{ rotate: 360 }}
         transition={{ duration: 7, repeat: Infinity, ease: 'linear' }}
@@ -79,7 +79,7 @@ function FloatingOrb({ size = 180 }: { size?: number }) {
         <div style={{
           position: 'absolute', top: -4, left: '50%', transform: 'translateX(-50%)',
           width: 8, height: 8, borderRadius: '50%',
-          background: '#00d2c8', boxShadow: '0 0 10px #00d2c8, 0 0 20px rgba(0,210,200,0.5)',
+          background: '#00d2c8', boxShadow: '0 0 10px #00d2c8, 0 0 20px rgba(70,183,255,0.5)',
         }} />
       </motion.div>
 
@@ -106,7 +106,7 @@ function FloatingOrb({ size = 180 }: { size?: number }) {
         style={{
           position: 'absolute', inset: '-15%',
           borderRadius: '50%',
-          border: '0.5px solid rgba(0,210,200,0.14)',
+          border: '0.5px solid rgba(70,183,255,0.14)',
         }}
         animate={{ rotate: 360 }}
         transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
@@ -153,7 +153,7 @@ function MobileFeatureStack() {
           <div style={{ minWidth: 0 }}>
             <div style={{
               fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)',
-              fontFamily: '"Comfortaa", "Plus Jakarta Sans", sans-serif',
+              fontFamily: '"Bricolage Grotesque", "Inter", sans-serif',
               letterSpacing: '-0.015em', marginBottom: 2,
             }}>{f.title}</div>
             <div style={{ fontSize: '0.68rem', color: 'var(--muted)', lineHeight: 1.45 }}>{f.desc}</div>
@@ -307,24 +307,24 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
    ZIG-ZAG FEATURE SECTION (desktop)
 ─────────────────────────────────────────────────────────────────────────────── */
 function ZigZagFeatures() {
-  const W       = 480;
-  const CARD_W  = 255;
-  const PITCH   = 138;
+  const W       = 520;
+  const CARD_W  = 280;
+  const PITCH   = 145;
   const N       = FEATURES.length;
 
   const getCardHeight = (index: number) => {
-    if (index === 0) return 95;
-    if (index === 1) return 96;
-    return 95;
+    if (index === 0) return 112; // Extra height for 2-line title + description without cutting off
+    if (index === 1) return 114;
+    return 108;
   };
 
-  const maxCardH = 96;
-  const TOTAL_H = (N - 1) * PITCH + maxCardH + 20;
+  const maxCardH = 114;
+  const TOTAL_H = (N - 1) * PITCH + maxCardH + 24;
 
-  const nxL = 30;
-  const nxR = W - 30;
-  const cxL = nxL + 18;
-  const cxR = nxR - CARD_W - 18;
+  const nxL = 26;
+  const nxR = W - 26;
+  const cxL = nxL + 20;
+  const cxR = nxR - CARD_W - 20;
 
   const nodes = FEATURES.map((_, i) => ({
     x: i % 2 === 0 ? nxL : nxR,
@@ -390,7 +390,7 @@ function ZigZagFeatures() {
 
       {FEATURES.map((f, i) => {
         const isLeft = i % 2 === 0;
-        const cardW  = 255;
+        const cardW  = 280;
         const cardH  = getCardHeight(i);
         const cardX  = isLeft ? cxL : cxR;
         const cardY  = nodes[i].y - cardH / 2;
@@ -402,15 +402,16 @@ function ZigZagFeatures() {
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.08 + i * 0.11, duration: 0.36 }}
             style={{
-              position: 'absolute', left: cardX, top: cardY, width: cardW, height: cardH,
-              padding: '11px 14px', borderRadius: 13,
+              position: 'absolute', left: cardX, top: cardY, width: cardW, minHeight: cardH,
+              padding: '12px 14px', borderRadius: 14,
               background: 'rgba(255,255,255,0.046)',
               backdropFilter: 'blur(24px) saturate(165%)',
               WebkitBackdropFilter: 'blur(24px) saturate(165%)',
               border: `1px solid ${f.color}2e`,
               borderTopColor: `${f.color}52`,
               boxShadow: `0 4px 22px rgba(0,0,0,0.48), 0 0 0 1px ${f.color}0a, inset 0 1px 0 rgba(255,255,255,0.07)`,
-              cursor: 'default', transition: 'all 0.22s ease', overflow: 'hidden',
+              cursor: 'default', transition: 'all 0.22s ease',
+              display: 'flex', flexDirection: 'column', justifyContent: 'center',
             }}
             onMouseEnter={e => {
               const el = e.currentTarget as HTMLElement;
@@ -427,15 +428,15 @@ function ZigZagFeatures() {
               el.style.transform   = 'translateX(0)';
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
               <span style={{ fontSize: '0.95rem', flexShrink: 0, color: f.color, filter: `drop-shadow(0 0 7px ${f.color}95)` }}>
                 {f.icon}
               </span>
-              <span style={{ fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif', fontSize: '0.84rem', fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.015em', lineHeight: 1.2 }}>
+              <span style={{ fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', fontSize: '0.84rem', fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.015em', lineHeight: 1.25 }}>
                 {f.title}
               </span>
             </div>
-            <p style={{ fontSize: '0.68rem', color: 'var(--muted)', lineHeight: 1.55, paddingLeft: 26 }}>
+            <p style={{ fontSize: '0.67rem', color: 'var(--muted)', lineHeight: 1.45, paddingLeft: 22, margin: 0 }}>
               {f.desc}
             </p>
           </motion.div>
@@ -462,7 +463,7 @@ function AuthCardContent({
       <div style={{
         display: 'flex', marginBottom: 28, padding: 4, borderRadius: 14,
         background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(0,210,200,0.10)',
+        border: '1px solid rgba(70,183,255,0.10)',
         boxShadow: '0 2px 10px rgba(0,0,0,0.35) inset',
       }}>
         {(['login', 'signup'] as const).map((t) => (
@@ -472,13 +473,13 @@ function AuthCardContent({
             style={{
               flex: 1, padding: '10px 0', borderRadius: 11,
               fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', border: 'none',
-              fontFamily: '"Comfortaa", "Plus Jakarta Sans", sans-serif',
+              fontFamily: '"Bricolage Grotesque", "Inter", sans-serif',
               transition: 'all 0.2s ease',
               background: tab === t
-                ? 'linear-gradient(135deg, rgba(0,210,200,0.16), rgba(168,85,247,0.12))'
+                ? 'linear-gradient(135deg, rgba(70,183,255,0.16), rgba(168,85,247,0.12))'
                 : 'transparent',
               color: tab === t ? 'var(--text)' : 'var(--muted)',
-              outline: tab === t ? '1px solid rgba(0,210,200,0.24)' : 'none',
+              outline: tab === t ? '1px solid rgba(70,183,255,0.24)' : 'none',
               boxShadow: tab === t
                 ? '0 2px 10px rgba(0,0,0,0.32), 0 1px 0 rgba(255,255,255,0.08) inset'
                 : 'none',
@@ -498,7 +499,7 @@ function AuthCardContent({
           transition={{ duration: 0.17 }}
         >
           <h2 style={{
-            fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif',
+            fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif',
             fontSize: '1.25rem', fontWeight: 600,
             letterSpacing: '-0.025em', marginBottom: 5, color: 'var(--text)',
           }}>
@@ -507,7 +508,7 @@ function AuthCardContent({
           <p style={{
             fontSize: '0.8rem', color: 'var(--muted)',
             lineHeight: 1.6, marginBottom: '1.6rem',
-            fontFamily: '"Plus Jakarta Sans", sans-serif',
+            fontFamily: '"Inter", sans-serif',
           }}>
             {tab === 'login'
               ? 'Use your organisation credentials to access the retrieval console.'
@@ -561,9 +562,9 @@ export function AuthPage() {
             <span style={{
               fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.12em',
               textTransform: 'uppercase', color: 'var(--accent)',
-              fontFamily: '"Comfortaa", "Quicksand", "Outfit", sans-serif',
+              fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif',
             }}>
-              Enterprise RAG Platform
+              Rag-Agent Intelligence Platform
             </span>
           </motion.div>
 
@@ -586,7 +587,7 @@ export function AuthPage() {
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.12 }}
             style={{
-              fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif',
+              fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif',
               fontSize: 'clamp(1.45rem, 5.5vw, 1.75rem)',
               fontWeight: 600, letterSpacing: '-0.025em', lineHeight: 1.25,
               color: 'var(--text)', textAlign: 'center', maxWidth: 320,
@@ -650,7 +651,7 @@ export function AuthPage() {
                   backdropFilter: 'blur(28px) saturate(180%)',
                   WebkitBackdropFilter: 'blur(28px) saturate(180%)',
                   borderRadius: '24px 24px 0 0',
-                  border: '1px solid rgba(0,210,200,0.18)',
+                  border: '1px solid rgba(70,183,255,0.18)',
                   borderBottom: 'none',
                   boxShadow: '0 -8px 48px rgba(0,0,0,0.65)',
                   maxHeight: '92vh',
@@ -671,7 +672,7 @@ export function AuthPage() {
                     display: 'flex', alignItems: 'center', gap: 6,
                     background: 'none', border: 'none', color: 'var(--accent)',
                     fontSize: '0.82rem', cursor: 'pointer', padding: '8px 0 16px',
-                    fontFamily: '"Plus Jakarta Sans", sans-serif', fontWeight: 500,
+                    fontFamily: '"Inter", sans-serif', fontWeight: 500,
                   }}
                 >
                   ← Back to overview
@@ -727,16 +728,16 @@ export function AuthPage() {
               fontSize: '0.68rem', fontWeight: 600,
               letterSpacing: '0.12em', textTransform: 'uppercase',
               color: 'var(--accent)',
-              fontFamily: '"Comfortaa", "Quicksand", "Outfit", sans-serif',
+              fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif',
             }}>
-              Enterprise RAG Platform
+              Rag-Agent Intelligence Platform
             </span>
           </motion.div>
 
           <motion.h1
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
             style={{
-              fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif',
+              fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif',
               fontSize: 'clamp(1.7rem, 2.8vw, 2.7rem)',
               fontWeight: 600, letterSpacing: '-0.025em', lineHeight: 1.2,
               color: 'var(--text)', maxWidth: 500, marginBottom: '0.9rem',
@@ -758,7 +759,7 @@ export function AuthPage() {
             style={{
               fontSize: '0.86rem', color: 'var(--muted)',
               lineHeight: 1.7, maxWidth: 420, marginBottom: '2.5rem',
-              fontFamily: '"Plus Jakarta Sans", sans-serif',
+              fontFamily: '"Inter", sans-serif',
             }}
           >
             Hybrid vector + keyword retrieval, delta-aware indexing, session-private
@@ -772,7 +773,7 @@ export function AuthPage() {
           marginTop: 'auto', paddingTop: '2rem',
           fontSize: '0.62rem', color: 'var(--muted)',
           opacity: 0.38, letterSpacing: '0.04em',
-          fontFamily: '"Plus Jakarta Sans", sans-serif',
+          fontFamily: '"Inter", sans-serif',
         }}>
           LangChain chunking · pgvector on Neon · Groq LLaMA 3.3 70B · Supabase registries
         </div>
@@ -783,7 +784,7 @@ export function AuthPage() {
         width: 480, minWidth: 360,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         padding: '2.5rem 2rem',
-        borderLeft: '1px solid rgba(0,210,200,0.10)',
+        borderLeft: '1px solid rgba(70,183,255,0.10)',
         background: 'linear-gradient(180deg, rgba(4,14,22,0.5) 0%, rgba(2,10,18,0.3) 100%)',
         backdropFilter: 'blur(8px)',
       }}>

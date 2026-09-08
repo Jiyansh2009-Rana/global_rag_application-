@@ -9,7 +9,13 @@ interface DialogProps {
   maxWidth?: string;
 }
 
-export function Dialog({ open, onClose, title, children, maxWidth = '520px' }: DialogProps) {
+export function Dialog({
+  open,
+  onClose,
+  title,
+  children,
+  maxWidth = '580px',
+}: DialogProps) {
   const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -28,34 +34,36 @@ export function Dialog({ open, onClose, title, children, maxWidth = '520px' }: D
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[300] flex items-center justify-center p-4"
+          className="fixed inset-0 z-[300] flex items-center justify-center p-2.5 sm:p-6"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
         >
-          {/* Backdrop */}
+          {/* Deep blur backdrop */}
           <div
-            className="absolute inset-0 bg-black/65 backdrop-blur-md"
+            className="absolute inset-0 bg-black/80 backdrop-blur-md"
             onClick={onClose}
             aria-hidden="true"
           />
 
-          {/* Card */}
+          {/* Glass Card */}
           <motion.div
             ref={panelRef}
-            initial={{ opacity: 0, scale: 0.96, y: 12 }}
+            initial={{ opacity: 0, scale: 0.95, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 12 }}
-            transition={{ type: 'spring', damping: 26, stiffness: 320 }}
-            className="relative flex flex-col overflow-hidden rounded-[20px] border border-[var(--border)] shadow-[0_32px_80px_rgba(0,0,0,0.65)]"
+            exit={{ opacity: 0, scale: 0.95, y: 12 }}
+            transition={{ type: 'spring', damping: 28, stiffness: 360 }}
+            className="relative flex flex-col overflow-hidden rounded-[20px] sm:rounded-[22px]"
             style={{
-              maxWidth,
+              maxWidth: `min(${maxWidth}, calc(100vw - 20px))`,
               width: '100%',
-              maxHeight: '85vh',
-              background: 'linear-gradient(145deg, rgba(18,40,36,0.93) 0%, rgba(10,24,21,0.97) 100%)',
-              backdropFilter: 'blur(48px) saturate(200%)',
-              WebkitBackdropFilter: 'blur(48px) saturate(200%)',
+              maxHeight: '88vh',
+              background: 'linear-gradient(165deg, rgba(16, 18, 22, 0.96) 0%, rgba(9, 10, 13, 0.98) 100%)',
+              backdropFilter: 'blur(32px) saturate(180%)',
+              WebkitBackdropFilter: 'blur(32px) saturate(180%)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.85), 0 0 32px rgba(70,183,255,0.08)',
             }}
             role="dialog"
             aria-modal="true"
@@ -63,18 +71,65 @@ export function Dialog({ open, onClose, title, children, maxWidth = '520px' }: D
             onClick={(e) => e.stopPropagation()}
           >
             {title && (
-              <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--border)] flex-shrink-0">
-                <h2 className="font-semibold text-[0.95rem] text-[var(--text)] tracking-tight">{title}</h2>
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '14px 18px',
+                  borderBottom: '1px solid rgba(255, 255, 255, 0.08)',
+                  background: 'rgba(255, 255, 255, 0.015)',
+                  flexShrink: 0,
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#46b7ff', boxShadow: '0 0 8px #46b7ff' }} />
+                  <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#e8e6e0', letterSpacing: '-0.02em', fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', margin: 0 }}>
+                    {title}
+                  </h2>
+                </div>
                 <button
+                  type="button"
                   onClick={onClose}
-                  className="w-7 h-7 rounded-md flex items-center justify-center text-sm text-[var(--muted)] hover:text-[var(--text)] bg-[var(--surface-2)] hover:bg-[var(--surface-hover)] border border-[var(--border)] transition-all duration-150"
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 9,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.85rem',
+                    color: '#9a9690',
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = '#e8e6e0';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = '#9a9690';
+                    e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)';
+                  }}
                   aria-label="Close dialog"
                 >
                   ✕
                 </button>
               </div>
             )}
-            <div className="flex-1 overflow-y-auto p-6">
+            <div
+              style={{
+                flex: 1,
+                overflowY: 'auto',
+                padding: '16px 18px 20px',
+                color: '#e8e6e0',
+                display: 'flex',
+                flexDirection: 'column',
+                minHeight: 0,
+              }}
+            >
               {children}
             </div>
           </motion.div>

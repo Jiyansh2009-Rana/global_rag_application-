@@ -81,7 +81,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
           ${fullWidth ? 'w-full' : ''}
           ${className}
         `}
-        style={{ fontFamily: '"Plus Jakarta Sans", sans-serif' }}
+        style={{ fontFamily: '"Inter", sans-serif' }}
         {...props}
       >
         {/* Shine overlay for primary */}

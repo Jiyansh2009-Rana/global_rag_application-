@@ -1,138 +1,150 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from './theme-provider';
 import { AuthProvider } from './auth-provider';
 import { useAuth } from '@/hooks/useContextHooks';
-import { useTheme } from '@/hooks/useContextHooks';
 import { Navbar } from '@/components/layout/Navbar';
+import { Sidebar } from '@/components/layout/Sidebar';
 import { AuthPage } from '@/features/auth/AuthPage';
 import { ChatPage } from '@/features/chat/ChatPage';
 import { UploadPage } from '@/features/upload/UploadPage';
 import { AdminPage } from '@/features/admin/AdminPage';
 import { SuperAdminPage } from '@/features/super-admin/SuperAdminPage';
-
+import { SpecShowcasePage } from '@/features/spec-showcase/SpecShowcasePage';
 import { GuideModal } from '@/components/guide/GuideModal';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
 });
 
-type Page = 'chat' | 'upload' | 'admin' | 'super-admin';
+type Page = 'overview' | 'chat' | 'upload' | 'admin' | 'super-admin';
 
 /* ── Loading screen ── */
 function LoadingScreen() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '1.5rem' }}>
-      <div style={{ width: 56, height: 56, borderRadius: 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 900, letterSpacing: '0.05em', color: '#021b18', background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', boxShadow: '0 0 32px rgba(45,212,191,0.45)', animation: 'pulseOpacity 2s ease-in-out infinite' }}>
-        GR
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '1.5rem', background: '#07080a' }}>
+      <div style={{ width: 56, height: 56, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.88rem', fontWeight: 900, letterSpacing: '0.05em', color: '#04121f', background: 'linear-gradient(135deg, #46b7ff, #8bf3e6)', boxShadow: '0 0 32px rgba(70,183,255,0.45)', animation: 'pulseOpacity 2s ease-in-out infinite' }}>
+        RA
       </div>
-      <div style={{ width: 28, height: 28, borderRadius: '50%', border: '2.5px solid var(--border)', borderTopColor: 'var(--accent)', animation: 'spin 0.8s linear infinite' }} />
-      <p style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>Loading session…</p>
+      <div style={{ width: 26, height: 26, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.08)', borderTopColor: '#46b7ff', animation: 'spin 0.8s linear infinite' }} />
+      <p style={{ fontSize: '0.8rem', color: '#5a5852', fontFamily: 'Space Mono, monospace' }}>Initializing Rag-Agent…</p>
     </div>
   );
 }
 
-/* ── Pre-auth Navbar (no profile, no nav, just logo + guide + theme toggle) ── */
-function PreAuthNav() {
-  const { theme, toggle } = useTheme();
+/* ── Pre-auth Navbar (Strictly for unauthenticated users, No Theme Toggle) ── */
+function PreAuthNav({ activePage, onNavigate }: { activePage: Page; onNavigate: (page: Page) => void }) {
   const [guideOpen, setGuideOpen] = useState(false);
 
   return (
     <>
-      <nav style={{ position: 'sticky', top: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 1.25rem', height: 60, background: 'var(--navbar-bg)', backdropFilter: 'var(--navbar-blur)', WebkitBackdropFilter: 'var(--navbar-blur)', borderBottom: '1px solid var(--navbar-border)', boxShadow: 'var(--navbar-shadow)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-          <div style={{ width: 30, height: 30, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.58rem', fontWeight: 900, letterSpacing: '0.05em', color: '#021b18', background: 'linear-gradient(135deg, var(--accent), var(--accent-2))', boxShadow: '0 0 14px rgba(45,212,191,0.45)' }}>
-            GR
-          </div>
-          <span style={{ fontSize: '1rem', fontWeight: 700, letterSpacing: '-0.02em', fontFamily: '"Comfortaa", "Quicksand", "Outfit", sans-serif' }}>
-            Global<span style={{ color: 'var(--accent)' }}>RAG</span>
-          </span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-          {/* Guide button */}
-          <button
-            onClick={() => setGuideOpen(true)}
-            style={{
-              height: 34,
-              padding: '0 10px',
-              borderRadius: 11,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 6,
-              background: 'rgba(0, 210, 200, 0.08)',
-              border: '1px solid rgba(0, 210, 200, 0.22)',
-              color: 'var(--accent)',
-              fontSize: '0.78rem',
-              fontWeight: 500,
-              fontFamily: '"Plus Jakarta Sans", sans-serif',
-              cursor: 'pointer',
-              transition: 'all 0.2s ease',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLElement).style.background = 'rgba(0, 210, 200, 0.16)';
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0, 210, 200, 0.4)';
-              (e.currentTarget as HTMLElement).style.boxShadow = '0 0 14px rgba(0, 210, 200, 0.2)';
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLElement).style.background = 'rgba(0, 210, 200, 0.08)';
-              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0, 210, 200, 0.22)';
-              (e.currentTarget as HTMLElement).style.boxShadow = 'none';
-            }}
-            aria-label="Open platform guide"
-          >
-            <span style={{ fontSize: '0.85rem' }}>📖</span>
-            <span className="hide-mobile">Guide</span>
-          </button>
+      <header style={{ position: 'sticky', top: 0, zIndex: 100 }}>
+        <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(7,8,10,0.5)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
+          <nav style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '0 1.5rem', height: 58 }}>
+            {/* Logo */}
+            <div onClick={() => onNavigate('overview')} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', cursor: 'pointer', flexShrink: 0 }}>
+              <span style={{ display: 'inline-flex', width: 30, height: 30, alignItems: 'center', justifyContent: 'center', borderRadius: 9, background: 'linear-gradient(135deg, #46b7ff, #8bf3e6)', fontSize: '0.58rem', fontWeight: 900, color: '#04121f', letterSpacing: '0.04em', boxShadow: '0 0 12px rgba(70,183,255,0.3)' }}>RA</span>
+              <span style={{ fontSize: '1rem', fontWeight: 700, letterSpacing: '-0.025em', fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', color: '#e8e6e0' }}>
+                Rag<span style={{ color: '#9a9690' }}>-Agent</span>
+              </span>
+            </div>
 
-          {/* Theme toggle */}
-          <button onClick={toggle} style={{ width: 34, height: 34, borderRadius: 10, border: '1px solid var(--border)', background: 'transparent', color: 'var(--muted)', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }} aria-label="Toggle theme">
-            {theme === 'dark' ? '☀' : '☾'}
-          </button>
+            {/* Right actions */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                onClick={() => onNavigate(activePage === 'overview' ? 'chat' : 'overview')}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 16px', borderRadius: 9999, fontSize: '0.85rem', fontWeight: 500, fontFamily: 'Inter, sans-serif', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.12)', background: activePage === 'overview' ? 'rgba(70,183,255,0.1)' : 'transparent', color: activePage === 'overview' ? '#46b7ff' : '#9a9690', transition: 'all 0.2s ease' }}
+              >
+                {activePage === 'overview' ? '⚡ Sign In' : '▲ Overview'}
+              </button>
+              <button
+                onClick={() => setGuideOpen(true)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, background: 'rgba(139,243,230,0.08)', border: '1px solid rgba(139,243,230,0.18)', color: '#8bf3e6', fontSize: '0.8rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
+                aria-label="Open guide"
+              >
+                <span>📖</span>
+                <span>Guide</span>
+              </button>
+            </div>
+          </nav>
         </div>
-      </nav>
+      </header>
       <GuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
     </>
   );
 }
 
-/* ── App Shell (inside all providers) ── */
+/* ── App Shell (Root Routing & Auth Gating) ── */
 function AppShell() {
   const { user, isAdmin, isSuperAdmin, isLoading } = useAuth();
-  const [page, setPage] = useState<Page>('chat');
+  const [page, setPage] = useState<Page>('overview');
+
+  // When user logs in, bypass Overview and default directly to Chat
+  useEffect(() => {
+    if (user && page === 'overview') {
+      setPage('chat');
+    }
+  }, [user, page]);
 
   if (isLoading) return <LoadingScreen />;
 
+  // 1. Unauthenticated user flow: Overview/Landing page or Login page
   if (!user) {
+    if (page === 'overview') {
+      return (
+        <SpecShowcasePage onOpenApp={(targetPage) => setPage((targetPage as Page) || 'chat')} />
+      );
+    }
     return (
       <>
-        <PreAuthNav />
+        <PreAuthNav activePage={page} onNavigate={(p) => setPage(p)} />
         <AuthPage />
       </>
     );
   }
 
+  // 2. Authenticated user workspace: Overview is bypassed. Responsive Hover-reveal sidebar + content
+  const activeAuthPage = page === 'overview' ? 'chat' : page;
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
   return (
-    <>
-      <Navbar activePage={page} onNavigate={(p) => setPage(p as Page)} />
-      <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <div style={{ display: page === 'chat' ? 'flex' : 'none', flex: 1, flexDirection: 'column' }}>
-          <ChatPage />
-        </div>
-        <div style={{ display: page === 'upload' ? 'flex' : 'none', flex: 1, flexDirection: 'column' }}>
-          <UploadPage />
-        </div>
-        {isAdmin && (
-          <div style={{ display: page === 'admin' ? 'flex' : 'none', flex: 1, flexDirection: 'column' }}>
-            <AdminPage />
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#07080a', color: '#e8e6e0', position: 'relative' }}>
+      {/* Responsive Hover-Reveal & Mobile Drawer Sidebar */}
+      <Sidebar
+        activePage={activeAuthPage}
+        onNavigate={(p) => setPage(p as Page)}
+        mobileOpen={mobileSidebarOpen}
+        onCloseMobile={() => setMobileSidebarOpen(false)}
+      />
+
+      {/* Main Workspace Area */}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh', overflow: 'hidden' }}>
+        <Navbar
+          activePage={activeAuthPage}
+          onNavigate={(p) => setPage(p as Page)}
+          onToggleMobileSidebar={() => setMobileSidebarOpen((o) => !o)}
+        />
+        
+        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+          <div style={{ display: activeAuthPage === 'chat' ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0, height: '100%' }}>
+            <ChatPage />
           </div>
-        )}
-        {isSuperAdmin && (
-          <div style={{ display: page === 'super-admin' ? 'flex' : 'none', flex: 1, flexDirection: 'column' }}>
-            <SuperAdminPage />
+          <div style={{ display: activeAuthPage === 'upload' ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
+            <UploadPage />
           </div>
-        )}
-      </main>
-    </>
+          {isAdmin && (
+            <div style={{ display: activeAuthPage === 'admin' ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
+              <AdminPage />
+            </div>
+          )}
+          {isSuperAdmin && (
+            <div style={{ display: activeAuthPage === 'super-admin' ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
+              <SuperAdminPage />
+            </div>
+          )}
+        </main>
+      </div>
+    </div>
   );
 }
 
@@ -142,9 +154,6 @@ export function Providers() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <AuthProvider>
-          <div className="glow-tl" />
-          <div className="glow-br" />
-          <div className="glow-mid" />
           <AppShell />
         </AuthProvider>
       </ThemeProvider>

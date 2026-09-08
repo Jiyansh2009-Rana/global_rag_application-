@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useContextHooks';
 import { Badge } from '@/components/ui/Badge';
@@ -16,7 +16,7 @@ import type { SuperAdminUser, SuperAdminDocument, SuperAdminOrg } from '@/api/ty
 
 /* ─── shared glass card style ─── */
 const glassPanel = {
-  background: 'linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(168,85,247,0.04) 50%, rgba(0,210,200,0.025) 100%)',
+  background: 'linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(168,85,247,0.04) 50%, rgba(70,183,255,0.025) 100%)',
   backdropFilter: 'blur(32px) saturate(170%)',
   WebkitBackdropFilter: 'blur(32px) saturate(170%)',
   border: '1px solid rgba(168,85,247,0.18)',
@@ -67,10 +67,10 @@ function SectionCard({ children, title, subtitle, delay = 0 }: {
       style={{ ...glassPanel, padding: '1.5rem 1.5rem' }}
     >
       <div style={{ marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(168,85,247,0.12)' }}>
-        <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: subtitle ? 4 : 0 }}>
+        <h2 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: subtitle ? 4 : 0 }}>
           {title}
         </h2>
-        {subtitle && <p style={{ fontSize: '0.75rem', color: 'var(--muted)', lineHeight: 1.5, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{subtitle}</p>}
+        {subtitle && <p style={{ fontSize: '0.75rem', color: 'var(--muted)', lineHeight: 1.5, fontFamily: '"Inter", sans-serif' }}>{subtitle}</p>}
       </div>
       {children}
     </motion.div>
@@ -132,7 +132,7 @@ function ConfirmDialog({
         }}
       >
         <div style={{ fontSize: '1.6rem', marginBottom: 12 }}>⚠️</div>
-        <h3 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
+        <h3 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
           Super Admin Global Action
         </h3>
         <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: 20 }}>
@@ -369,7 +369,7 @@ function OrganisationsTab({
               <div style={{ fontSize: '1.6rem', marginBottom: 12 }}>
                 {actionOrg.is_disabled ? '🔓' : '⚠️'}
               </div>
-              <h3 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
+              <h3 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
                 {actionOrg.is_disabled ? `Activate Organisation: ${actionOrg.org_id}` : `Suspend Organisation: ${actionOrg.org_id}`}
               </h3>
               <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: 14 }}>
@@ -424,7 +424,7 @@ function OrganisationsTab({
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(168,85,247,0.12)', flexWrap: 'wrap', gap: 10 }}>
           <div>
-            <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
+            <h2 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Organisation Access Governance
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
@@ -525,7 +525,7 @@ function OrganisationsTab({
                       width: 28, height: 28, borderRadius: 8, flexShrink: 0,
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '0.75rem', fontWeight: 700,
-                      background: org.is_disabled ? 'rgba(248,113,113,0.2)' : 'rgba(0,210,200,0.15)',
+                      background: org.is_disabled ? 'rgba(248,113,113,0.2)' : 'rgba(70,183,255,0.15)',
                       color: org.is_disabled ? 'var(--danger)' : 'var(--accent)',
                     }}>
                       🏢
@@ -659,7 +659,7 @@ function AllUsersTab({
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(168,85,247,0.12)', flexWrap: 'wrap', gap: 10 }}>
           <div>
-            <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
+            <h2 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Platform Users & Admins
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
@@ -778,8 +778,8 @@ function AllUsersTab({
                         fontSize: '0.75rem', fontWeight: 700, color: '#fff',
                         background: isSuper
                           ? 'linear-gradient(135deg, #a855f7, #ec4899)'
-                          : 'linear-gradient(135deg, rgba(0,210,200,0.35), rgba(168,85,247,0.25))',
-                        border: `1px solid ${isSuper ? '#ec4899' : 'rgba(0,210,200,0.3)'}`,
+                          : 'linear-gradient(135deg, rgba(70,183,255,0.35), rgba(168,85,247,0.25))',
+                        border: `1px solid ${isSuper ? '#ec4899' : 'rgba(70,183,255,0.3)'}`,
                       }}>
                         {displayName.charAt(0).toUpperCase()}
                       </div>
@@ -798,7 +798,7 @@ function AllUsersTab({
                     {/* Org */}
                     <div style={{ fontSize: '0.75rem', color: u.org_id ? 'var(--text-secondary)' : 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {u.org_id ? (
-                        <span style={{ padding: '2px 7px', borderRadius: 6, background: 'rgba(0,210,200,0.08)', border: '1px solid rgba(0,210,200,0.18)', color: 'var(--accent)', fontSize: '0.70rem' }}>
+                        <span style={{ padding: '2px 7px', borderRadius: 6, background: 'rgba(70,183,255,0.08)', border: '1px solid rgba(70,183,255,0.18)', color: 'var(--accent)', fontSize: '0.70rem' }}>
                           {u.org_id}
                         </span>
                       ) : '—'}
@@ -973,7 +973,7 @@ function AllDocumentsTab({
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(168,85,247,0.12)', flexWrap: 'wrap', gap: 10 }}>
           <div>
-            <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
+            <h2 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Global Platform Documents
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
@@ -1273,7 +1273,7 @@ export function SuperAdminPage() {
               </div>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <h1 style={{ fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif', fontSize: '1.5rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', lineHeight: 1.15 }}>
+                  <h1 style={{ fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif', fontSize: '1.5rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', lineHeight: 1.15 }}>
                     Super Admin Console
                   </h1>
                   <span style={{
@@ -1325,7 +1325,7 @@ export function SuperAdminPage() {
                 border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 fontSize: '0.80rem', fontWeight: 500, transition: 'all 0.2s ease',
                 background: activeTab === tab.id
-                  ? 'linear-gradient(135deg, rgba(168,85,247,0.22), rgba(0,210,200,0.14))'
+                  ? 'linear-gradient(135deg, rgba(168,85,247,0.22), rgba(70,183,255,0.14))'
                   : 'transparent',
                 color: activeTab === tab.id ? 'var(--text)' : 'var(--muted)',
                 outline: activeTab === tab.id ? '1px solid rgba(168,85,247,0.35)' : 'none',

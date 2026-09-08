@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useContextHooks';
 import { Badge } from '@/components/ui/Badge';
@@ -12,10 +12,10 @@ const glassPanel = {
   background: 'linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(0,180,200,0.04) 50%, rgba(255,255,255,0.025) 100%)',
   backdropFilter: 'blur(32px) saturate(170%)',
   WebkitBackdropFilter: 'blur(32px) saturate(170%)',
-  border: '1px solid rgba(0,210,200,0.14)',
+  border: '1px solid rgba(70,183,255,0.14)',
   borderTopColor: 'rgba(255,255,255,0.20)',
   borderRadius: 20,
-  boxShadow: '0 8px 40px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.09) inset, 0 0 0 1px rgba(0,210,200,0.06)',
+  boxShadow: '0 8px 40px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.09) inset, 0 0 0 1px rgba(70,183,255,0.06)',
 } as const;
 
 /* ─── capability matrix ─── */
@@ -63,11 +63,11 @@ function SectionCard({ children, title, subtitle, delay = 0 }: {
       transition={{ delay, duration: 0.38 }}
       style={{ ...glassPanel, padding: '1.5rem 1.5rem' }}
     >
-      <div style={{ marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(0,210,200,0.10)' }}>
-        <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: subtitle ? 4 : 0 }}>
+      <div style={{ marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(70,183,255,0.10)' }}>
+        <h2 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: subtitle ? 4 : 0 }}>
           {title}
         </h2>
-        {subtitle && <p style={{ fontSize: '0.75rem', color: 'var(--muted)', lineHeight: 1.5, fontFamily: '"Plus Jakarta Sans", sans-serif' }}>{subtitle}</p>}
+        {subtitle && <p style={{ fontSize: '0.75rem', color: 'var(--muted)', lineHeight: 1.5, fontFamily: '"Inter", sans-serif' }}>{subtitle}</p>}
       </div>
       {children}
     </motion.div>
@@ -123,7 +123,7 @@ function GlobalUploadSettingsCard({
           padding: '1.1rem 1.25rem',
           borderRadius: 14,
           background: 'rgba(255,255,255,0.038)',
-          border: '1px solid rgba(0,210,200,0.12)',
+          border: '1px solid rgba(70,183,255,0.12)',
           borderTopColor: 'rgba(255,255,255,0.12)',
           gap: 16,
           flexWrap: 'wrap',
@@ -226,7 +226,7 @@ function ConfirmDialog({
         }}
       >
         <div style={{ fontSize: '1.5rem', marginBottom: 12 }}>⚠️</div>
-        <h3 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
+        <h3 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
           Confirm Delete
         </h3>
         <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: 20 }}>
@@ -301,7 +301,7 @@ function OverviewTab() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.85rem' }}>
           {orgCards.map(({ label, value, icon }) => (
             <div key={label}
-              style={{ padding: '1rem 1.1rem', borderRadius: 14, background: 'rgba(255,255,255,0.038)', border: '1px solid rgba(0,210,200,0.12)', borderTopColor: 'rgba(255,255,255,0.12)', boxShadow: '0 2px 12px rgba(0,0,0,0.3)', transition: 'all 0.2s ease' }}
+              style={{ padding: '1rem 1.1rem', borderRadius: 14, background: 'rgba(255,255,255,0.038)', border: '1px solid rgba(70,183,255,0.12)', borderTopColor: 'rgba(255,255,255,0.12)', boxShadow: '0 2px 12px rgba(0,0,0,0.3)', transition: 'all 0.2s ease' }}
             >
               <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.10em', color: 'var(--muted)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ color: 'var(--accent)' }}>{icon}</span>{label}
@@ -323,7 +323,7 @@ function OverviewTab() {
         <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
           <table style={{ width: '100%', minWidth: 480, borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(0,210,200,0.15)' }}>
+              <tr style={{ borderBottom: '1px solid rgba(70,183,255,0.15)' }}>
                 <th style={{ textAlign: 'left', padding: '0 0 12px 0', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.10em', color: 'var(--muted)', fontWeight: 500, width: '48%' }}>Capability</th>
                 {['User', 'Admin', 'Super Admin'].map(r => (
                   <th key={r} style={{ padding: '0 8px 12px', textAlign: 'center', minWidth: 85 }}>
@@ -434,9 +434,9 @@ function UsersTab() {
         style={{ ...glassPanel, padding: '1.5rem 1.5rem' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(0,210,200,0.10)', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(70,183,255,0.10)', flexWrap: 'wrap', gap: 10 }}>
           <div>
-            <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
+            <h2 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Organisation Users
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
@@ -504,14 +504,14 @@ function UsersTab() {
                       alignItems: 'center',
                       padding: '12px 14px',
                       borderRadius: 13,
-                      background: isSelf ? 'rgba(0,210,200,0.06)' : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${isSelf ? 'rgba(0,210,200,0.20)' : 'rgba(255,255,255,0.06)'}`,
+                      background: isSelf ? 'rgba(70,183,255,0.06)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${isSelf ? 'rgba(70,183,255,0.20)' : 'rgba(255,255,255,0.06)'}`,
                       transition: 'background 0.18s',
                     }}
                   >
                     {/* User info (Name + Email) */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                      <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-fg)', background: 'linear-gradient(135deg, rgba(0,210,200,0.28), rgba(168,85,247,0.22))', border: '1px solid rgba(0,210,200,0.22)' }}>
+                      <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-fg)', background: 'linear-gradient(135deg, rgba(70,183,255,0.28), rgba(168,85,247,0.22))', border: '1px solid rgba(70,183,255,0.22)' }}>
                         {displayName.charAt(0).toUpperCase()}
                       </div>
                       <div style={{ minWidth: 0 }}>
@@ -704,9 +704,9 @@ function DocumentsTab() {
         style={{ ...glassPanel, padding: '1.5rem 1.5rem' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(0,210,200,0.10)', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(70,183,255,0.10)', flexWrap: 'wrap', gap: 10 }}>
           <div>
-            <h2 style={{ fontFamily: '"Plus Jakarta Sans", "Outfit", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
+            <h2 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Organisation Documents
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
@@ -827,8 +827,8 @@ function DocumentsTab() {
                         style={{
                           padding: '5px 9px',
                           borderRadius: 8,
-                          border: '1px solid rgba(0,210,200,0.22)',
-                          background: 'rgba(0,210,200,0.08)',
+                          border: '1px solid rgba(70,183,255,0.22)',
+                          background: 'rgba(70,183,255,0.08)',
                           color: 'var(--accent)',
                           fontSize: '0.70rem',
                           fontWeight: 600,
@@ -903,9 +903,9 @@ export function AdminPage() {
         {/* ── PAGE HEADER ── */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4, flexWrap: 'wrap' }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', background: 'linear-gradient(135deg, rgba(0,210,200,0.18), rgba(168,85,247,0.14))', border: '1px solid rgba(0,210,200,0.22)', boxShadow: '0 4px 16px rgba(0,210,200,0.14)' }}>⊞</div>
+            <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', background: 'linear-gradient(135deg, rgba(70,183,255,0.18), rgba(168,85,247,0.14))', border: '1px solid rgba(70,183,255,0.22)', boxShadow: '0 4px 16px rgba(70,183,255,0.14)' }}>⊞</div>
             <div>
-              <h1 style={{ fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif', fontSize: '1.5rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', lineHeight: 1.15 }}>Admin Panel</h1>
+              <h1 style={{ fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif', fontSize: '1.5rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', lineHeight: 1.15 }}>Admin Panel</h1>
               <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 3 }}>Manage users, documents, roles and system configuration.</p>
             </div>
           </div>
@@ -914,7 +914,7 @@ export function AdminPage() {
         {/* ── TABS ── */}
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-          style={{ display: 'flex', gap: 6, padding: 5, borderRadius: 16, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(0,210,200,0.10)', boxShadow: '0 2px 10px rgba(0,0,0,0.35) inset', width: 'fit-content', flexWrap: 'wrap' }}
+          style={{ display: 'flex', gap: 6, padding: 5, borderRadius: 16, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(70,183,255,0.10)', boxShadow: '0 2px 10px rgba(0,0,0,0.35) inset', width: 'fit-content', flexWrap: 'wrap' }}
         >
           {TABS.map(tab => (
             <button
@@ -926,10 +926,10 @@ export function AdminPage() {
                 border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 fontSize: '0.80rem', fontWeight: 500, transition: 'all 0.2s ease',
                 background: activeTab === tab.id
-                  ? 'linear-gradient(135deg, rgba(0,210,200,0.16), rgba(168,85,247,0.12))'
+                  ? 'linear-gradient(135deg, rgba(70,183,255,0.16), rgba(168,85,247,0.12))'
                   : 'transparent',
                 color: activeTab === tab.id ? 'var(--text)' : 'var(--muted)',
-                outline: activeTab === tab.id ? '1px solid rgba(0,210,200,0.24)' : 'none',
+                outline: activeTab === tab.id ? '1px solid rgba(70,183,255,0.24)' : 'none',
                 boxShadow: activeTab === tab.id
                   ? '0 2px 10px rgba(0,0,0,0.32), 0 1px 0 rgba(255,255,255,0.08) inset'
                   : 'none',
@@ -961,7 +961,7 @@ export function AdminPage() {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
           style={{ textAlign: 'center', fontSize: '0.65rem', color: 'var(--muted)', opacity: 0.38, letterSpacing: '0.04em' }}
         >
-          Admin Panel · GlobalRAG Enterprise · Role-Based Access Control
+          Admin Panel · Rag-Agent Enterprise · Role-Based Access Control
         </motion.p>
       </div>
     </div>

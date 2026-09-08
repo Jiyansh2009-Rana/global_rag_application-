@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getPlatformGuide } from '@/api/guide';
 import type { PlatformGuide } from '@/api/types';
@@ -49,7 +49,7 @@ const fallbackGuide: PlatformGuide = {
     'You can ask the AI to answer in different languages!',
   ],
   support: "If you need elevated access (like Global Upload permissions), please contact your Organization's Admin.",
-  contact: 'if you see any issue or you have any suggestion then contact this email mcode1929@gmail.com',
+  contact: 'if you see any issue or you have any suggestion then contact this email rag1agentsuperadmin@gmail.com',
 };
 
 export function GuideModal({ open, onClose }: GuideModalProps) {
@@ -148,7 +148,7 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                 <div>
                   <h2
                     style={{
-                      fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif',
+                      fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif',
                       fontSize: '1.15rem',
                       fontWeight: 600,
                       color: 'var(--text)',
@@ -160,7 +160,7 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                   </h2>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
                     <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>
-                      How to use the Global RAG Platform &amp; Best Practices
+                      How to use the Rag-Agent Platform &amp; Best Practices
                     </p>
                     {loading && (
                       <span
@@ -248,7 +248,7 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    fontFamily: '"Comfortaa", "Quicksand", sans-serif',
+                    fontFamily: '"Bricolage Grotesque", "Inter", sans-serif',
                   }}
                 >
                   <span style={{ color: 'var(--accent)' }}>◈</span> Step-by-Step Guide
@@ -276,7 +276,7 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                     >
                       <div
                         style={{
-                          fontFamily: '"Comfortaa", "Outfit", "Plus Jakarta Sans", sans-serif',
+                          fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif',
                           fontSize: '0.92rem',
                           fontWeight: 600,
                           color: 'var(--text)',
@@ -397,7 +397,7 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                   border: '1px solid var(--border-accent)',
                   background: 'linear-gradient(135deg, var(--accent), var(--accent-2))',
                   color: 'var(--accent-fg)',
-                  fontFamily: '"Plus Jakarta Sans", sans-serif',
+                  fontFamily: '"Inter", sans-serif',
                   fontSize: '0.84rem',
                   fontWeight: 600,
                   cursor: 'pointer',
