@@ -22,6 +22,10 @@ def generate_set_id(doc_id: str, set_index: int) -> str:
     return f"{doc_id}_set_{set_index:04d}"
 
 def extract_pages_as_list(raw_text: str, doc_type: DocumentType) -> List[str]:
+
+    if doc_type == DocumentType.IMAGE:
+        return [raw_text]
+    
     if doc_type == DocumentType.PPTX:
         slides = raw_text.split("---SLIDE_BREAK---")
         return [s.strip() for s in slides]

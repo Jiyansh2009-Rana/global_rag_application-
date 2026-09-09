@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { useAuth, useIsMobile } from '@/hooks/useContextHooks';
 import { queryApi, downloadFile, streamQuery, parseQuerySSEStream } from '@/api/query';
-import { parseApiError } from '@/api/client';
+import { parseApiError, tokenStore } from '@/api/client';
 import type { QueryResponse, Source, QueryRequest, ChatHistoryItem } from '@/api/types';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
@@ -37,13 +37,46 @@ function ImageLightboxModal({
   onClose: () => void;
 }) {
   const [downloading, setDownloading] = useState(false);
-  const imageUrl = source.image_data || source.document_url || '';
+  const [loadedUrl, setLoadedUrl] = useState<string>(source.image_data || '');
+  const [loading, setLoading] = useState(!source.image_data && !!source.document_url);
+
+  useEffect(() => {
+    let active = true;
+    if (source.image_data) {
+      setLoadedUrl(source.image_data);
+      setLoading(false);
+    } else if (source.document_url) {
+      setLoading(true);
+      const token = tokenStore.get();
+      fetch(source.document_url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.blob();
+        })
+        .then((blob) => {
+          if (active) {
+            const blobUrl = URL.createObjectURL(blob);
+            setLoadedUrl(blobUrl);
+            setLoading(false);
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load image preview:', err);
+          if (active) setLoading(false);
+        });
+    }
+    return () => {
+      active = false;
+    };
+  }, [source.image_data, source.document_url]);
 
   const handleDownload = async () => {
     setDownloading(true);
     try {
-      if (source.image_data) {
-        await downloadFile(source.image_data, source.document_name);
+      if (loadedUrl) {
+        await downloadFile(loadedUrl, source.document_name);
       } else if (source.document_url) {
         await downloadFile(source.document_url, source.document_name);
       }
@@ -138,17 +171,29 @@ function ImageLightboxModal({
           borderRadius: 12,
           background: 'rgba(0,0,0,0.5)',
           border: '1px solid rgba(255,255,255,0.08)',
+          minHeight: 180,
+          minWidth: 280,
         }}>
-          <img
-            src={imageUrl}
-            alt={source.document_name}
-            style={{
-              maxWidth: '100%',
-              maxHeight: 'calc(80vh - 70px)',
-              objectFit: 'contain',
-              borderRadius: 8,
-            }}
-          />
+          {loading ? (
+            <div style={{ padding: '2rem', color: 'var(--muted)', fontSize: '0.82rem' }}>
+              Loading image preview…
+            </div>
+          ) : loadedUrl ? (
+            <img
+              src={loadedUrl}
+              alt={source.document_name}
+              style={{
+                maxWidth: '100%',
+                maxHeight: 'calc(80vh - 70px)',
+                objectFit: 'contain',
+                borderRadius: 8,
+              }}
+            />
+          ) : (
+            <div style={{ padding: '2rem', color: 'var(--muted)', fontSize: '0.82rem' }}>
+              Preview not available. Use download button above.
+            </div>
+          )}
         </div>
       </motion.div>
     </motion.div>
@@ -171,13 +216,40 @@ function SourceCard({
 }) {
   const isImg = source.is_image || !!source.image_data || /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(source.document_name);
   const [downloading, setDownloading] = useState(false);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(source.image_data || null);
+
+  useEffect(() => {
+    let active = true;
+    if (source.image_data) {
+      setThumbnailUrl(source.image_data);
+    } else if (isImg && source.document_url) {
+      const token = tokenStore.get();
+      fetch(source.document_url, {
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          return res.blob();
+        })
+        .then((blob) => {
+          if (active) {
+            const url = URL.createObjectURL(blob);
+            setThumbnailUrl(url);
+          }
+        })
+        .catch(() => { /* ignore */ });
+    }
+    return () => {
+      active = false;
+    };
+  }, [source.image_data, source.document_url, isImg]);
 
   const handleDownload = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setDownloading(true);
     try {
-      if (source.image_data) {
-        await downloadFile(source.image_data, source.document_name);
+      if (thumbnailUrl) {
+        await downloadFile(thumbnailUrl, source.document_name);
       } else if (source.document_url) {
         await downloadFile(source.document_url, source.document_name);
       }
@@ -251,12 +323,12 @@ function SourceCard({
       <ScoreBar score={source.similarity_score} />
 
       {/* Image Thumbnail Preview */}
-      {isImg && source.image_data && (
+      {isImg && (
         <div style={{ marginTop: 10 }}>
           <div
             onClick={(e) => {
               e.stopPropagation();
-              onOpenImage(source);
+              onOpenImage({ ...source, image_data: thumbnailUrl || source.image_data });
             }}
             style={{
               cursor: 'zoom-in',
@@ -269,20 +341,27 @@ function SourceCard({
               justifyContent: 'center',
               alignItems: 'center',
               maxHeight: 180,
+              minHeight: 100,
             }}
           >
-            <img
-              src={source.image_data}
-              alt={source.document_name}
-              style={{
-                width: '100%',
-                maxHeight: 180,
-                objectFit: 'contain',
-                transition: 'transform 0.2s ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
-              onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
-            />
+            {thumbnailUrl ? (
+              <img
+                src={thumbnailUrl}
+                alt={source.document_name}
+                style={{
+                  width: '100%',
+                  maxHeight: 180,
+                  objectFit: 'contain',
+                  transition: 'transform 0.2s ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.transform = 'scale(1.02)')}
+                onMouseLeave={(e) => (e.currentTarget.style.transform = 'scale(1)')}
+              />
+            ) : (
+              <div style={{ color: 'var(--muted)', fontSize: '0.75rem', padding: '1.5rem' }}>
+                🖼 Click to preview {source.document_name}
+              </div>
+            )}
             <div style={{
               position: 'absolute',
               bottom: 6,
@@ -1310,59 +1389,27 @@ export function ChatPage() {
         }
       }
     } catch (err) {
-      console.warn('Backend unavailable during update; activating Rag-Agent simulated streaming response:', err);
-      // Realistic simulated sources
-      const mockSources: Source[] = [
-        {
-          chunk_id: 'chk_9f82a1',
-          document_name: 'Rag_Agent_Architecture_Spec.pdf',
-          text_preview: `Grounded response for "${q}". Rag-Agent hybrid vector search combines pgvector cosine indexing with BM25 keyword matching, evaluated by cross-encoder thresholding.`,
-          similarity_score: 0.942,
-          page_number: 3,
-        },
-        {
-          chunk_id: 'chk_7b19e4',
-          document_name: 'Enterprise_Telemetry_Analysis.docx',
-          text_preview: 'Cross-encoder scores evaluate candidate chunks above threshold 0.72 for zero-hallucination factual grounding.',
-          similarity_score: 0.884,
-          page_number: 1,
-        },
-      ];
-
-      setMessages(m => m.map(msg => msg.id === assistantId ? { ...msg, streamingSources: mockSources } : msg));
-
-      // Simulate streaming tokens
-      const simulatedText = `**Rag-Agent Grounded Response**\n\nBased on your indexed documents, here is the synthesis for *"**${q}**"*:\n\n1. **Vector Relevance**: Semantic cosine distance search retrieved candidate segments with a peak score of **0.942**, comfortably exceeding the **0.72 cutoff threshold**.\n2. **Synthesis & Grounding**: The hybrid pipeline cross-referenced dense embeddings with lexical BM25 matching, filtering noise to ensure zero hallucination.\n3. **Citations**: Attributed directly across **2 verified source segments** with page-level links.\n\n*Rag-Agent is operating in resilient transition mode while your backend updates complete.*`;
-
-      let currentStream = '';
-      const tokens = simulatedText.split(' ');
-      for (const tok of tokens) {
-        await new Promise(r => setTimeout(r, 35));
-        currentStream += tok + ' ';
-        setMessages(m => m.map(msg => msg.id === assistantId ? { ...msg, streamingAnswer: currentStream } : msg));
-      }
-
-      const finalResponse: QueryResponse = {
-        answer: simulatedText,
-        language: 'English',
-        query_mode: mode,
-        session_id: activeSessionId || safeUUID(),
-        sources: mockSources,
-        total_sources_found: mockSources.length,
-        generated_by: 'Gemini 1.5 Pro (Rag-Agent Pipeline)',
-      };
-
-      setMessages(m => m.map(msg => msg.id === assistantId ? {
-        ...msg,
-        content: simulatedText,
-        isStreaming: false,
-        streamingAnswer: undefined,
-        streamingSources: undefined,
-        response: finalResponse,
-        animate: false,
-      } : msg));
+      console.error('Query failed:', err);
+      const errMsg = parseApiError(err);
+      setMessages((m) =>
+        m.map((msg) =>
+          msg.id === assistantId
+            ? {
+                ...msg,
+                type: 'error',
+                content: `Query failed: ${errMsg}`,
+                isStreaming: false,
+                streamingAnswer: undefined,
+                streamingSources: undefined,
+                response: undefined,
+                animate: false,
+              }
+            : msg
+        )
+      );
     } finally {
       setIsLoading(false);
+      setStage('embedding');
     }
   };
 

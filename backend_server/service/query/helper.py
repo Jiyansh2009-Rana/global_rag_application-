@@ -93,7 +93,7 @@ def retrieve_local_redis(
     user_id: str,
     org_id: str,
     top_k: int = 5,
-    match_threshold: float = 0.1
+    match_threshold: float = 0.10
 ) -> List[Dict[str, Any]]:
     if not redis_client:
         logger.warning("Redis unavailable for local retrieval.")
@@ -176,8 +176,9 @@ async def stream_llm_answer(
         chunk_text = chunk.get("text", "")
         if isinstance(chunk_text, str) and chunk_text.startswith("data:image/"):
             context_parts.append(
-                f"[Source {i} | Image: {chunk['document_name']}]\n"
-                f"(Image matched via multimodal embedding: {chunk['document_name']})"
+                f"[Source {i} | Image Document: {chunk['document_name']}]\n"
+                f"The image document '{chunk['document_name']}' was matched via multimodal embedding. "
+                f"Inform the user that the image has been found and is available for preview and download in the citations."
             )
         else:
             context_parts.append(

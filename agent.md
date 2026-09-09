@@ -1,12 +1,12 @@
-# Global RAG Application — Agent Guidelines & System Architecture
+# Rag-Agent application — Agent Guidelines & System Architecture
 
-This document serves as the master guide and operational rulebook for AI agents, developers, and automated tools working on the **Global RAG Application** codebase.
+This document serves as the master guide and operational rulebook for AI agents, developers, and automated tools working on the **Rag-Agent application** codebase.
 
 ---
 
 ## 1. Project Overview & System Identity
 
-The **Global RAG Application** is an enterprise-grade, multi-tenant **Retrieval-Augmented Generation (RAG)** platform designed for secure, role-isolated document ingestion and natural language querying.
+The **Rag-Agent application** is an enterprise-grade, multi-tenant **Retrieval-Augmented Generation (RAG)** platform designed for secure, role-isolated document ingestion and natural language querying.
 
 ### High-Level Architecture
 - **Frontend**: React 18, Vite, TypeScript, Tailwind CSS v4, `@tanstack/react-query`, Framer Motion, Server-Sent Events (SSE) streaming consumer.

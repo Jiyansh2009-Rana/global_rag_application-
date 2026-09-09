@@ -1,4 +1,4 @@
-# Global RAG Application — AI Agent Rules & Workspace Guidelines
+# Rag-Agent application — AI Agent Rules & Workspace Guidelines
 
 Master workspace rules and operating constraints for AI agents in this repository.
 

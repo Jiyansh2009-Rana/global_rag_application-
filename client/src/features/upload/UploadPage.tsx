@@ -23,15 +23,47 @@ const glassPanel = {
 } as const;
 
 /* ── Visualized Chunk Inspector ── */
-function ChunkVisualizer({ docTitle, chunksCount }: { docTitle: string; chunksCount: number }) {
+function ChunkVisualizer({ docTitle, chunksCount, mode }: { docTitle: string; chunksCount: number; mode: UploadMode }) {
+  const isImage = /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(docTitle);
   const [selectedIdx, setSelectedIdx] = useState(0);
-  const count = Math.max(chunksCount || 5, 4);
+  const isLocal = mode === 'local';
+
+  if (isImage) {
+    return (
+      <div style={{ marginTop: 12, padding: '12px 14px', borderRadius: 12, background: 'rgba(7, 8, 10, 0.95)', border: '1px solid rgba(255, 255, 255, 0.08)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ fontSize: '0.72rem', fontFamily: 'var(--font-mono)', color: 'var(--primary)', fontWeight: 600, textTransform: 'uppercase' }}>
+              🖼 Visual Vector Inspector
+            </span>
+            <span style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: 4, background: 'rgba(70,183,255,0.1)', color: 'var(--accent)' }}>
+              1 Image Chunk
+            </span>
+          </div>
+          <span style={{ fontSize: '0.65rem', fontFamily: 'var(--font-mono)', color: isLocal ? 'var(--warning)' : 'var(--success)', fontWeight: 500 }}>
+            {isLocal ? 'Redis Ephemeral Store Active (1h TTL)' : 'Neon Vector Store Active'}
+          </span>
+        </div>
+
+        <div style={{ padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--muted)', fontSize: '0.62rem' }}>
+            <span>Single Multimodal Image Embedding</span>
+            <span style={{ color: 'var(--accent)' }}>1024 dimensions (Jina CLIP v2)</span>
+          </div>
+          <div style={{ color: 'var(--text)', lineHeight: 1.4 }}>
+            Full visual feature vector generated for {docTitle}. Retrievable via cross-modal cosine similarity search in {isLocal ? 'private local sandbox' : 'organization global knowledge base'}.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const count = Math.max(chunksCount || 1, 1);
   const sampleChunks = Array.from({ length: Math.min(count, 8) }).map((_, i) => ({
     chunkId: `chk_${(i + 1).toString().padStart(2, '0')}`,
     page: Math.floor(i / 2) + 1,
-    tokenLength: 470 + ((i * 19) % 55),
-    overlap: 50,
-    text: `Segment ${i + 1} from ${docTitle}. Semantically partitioned using recursive character chunking with 50-token window overlap for HNSW embedding index.`,
+    tokenLength: 450 + ((i * 23) % 60),
+    text: `Indexed segment #${i + 1} from ${docTitle} with dense 1024-dim vector embedding.`,
   }));
 
   const active = sampleChunks[selectedIdx] || sampleChunks[0];
@@ -44,46 +76,46 @@ function ChunkVisualizer({ docTitle, chunksCount }: { docTitle: string; chunksCo
             🧩 Chunk Visualizer
           </span>
           <span style={{ fontSize: '0.65rem', padding: '1px 6px', borderRadius: 4, background: 'rgba(255,255,255,0.05)', color: 'var(--muted)' }}>
-            {sampleChunks.length} Chunks
+            {chunksCount} {chunksCount === 1 ? 'Chunk' : 'Chunks'}
           </span>
         </div>
-        <span style={{ fontSize: '0.65rem', fontFamily: 'var(--font-mono)', color: 'var(--success)', fontWeight: 500 }}>
-          Neon Vector Store Active
+        <span style={{ fontSize: '0.65rem', fontFamily: 'var(--font-mono)', color: isLocal ? 'var(--warning)' : 'var(--success)', fontWeight: 500 }}>
+          {isLocal ? 'Redis Ephemeral Store Active (1h TTL)' : 'Neon Vector Store Active'}
         </span>
       </div>
 
-      {/* Grid of chunk blocks */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))', gap: 6, marginBottom: 10 }}>
-        {sampleChunks.map((c, idx) => (
-          <button
-            key={idx}
-            type="button"
-            onClick={() => setSelectedIdx(idx)}
-            style={{
-              padding: '6px 4px',
-              borderRadius: 8,
-              border: selectedIdx === idx ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.06)',
-              background: selectedIdx === idx ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
-              color: selectedIdx === idx ? '#ffffff' : 'var(--muted)',
-              cursor: 'pointer',
-              fontFamily: 'var(--font-mono)',
-              fontSize: '0.68rem',
-              transition: 'all 0.15s ease',
-              textAlign: 'center',
-            }}
-          >
-            <div>#{idx + 1}</div>
-            <div style={{ fontSize: '0.58rem', opacity: 0.8 }}>{c.tokenLength}t</div>
-          </button>
-        ))}
-      </div>
+      {sampleChunks.length > 1 && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(64px, 1fr))', gap: 6, marginBottom: 10 }}>
+          {sampleChunks.map((c, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => setSelectedIdx(idx)}
+              style={{
+                padding: '6px 4px',
+                borderRadius: 8,
+                border: selectedIdx === idx ? '1px solid var(--primary)' : '1px solid rgba(255,255,255,0.06)',
+                background: selectedIdx === idx ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
+                color: selectedIdx === idx ? '#ffffff' : 'var(--muted)',
+                cursor: 'pointer',
+                fontFamily: 'var(--font-mono)',
+                fontSize: '0.68rem',
+                transition: 'all 0.15s ease',
+                textAlign: 'center',
+              }}
+            >
+              <div>#{idx + 1}</div>
+              <div style={{ fontSize: '0.58rem', opacity: 0.8 }}>{c.tokenLength}t</div>
+            </button>
+          ))}
+        </div>
+      )}
 
-      {/* Active Chunk Preview */}
       {active && (
         <div style={{ padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', fontSize: '0.7rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4, color: 'var(--muted)', fontSize: '0.62rem' }}>
             <span>{active.chunkId} · Page {active.page}</span>
-            <span style={{ color: 'var(--accent)' }}>{active.tokenLength} tokens</span>
+            <span style={{ color: 'var(--accent)' }}>~{active.tokenLength} tokens</span>
           </div>
           <div style={{ color: 'var(--text)', lineHeight: 1.4 }}>
             "{active.text}"
@@ -95,7 +127,7 @@ function ChunkVisualizer({ docTitle, chunksCount }: { docTitle: string; chunksCo
 }
 
 /* ── Per-file Progress Card ── */
-function FileProgressCard({ state, index }: { state: FileUploadState; index: number }) {
+function FileProgressCard({ state, index, mode }: { state: FileUploadState; index: number; mode: UploadMode }) {
   const { file, phase, progress, totalPages, processedPages, chunksCreated, docId, aliasDetected, aliasMessage, error } = state;
 
   const isSpinning = phase === 'uploading' || phase === 'ocr' || phase === 'processing';
@@ -212,7 +244,7 @@ function FileProgressCard({ state, index }: { state: FileUploadState; index: num
 
       {/* ── Interactive Chunk Inspector ── */}
       {phase === 'done' && (
-        <ChunkVisualizer docTitle={file.name} chunksCount={chunksCreated} />
+        <ChunkVisualizer docTitle={file.name} chunksCount={chunksCreated} mode={mode} />
       )}
 
       {/* ── Error ── */}
@@ -578,12 +610,9 @@ export function UploadPage() {
           }
         }
       } catch (err) {
-        console.warn('Backend currently undergoing update; running Rag-Agent ingest simulation:', err);
-        patch({ phase: 'ocr' });
-        await new Promise((r) => setTimeout(r, 700));
-        patch({ phase: 'processing', totalPages: 4, processedPages: 2, progress: 50, chunksCreated: 3 });
-        await new Promise((r) => setTimeout(r, 800));
-        patch({ phase: 'done', totalPages: 4, processedPages: 4, progress: 100, chunksCreated: 6, docId: `doc_${Math.random().toString(36).substring(2, 8)}` });
+        console.error('Upload failed:', err);
+        const errMsg = parseApiError(err);
+        patch({ phase: 'error', error: errMsg, progress: 0 });
       }
     };
 
@@ -888,7 +917,7 @@ export function UploadPage() {
                 </span>
               </div>
               {fileStates.map((state, i) => (
-                <FileProgressCard key={state.file.name + i} state={state} index={i} />
+                <FileProgressCard key={state.file.name + i} state={state} index={i} mode={mode} />
               ))}
             </motion.div>
           )}
