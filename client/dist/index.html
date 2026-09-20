@@ -11,9 +11,8 @@
     <script>
       (function () {
         var stored = localStorage.getItem('rag-theme');
-        var preferred = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-        var theme = stored || preferred;
-        document.documentElement.setAttribute('data-theme', theme);
+        var theme = stored || 'dark';
+        document.documentElement.setAttribute('data-theme', 'dark');
       })();
     </script>
 
@@ -25,8 +24,8 @@
 
     <!-- API preconnect (adjust if deploying to different origin) -->
     <link rel="preconnect" href="http://localhost:7000" />
-    <script type="module" crossorigin src="/assets/index-Bwnmsu_j.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-CTaVYI1P.css">
+    <script type="module" crossorigin src="/assets/index-Chkz3ySN.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-EfWVu1LY.css">
   </head>
   <body>
     <div id="root"></div>

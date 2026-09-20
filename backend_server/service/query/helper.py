@@ -233,7 +233,8 @@ async def stream_llm_answer(
             if token:
                 yield token
     except Exception as e:
-        raise HTTPException(status_code=502, detail=f"LLM streaming failed during generation: {e}")
+        logger.error(f"Stream iteration interrupted: {e}")
+        yield f"\n\n[Generation interrupted: {e}]"
 
 def save_chat_history(user_id: str, org_id: str, query: str, answer: str, query_mode: str, session_id: str) -> None:
     if not supabase_client:

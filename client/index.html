@@ -11,9 +11,8 @@
     <script>
       (function () {
         var stored = localStorage.getItem('rag-theme');
-        var preferred = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-        var theme = stored || preferred;
-        document.documentElement.setAttribute('data-theme', theme);
+        var theme = stored || 'dark';
+        document.documentElement.setAttribute('data-theme', 'dark');
       })();
     </script>
 

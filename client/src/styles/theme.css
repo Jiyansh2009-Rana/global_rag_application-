@@ -1,4 +1,4 @@
-﻿/* ─────────────────────────────────────────────────────────────────────────────
+/* ─────────────────────────────────────────────────────────────────────────────
    Rag-Agent — Scrolltide Design System v3.0
    Cinematic dark-web aesthetic: ink base, tide-teal accent, bone type.
    CSS-first Tailwind v4 @theme block.
@@ -87,63 +87,63 @@
 }
 
 [data-theme="light"] {
-  --bg-base:        #f4f4f0;
-  --bg-layer1:      #ffffff;
-  --bg-layer2:      #eeede9;
-  --bg-layer3:      #e5e4e0;
+  --bg-base:        #07080a;
+  --bg-layer1:      #0b0c0f;
+  --bg-layer2:      #0f1014;
+  --bg-layer3:      #141518;
   --background:     var(--bg-base);
-  --surface:        var(--bg-layer1);
-  --surface-2:      var(--bg-layer2);
-  --surface-hover:  rgba(0, 0, 0, 0.04);
+  --surface:        var(--bg-layer2);
+  --surface-2:      var(--bg-layer3);
+  --surface-hover:  rgba(255, 255, 255, 0.04);
 
-  --border:         rgba(0, 0, 0, 0.08);
-  --border-strong:  rgba(0, 0, 0, 0.16);
-  --border-accent:  rgba(70, 183, 255, 0.3);
-  --border-subtle:  rgba(0, 0, 0, 0.04);
+  --border:         rgba(255, 255, 255, 0.08);
+  --border-strong:  rgba(255, 255, 255, 0.16);
+  --border-accent:  rgba(70, 183, 255, 0.38);
+  --border-subtle:  rgba(255, 255, 255, 0.04);
 
-  --text:           #1a1917;
-  --text-secondary: #4a4845;
-  --muted:          #7a7875;
+  --text:           #e8e6e0;
+  --text-secondary: #9a9690;
+  --muted:          #5a5852;
 
-  --primary:        #0084d6;
-  --primary-hover:  #0073bb;
-  --primary-dim:    rgba(0, 132, 214, 0.12);
-  --primary-glow:   rgba(0, 132, 214, 0.25);
-  --primary-fg:     #ffffff;
+  --primary:        #46b7ff;
+  --primary-hover:  #6cc5ff;
+  --primary-dim:    rgba(70, 183, 255, 0.12);
+  --primary-glow:   rgba(70, 183, 255, 0.35);
+  --primary-fg:     #04121f;
 
-  --accent:         #0ea587;
-  --accent-2:       #0284c7;
-  --accent-dim:     rgba(14, 165, 135, 0.12);
-  --accent-glow:    rgba(14, 165, 135, 0.2);
-  --accent-fg:      #ffffff;
+  --accent:         #8bf3e6;
+  --accent-2:       #46b7ff;
+  --accent-dim:     rgba(139, 243, 230, 0.12);
+  --accent-glow:    rgba(139, 243, 230, 0.25);
+  --accent-fg:      #04121f;
 
-  --success:        #16a34a;
-  --success-dim:    rgba(22, 163, 74, 0.12);
-  --warning:        #d97706;
-  --warning-dim:    rgba(217, 119, 6, 0.12);
-  --danger:         #e11d48;
-  --danger-dim:     rgba(225, 29, 72, 0.12);
-  --info:           #0284c7;
-  --info-dim:       rgba(2, 132, 199, 0.12);
+  --success:        #22c55e;
+  --success-dim:    rgba(34, 197, 94, 0.14);
+  --warning:        #eab308;
+  --warning-dim:    rgba(234, 179, 8, 0.14);
+  --danger:         #f43f5e;
+  --danger-dim:     rgba(244, 63, 94, 0.14);
+  --info:           #38bdf8;
+  --info-dim:       rgba(56, 189, 248, 0.14);
 
-  --glass-bg:          linear-gradient(135deg, rgba(255,255,255,0.9) 0%, rgba(244,244,240,0.8) 100%);
-  --glass-bg-deep:     linear-gradient(145deg, #ffffff 0%, #f4f4f0 100%);
-  --glass-bg-card:     linear-gradient(145deg, #ffffff 0%, #f8f8f4 100%);
-  --glass-border:      rgba(0, 0, 0, 0.08);
-  --glass-border-top:  rgba(255, 255, 255, 0.9);
-  --glass-blur:        blur(16px);
-  --glass-blur-deep:   blur(28px);
-  --glass-shadow:      0 4px 20px rgba(0,0,0,0.06);
-  --glass-shadow-lg:   0 12px 36px rgba(0,0,0,0.10);
+  --glass-bg:          linear-gradient(135deg, rgba(255,255,255,0.04) 0%, rgba(70,183,255,0.02) 50%, rgba(255,255,255,0.01) 100%);
+  --glass-bg-deep:     linear-gradient(145deg, rgba(15,16,20,0.96) 0%, rgba(7,8,10,0.99) 100%);
+  --glass-bg-card:     linear-gradient(145deg, rgba(20,21,24,0.82) 0%, rgba(15,16,20,0.94) 100%);
+  --glass-border:      rgba(255, 255, 255, 0.08);
+  --glass-border-top:  rgba(255, 255, 255, 0.14);
+  --glass-blur:        blur(20px) saturate(160%);
+  --glass-blur-deep:   blur(40px) saturate(180%);
+  --glass-shadow:      0 8px 32px rgba(0,0,0,0.7), 0 1px 0 rgba(255,255,255,0.07) inset;
+  --glass-shadow-lg:   0 24px 64px rgba(0,0,0,0.85), 0 1px 0 rgba(255,255,255,0.10) inset;
 
-  --navbar-bg:      rgba(244, 244, 240, 0.85);
-  --navbar-blur:    blur(12px);
-  --navbar-border:  rgba(0, 0, 0, 0.07);
+  --navbar-bg:      rgba(7, 8, 10, 0.4);
+  --navbar-blur:    blur(12px) saturate(160%);
+  --navbar-border:  rgba(255, 255, 255, 0.08);
   --navbar-shadow:  none;
 
-  --sidebar-bg:     linear-gradient(180deg, rgba(244,244,240,0.9) 0%, rgba(238,237,233,0.8) 100%);
+  --sidebar-bg:     linear-gradient(180deg, rgba(11,12,15,0.85) 0%, rgba(7,8,10,0.75) 100%);
 
-  --input-bg:       rgba(0, 0, 0, 0.03);
-  --input-shadow:   0 1px 4px rgba(0,0,0,0.06) inset;
-  --input-focus-ring: 0 0 0 3px rgba(0, 132, 214, 0.18), 0 1px 4px rgba(0,0,0,0.06) inset;
+  --input-bg:       rgba(255, 255, 255, 0.03);
+  --input-shadow:   0 2px 8px rgba(0,0,0,0.4) inset;
+  --input-focus-ring: 0 0 0 3px rgba(70, 183, 255, 0.22), 0 2px 8px rgba(0,0,0,0.4) inset;
 }

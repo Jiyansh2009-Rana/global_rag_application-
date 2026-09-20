@@ -538,6 +538,7 @@ export function AuthPage() {
         minHeight: 'calc(100vh - 60px)',
         display: 'flex', flexDirection: 'column',
         overflowX: 'hidden', position: 'relative',
+        background: '#07080a', color: '#e8e6e0',
       }}>
         {/* Drifting particle background */}
         <DriftingParticles />
@@ -696,7 +697,7 @@ export function AuthPage() {
      DESKTOP LAYOUT — side-by-side hero + auth card
   ══════════════════════════════════════════════════════════ */
   return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', minHeight: 'calc(100vh - 60px)' }}>
+    <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', minHeight: 'calc(100vh - 60px)', background: '#07080a', color: '#e8e6e0' }}>
 
       {/* ── LEFT: Hero + Zig-Zag Features ── */}
       <div

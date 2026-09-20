@@ -14,10 +14,8 @@ export const ThemeContext = createContext<ThemeContextValue>({
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() => {
-    // Read the value already set by the inline <script> in index.html
     const stored = localStorage.getItem('rag-theme') as Theme | null;
-    const preferred = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
-    return stored ?? preferred;
+    return stored ?? 'dark';
   });
 
   useEffect(() => {

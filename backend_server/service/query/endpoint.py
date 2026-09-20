@@ -1,7 +1,10 @@
 import json
 import uuid
+import logging
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import StreamingResponse
+
+logger = logging.getLogger(__name__)
 
 from core.database import supabase_client
 from core.security import get_current_user
@@ -86,18 +89,28 @@ async def query_rag(
         })
 
     async def generate_rag_response():
-        # First send the sources event
-        yield f"data: {json.dumps({'event': 'sources', 'data': sources})}\n\n"
+        try:
+            # First send the sources event
+            yield f"data: {json.dumps({'event': 'sources', 'data': sources})}\n\n"
 
-        full_answer = ""
-        async for token in stream_llm_answer(body.query, retrieved_chunks, body.language, body.system_prompt):
-            full_answer += token
-            yield f"data: {json.dumps({'event': 'token', 'data': token})}\n\n"
+            full_answer = ""
+            async for token in stream_llm_answer(
+                user_query=body.query,
+                context_chunks=retrieved_chunks,
+                user_name=current_user.email.split("@")[0] if current_user.email else "user",
+                language=body.language,
+                system_prompt=body.system_prompt
+            ):
+                full_answer += token
+                yield f"data: {json.dumps({'event': 'token', 'data': token})}\n\n"
 
-        if body.upload_mode in [QueryMode.GLOBAL, QueryMode.BOTH]:
-            save_chat_history(user_id, org_id, body.query, full_answer, body.upload_mode.value, current_session_id)
+            if body.upload_mode in [QueryMode.GLOBAL, QueryMode.BOTH]:
+                save_chat_history(user_id, org_id, body.query, full_answer, body.upload_mode.value, current_session_id)
 
-        yield f"data: {json.dumps({'event': 'done', 'session_id': current_session_id})}\n\n"
+            yield f"data: {json.dumps({'event': 'done', 'session_id': current_session_id})}\n\n"
+        except Exception as e:
+            logger.error(f"Streaming error in generate_rag_response: {e}")
+            yield f"data: {json.dumps({'event': 'error', 'data': f'LLM generation error: {e}'})}\n\n"
 
     return StreamingResponse(generate_rag_response(), media_type="text/event-stream")
 

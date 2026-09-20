@@ -97,10 +97,10 @@ function AppShell() {
       );
     }
     return (
-      <>
+      <div style={{ minHeight: '100vh', background: '#07080a', display: 'flex', flexDirection: 'column' }}>
         <PreAuthNav activePage={page} onNavigate={(p) => setPage(p)} />
         <AuthPage />
-      </>
+      </div>
     );
   }
 

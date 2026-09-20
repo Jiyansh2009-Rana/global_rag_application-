@@ -1693,7 +1693,8 @@ export function ChatPage() {
             resize: 'none',
             background: 'transparent',
             border: 'none',
-            color: 'var(--text)',
+            color: '#e8e6e0',
+            caretColor: '#46b7ff',
             fontSize: '16px',
             fontFamily: 'inherit',
             outline: 'none',
@@ -1752,12 +1753,14 @@ export function ChatPage() {
         fontFamily: '"Inter", sans-serif',
         position: 'relative',
         overflow: 'hidden',
+        background: '#07080a',
+        color: '#e8e6e0',
       }}
     >
       
       {/* ── 1. CENTERED FLOATING STATE (Horizontal & Vertical Center) ── */}
       {isCenteredState ? (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '1.25rem 0.875rem' : '2rem 1.5rem', overflowY: 'auto' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '1.25rem 0.875rem' : '2rem 1.5rem', overflowY: 'auto', background: '#07080a' }}>
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1827,7 +1830,7 @@ export function ChatPage() {
         /* ── 2. ACTIVE THREAD STATE WITH DOCKED COMPOSER ── */
         <>
           {/* Thread */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '0.75rem 0.5rem 0.5rem' : '1rem 0.75rem 0.75rem' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '0.75rem 0.5rem 0.5rem' : '1rem 0.75rem 0.75rem', background: '#07080a' }}>
             <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 16 }}>
 
               {/* History View Banner */}
@@ -1888,15 +1891,13 @@ export function ChatPage() {
 
           {/* Docked Composer at bottom */}
           <div
-            className="glass"
             style={{
               flexShrink: 0,
               borderRadius: 0,
               borderLeft: 'none', borderRight: 'none', borderBottom: 'none',
-              borderTop: '1px solid var(--border)',
+              borderTop: '1px solid rgba(255, 255, 255, 0.08)',
               padding: isMobile ? '0.5rem 0.625rem 0.625rem' : '0.75rem 1rem 1rem',
-              backdropFilter: 'var(--glass-blur)',
-              WebkitBackdropFilter: 'var(--glass-blur)',
+              background: '#07080a',
             }}
           >
             {renderComposer(false)}
