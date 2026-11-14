@@ -1,4 +1,4 @@
-import { tokenStore, apiFetch, BASE_URL, onUnauthorized } from './client';
+import { tokenStore, apiFetch, BASE_URL, onUnauthorized, refreshAccessToken } from './client';
 import type { ConsentResponse, UploadSSEEvent } from './types';
 
 export const getConsent = (upload_mode: 'global' | 'local') =>
@@ -18,14 +18,29 @@ export async function uploadDocumentSSE(
   fd.append('upload_mode', upload_mode);
   fd.append('confirmed', 'true');
 
+  let curToken = token || tokenStore.get();
   const headers: Record<string, string> = {};
-  if (token) headers['Authorization'] = `Bearer ${token}`;
+  if (curToken) headers['Authorization'] = `Bearer ${curToken}`;
 
-  const res = await fetch(`${BASE_URL}/upload/document`, {
+  let res = await fetch(`${BASE_URL}/upload/document`, {
     method: 'POST',
     headers,
+    credentials: 'include',
     body: fd,
   });
+
+  if (res.status === 401) {
+    const refreshedToken = await refreshAccessToken();
+    if (refreshedToken) {
+      headers['Authorization'] = `Bearer ${refreshedToken}`;
+      res = await fetch(`${BASE_URL}/upload/document`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: fd,
+      });
+    }
+  }
 
   if (res.status === 401) {
     tokenStore.clear();

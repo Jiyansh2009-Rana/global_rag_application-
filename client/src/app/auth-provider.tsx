@@ -1,6 +1,6 @@
 import { createContext, useCallback, useEffect, useRef, useState } from 'react';
 import { authApi } from '@/api/auth';
-import { onUnauthorized, tokenStore } from '@/api/client';
+import { onUnauthorized, tokenStore, refreshAccessToken } from '@/api/client';
 import type { UserMe, SignupPayload } from '@/api/types';
 
 type Role = 'User' | 'Admin' | 'Super Admin';
@@ -13,7 +13,10 @@ interface AuthContextValue {
   isLoading: boolean;
   token: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (payload: SignupPayload) => Promise<void>;
+  signUp: (payload: SignupPayload) => Promise<{ detail: string }>;
+  verifySignup: (email: string, otp: string) => Promise<{ detail: string; user_id?: string }>;
+  forgotPassword: (email: string) => Promise<{ detail: string }>;
+  resetPassword: (email: string, otp: string, newPassword: string) => Promise<{ detail: string }>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -26,7 +29,10 @@ export const AuthContext = createContext<AuthContextValue>({
   isLoading: true,
   token: null,
   signIn: async () => void 0,
-  signUp: async () => void 0,
+  signUp: async () => ({ detail: '' }),
+  verifySignup: async () => ({ detail: '' }),
+  forgotPassword: async () => ({ detail: '' }),
+  resetPassword: async () => ({ detail: '' }),
   signOut: async () => void 0,
   refreshUser: async () => void 0,
 });
@@ -44,10 +50,19 @@ export function AuthProvider({
   const logoutRef = useRef(onLogout);
   logoutRef.current = onLogout;
 
-  // Fetch user profile once we have a token
+  // Fetch user profile once we have a token (or try refresh token cookie)
   const refreshUser = useCallback(async () => {
-    const t = tokenStore.get();
-    if (!t) { setUser(null); setIsLoading(false); return; }
+    let t = tokenStore.get();
+    if (!t) {
+      t = await refreshAccessToken();
+      if (!t) {
+        setUser(null);
+        setTokenState(null);
+        setIsLoading(false);
+        return;
+      }
+      setTokenState(t);
+    }
     try {
       const me = await authApi.me();
       setUser(me);
@@ -58,10 +73,28 @@ export function AuthProvider({
     }
   }, []);
 
-  // On mount — restore session from persisted token (localStorage) if present
+  // On mount — restore session from persisted token or refresh cookie
   useEffect(() => {
     void refreshUser();
   }, [refreshUser]);
+
+  // Proactive silent refresh: access token is valid for 15 minutes, refresh at 14 minutes
+  useEffect(() => {
+    if (!_tokenState) return;
+    const REFRESH_INTERVAL_MS = 14 * 60 * 1000;
+    const interval = setInterval(async () => {
+      try {
+        const refreshed = await refreshAccessToken();
+        if (refreshed) {
+          setTokenState(refreshed);
+        }
+      } catch {
+        // Handled in refreshAccessToken
+      }
+    }, REFRESH_INTERVAL_MS);
+
+    return () => clearInterval(interval);
+  }, [_tokenState]);
 
   // Subscribe to 401 events
   useEffect(() => {
@@ -83,7 +116,19 @@ export function AuthProvider({
   }, [refreshUser]);
 
   const signUp = useCallback(async (payload: SignupPayload) => {
-    await authApi.signup(payload);
+    return await authApi.signup(payload);
+  }, []);
+
+  const verifySignup = useCallback(async (email: string, otp: string) => {
+    return await authApi.verifySignup({ email, otp });
+  }, []);
+
+  const forgotPassword = useCallback(async (email: string) => {
+    return await authApi.forgotPassword({ email });
+  }, []);
+
+  const resetPassword = useCallback(async (email: string, otp: string, newPassword: string) => {
+    return await authApi.resetPassword({ email, otp, new_password: newPassword });
   }, []);
 
   const signOut = useCallback(async () => {
@@ -114,6 +159,9 @@ export function AuthProvider({
         token: tokenStore.get(),
         signIn,
         signUp,
+        verifySignup,
+        forgotPassword,
+        resetPassword,
         signOut,
         refreshUser,
       }}

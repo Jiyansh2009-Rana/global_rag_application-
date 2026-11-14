@@ -90,6 +90,10 @@ export function parseApiError(raw: unknown): string {
     return 'This email is already registered. Try signing in instead.';
   if (msg.toLowerCase().includes('invalid credentials'))
     return 'Invalid email or password. Please try again.';
+  if (msg.toLowerCase().includes('incorrect otp'))
+    return 'Incorrect 6-digit code. Please check your email and try again.';
+  if (msg.toLowerCase().includes('otp expired') || msg.toLowerCase().includes('invalid or expired otp'))
+    return 'The verification code has expired. Please request a new one.';
   if (msg.toLowerCase().includes('no organisation assigned'))
     return 'Your account has no organisation assigned. Contact your Super Admin.';
   if (msg.toLowerCase().includes('consent required') || msg.toLowerCase().includes('not confirmed'))
@@ -112,6 +116,50 @@ export function isRoleConflictError(msg: string): boolean {
   );
 }
 
+/* ── Deduplicated Access Token Refresh (15-min lifespan) ── */
+let _refreshPromise: Promise<string | null> | null = null;
+
+export async function refreshAccessToken(): Promise<string | null> {
+  if (_refreshPromise) {
+    return _refreshPromise;
+  }
+
+  _refreshPromise = (async () => {
+    try {
+      const res = await fetch(`${BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({}),
+      });
+
+      if (!res.ok) {
+        tokenStore.clear();
+        onUnauthorized.notify();
+        return null;
+      }
+
+      const data = (await res.json()) as { access_token?: string };
+      if (data && data.access_token) {
+        tokenStore.set(data.access_token);
+        return data.access_token;
+      }
+
+      tokenStore.clear();
+      onUnauthorized.notify();
+      return null;
+    } catch {
+      tokenStore.clear();
+      onUnauthorized.notify();
+      return null;
+    } finally {
+      _refreshPromise = null;
+    }
+  })();
+
+  return _refreshPromise;
+}
+
 /* ── Core fetch wrapper ── */
 export async function apiFetch<T>(
   path: string,
@@ -119,24 +167,57 @@ export async function apiFetch<T>(
   parseJson = true,
 ): Promise<T> {
   const url = path.startsWith('http') ? path : `${BASE_URL}${path}`;
-  const token = tokenStore.get();
+  const isAuthRoute =
+    path.includes('/auth/login') ||
+    path.includes('/auth/refresh') ||
+    path.includes('/auth/signup') ||
+    path.includes('/auth/verify-signup') ||
+    path.includes('/auth/forgot-password') ||
+    path.includes('/auth/reset-password');
 
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string> | undefined),
   };
+  const token = tokenStore.get();
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
-  if (!(options.body instanceof FormData)) {
+  if (!(options.body instanceof FormData) && !headers['Content-Type']) {
     headers['Content-Type'] = 'application/json';
   }
 
-  const res = await fetch(url, { ...options, headers });
+  const fetchOptions: RequestInit = {
+    ...options,
+    headers,
+    credentials: 'include',
+  };
+
+  let res = await fetch(url, fetchOptions);
+
+  // Handle 401: attempt automatic token refresh on non-auth routes
+  if (res.status === 401 && !isAuthRoute) {
+    const refreshedToken = await refreshAccessToken();
+    if (refreshedToken) {
+      headers['Authorization'] = `Bearer ${refreshedToken}`;
+      res = await fetch(url, { ...fetchOptions, headers });
+    } else {
+      tokenStore.clear();
+      onUnauthorized.notify();
+      throw new ApiError(401, 'Session expired. Please sign in again.');
+    }
+  }
 
   if (res.status === 401) {
-    tokenStore.clear();
-    onUnauthorized.notify();
-    throw new ApiError(401, 'Session expired. Please sign in again.');
+    if (!isAuthRoute) {
+      tokenStore.clear();
+      onUnauthorized.notify();
+    }
+    let detail = 'Session expired. Please sign in again.';
+    try {
+      const errData = await res.json();
+      detail = extractDetail(errData);
+    } catch { /* ignore parse errors */ }
+    throw new ApiError(401, detail);
   }
 
   if (!parseJson) return undefined as T;

@@ -1,10 +1,11 @@
 import smtplib
 import logging
 from email.mime.text import MIMEText
+from email.message import EmailMessage
 from email.mime.multipart import MIMEMultipart
 from core.config import (
     SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD, 
-    SMTP_FROM_NAME, SMTP_FROM_EMAIL
+    SMTP_FROM_NAME, SMTP_FROM_EMAIL, APP_NAME
 )
 
 logger = logging.getLogger(__name__)
@@ -81,3 +82,43 @@ def send_organization_disabled_email(admin_email: str, org_id: str, reason: str 
     except Exception as e:
         logger.error(f"Failed to send suspension email: {e}")
         return False
+
+def send_otp_email(to_email: str, otp: str, purpose: str) -> None:
+    """Sends signup/reset OTP via SMTP."""
+    if not SMTP_USER or not SMTP_PASSWORD:
+        raise RuntimeError("SMTP credentials are not configured.")
+    subjects = {
+        "signup": "Verify your email to complete signup",
+        "reset": "Password reset verification code",
+    }
+    subject = subjects.get(purpose, "Your OTP Code")
+    text_body = (
+        f"Hi from {APP_NAME}. Your verification code is: {otp}\n"
+        f"This code is valid for 5 minutes. Please do not share it with anyone."
+    )
+    html_body = f"""
+    <html>
+      <body style="background-color: #f4f4f5; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px 20px; margin: 0;">
+        <div style="max-width: 500px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; padding: 40px 30px; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.05);">
+          <h2 style="color: #0f766e; margin-top: 0; font-size: 26px;">{APP_NAME}</h2>
+          <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 20px 0;">
+          <p style="font-size: 16px; color: #3f3f46; margin-top: 20px;">Hello,</p>
+          <p style="font-size: 16px; color: #3f3f46; line-height: 1.5;">Here is your verification code. This code is valid for <strong>5 minutes</strong>.</p>
+          <div style="margin: 35px auto; padding: 15px; background-color: #f0fdfa; border: 1px solid #5eead4; border-radius: 8px; font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #0f766e; max-width: 250px;">
+            {otp}
+          </div>
+          <p style="font-size: 13px; color: #71717a; margin-top: 30px; margin-bottom: 0;">For your security, please do not share this code with anyone.</p>
+        </div>
+      </body>
+    </html>
+    """
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
+    msg["To"] = to_email
+    msg.set_content(text_body)
+    msg.add_alternative(html_body, subtype="html")
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=5) as server:
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASSWORD)
+        server.send_message(msg)

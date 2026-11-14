@@ -26,3 +26,4 @@ python-dotenv
 langchain
 langchain-groq
 langchain-core
+#requirements.txt

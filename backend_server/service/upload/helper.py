@@ -18,6 +18,7 @@ from pdf2image import convert_from_bytes
 import pytesseract
 from fastapi import HTTPException
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+import hashlib
 
 from core.config import JINA_API_KEY, LOCAL_SESSION_TTL, PAGES_PER_SET
 from core.database import get_neon_connection, supabase_client, redis_client
@@ -444,6 +445,7 @@ def store_page_hash(
     if not supabase_client:
         return
     try:
+        supabase_client.table("page_registry").delete().eq("document_id", doc_id).eq("page_number", page_num).execute()
         supabase_client.table("page_registry").insert({
             "id": f"page_{uuid.uuid4().hex[:12]}",
             "document_id": doc_id,
@@ -455,6 +457,32 @@ def store_page_hash(
         }).execute()
     except Exception as e:
         logger.error(f"Page hash store error: {e}")
+
+def cleanup_removed_global_pages(doc_id: str, org_id: str, total_pages: int) -> None:
+    """Deletes chunks and page_registry records for pages that no longer exist in the newer version."""
+    # 1. Clean up Neon
+    conn = get_neon_connection()
+    if conn:
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT set_config('app.current_org_id', %s, true)", (org_id,))
+                cur.execute(
+                    "DELETE FROM document_chunks WHERE document_id = %s AND page_number > %s",
+                    (doc_id, total_pages)
+                )
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            logger.error(f"Failed to cleanup removed pages in Neon: {e}")
+        finally:
+            conn.close()
+
+    # 2. Clean up Supabase page_registry
+    if supabase_client:
+        try:
+            supabase_client.table("page_registry").delete().eq("document_id", doc_id).gt("page_number", total_pages).execute()
+        except Exception as e:
+            logger.warning(f"Failed to cleanup removed page_registry rows: {e}")
 
 def store_raw_file_global_supabase(org_id: str, doc_id: str, filename: str, file_bytes: bytes) -> None:
     if not supabase_client:
@@ -522,6 +550,12 @@ def process_set_global(
             cur.execute("SELECT set_config('app.current_org_id', %s, true)", (org_id,))
             cur.execute("SELECT set_config('app.current_user_id', %s, true)", (uploaded_by,))
             cur.execute("SELECT set_config('app.current_role', %s, true)", (role,))
+
+            for page_num in page_hash_map.keys():
+                cur.execute(
+                    "DELETE FROM document_chunks WHERE document_id = %s AND page_number = %s",
+                    (doc_id, page_num)
+                )
 
             for (chunk_text, page_num, chunk_idx), embedding in zip(all_chunk_records, embeddings):
                 chunk_id = generate_chunk_id()
@@ -608,6 +642,69 @@ def store_local_alias_audit_redis(
     except Exception as e:
         logger.error(f"[local_alias_audit] Redis write failed: {e}")
 
+def resolve_local_document_status(
+    user_id: str, org_id: str, filename: str, file_hash_val: str
+) -> Dict[str, Any]:
+
+    """Resolves stable doc_id and duplicate/alias/update status for local Redis sessions."""
+
+    norm_filename_hash = hashlib.sha256(filename.strip().lower().encode("utf-8")).hexdigest()
+    docmap_key = f"local:docmap:{user_id}:{norm_filename_hash}"
+    filehash_key = f"local:filehash:{user_id}:{file_hash_val}"
+    docmap_raw = redis_client.get(docmap_key) if redis_client else None
+    filehash_raw = redis_client.get(filehash_key) if redis_client else None
+    docmap_data = json.loads(docmap_raw) if docmap_raw else None
+    filehash_data = json.loads(filehash_raw) if filehash_raw else None
+    is_duplicate = False
+    is_update = False
+    is_alias = False
+    original_filename = None
+    if filehash_data:
+        doc_id = filehash_data["doc_id"]
+        original_filename = filehash_data["file_name"]
+        is_duplicate = True
+        if original_filename != filename:
+            is_alias = True
+            store_local_alias_audit_redis(
+                user_id=user_id,
+                org_id=org_id,
+                doc_id=doc_id,
+                alias_filename=filename,
+                original_filename=original_filename,
+                file_hash=file_hash_val,
+            )
+    elif docmap_data:
+        doc_id = docmap_data["doc_id"]
+        is_update = True
+    else:
+        doc_id = generate_document_id()
+    if redis_client:
+        now_iso = datetime.now(timezone.utc).isoformat()
+        new_docmap = {
+            "doc_id": doc_id,
+            "file_name": filename,
+            "user_id": user_id,
+            "org_id": org_id,
+            "file_hash": file_hash_val,
+            "created_at": docmap_data.get("created_at", now_iso) if docmap_data else now_iso,
+            "updated_at": now_iso,
+        }
+        pipe = redis_client.pipeline()
+        pipe.setex(docmap_key, LOCAL_SESSION_TTL, json.dumps(new_docmap))
+        if not is_alias:
+            pipe.setex(filehash_key, LOCAL_SESSION_TTL, json.dumps({"doc_id": doc_id, "file_name": filename}))
+        else:
+            pipe.expire(filehash_key, LOCAL_SESSION_TTL)
+        pipe.execute()
+    return {
+        "doc_id": doc_id,
+        "is_duplicate": is_duplicate,
+        "is_alias": is_alias,
+        "original_filename": original_filename,
+        "is_update": is_update,
+    }
+
+
 def check_page_hash_local_redis(
     user_id: str, doc_id: str, page_num: int, page_hash_val: str
 ) -> bool:
@@ -653,6 +750,55 @@ def store_raw_file_local_redis(user_id: str, doc_id: str, filename: str, file_by
     except Exception as e:
         logger.error(f"Failed to store raw file in Redis: {e}")
 
+def _delete_local_page_chunks(user_id: str, doc_id: str, page_nums: List[int], delete_page_meta: bool = False) -> None:
+    if not redis_client or not page_nums:
+        return
+    pipe = redis_client.pipeline()
+    for pn in page_nums:
+        pipe.get(f"local:delta:{user_id}:{doc_id}:page:{pn}:chunks")
+    chunk_lists = pipe.execute()
+    del_pipe = redis_client.pipeline()
+    keys_to_delete = 0
+    for pn, raw_cids in zip(page_nums, chunk_lists):
+        if raw_cids:
+            try:
+                for old_cid in json.loads(raw_cids):
+                    del_pipe.delete(f"local:{user_id}:{doc_id}:chunk:{old_cid}")
+                    keys_to_delete += 1
+            except Exception as e:
+                logger.warning(f"[local_delta] failed parsing old chunk IDs for page {pn}: {e}")
+        if delete_page_meta:
+            del_pipe.delete(f"local:delta:{user_id}:{doc_id}:page:{pn}")
+            del_pipe.delete(f"local:delta:{user_id}:{doc_id}:page:{pn}:chunks")
+            keys_to_delete += 2
+    if keys_to_delete:
+        del_pipe.execute()
+
+
+
+def _delete_local_page_chunks(user_id: str, doc_id: str, page_nums: List[int], delete_page_meta: bool = False) -> None:
+    if not redis_client or not page_nums:
+        return
+    pipe = redis_client.pipeline()
+    for pn in page_nums:
+        pipe.get(f"local:delta:{user_id}:{doc_id}:page:{pn}:chunks")
+    chunk_lists = pipe.execute()
+    del_pipe = redis_client.pipeline()
+    keys_to_delete = 0
+    for pn, raw_cids in zip(page_nums, chunk_lists):
+        if raw_cids:
+            try:
+                for old_cid in json.loads(raw_cids):
+                    del_pipe.delete(f"local:{user_id}:{doc_id}:chunk:{old_cid}")
+                    keys_to_delete += 1
+            except Exception as e:
+                logger.warning(f"[local_delta] failed parsing old chunk IDs for page {pn}: {e}")
+        if delete_page_meta:
+            del_pipe.delete(f"local:delta:{user_id}:{doc_id}:page:{pn}")
+            del_pipe.delete(f"local:delta:{user_id}:{doc_id}:page:{pn}:chunks")
+            keys_to_delete += 2
+    if keys_to_delete:
+        del_pipe.execute()
 def process_set_local(
     set_id: str,
     doc_id: str,
@@ -662,32 +808,36 @@ def process_set_local(
     page_set: List[str],
     page_offsets: List[int],
     doc_type: DocumentType,
+    file_hash_val: str = "",
 ) -> dict:
     if not redis_client:
         return {"set_id": set_id, "chunks_created": 0, "pages_newly_indexed": 0, "pages_skipped": len(page_set)}
-
     is_image = doc_type == DocumentType.IMAGE
     all_chunk_records: List[tuple] = []
     page_hash_map: Dict[int, str] = {}
-
+    changed_pages: List[int] = []
     for page_text, page_num in zip(page_set, page_offsets):
         p_hash = page_hash(page_text)
         if check_page_hash_local_redis(user_id, doc_id, page_num, p_hash):
+            # Refresh TTL on unchanged page + its chunk list so partial updates do not desync expiry
+            ttl_pipe = redis_client.pipeline()
+            ttl_pipe.expire(f"local:delta:{user_id}:{doc_id}:page:{page_num}", LOCAL_SESSION_TTL)
+            ttl_pipe.expire(f"local:delta:{user_id}:{doc_id}:page:{page_num}:chunks", LOCAL_SESSION_TTL)
+            ttl_pipe.execute()
             continue
-
+        changed_pages.append(page_num)
         if not page_text.strip():
             page_chunks = []
         else:
             page_chunks = [page_text] if is_image else chunk_by_type(doc_type, page_text)
-
         for idx, chunk_text in enumerate(page_chunks):
             all_chunk_records.append((chunk_text, page_num, idx))
         page_hash_map[page_num] = p_hash
-
     pages_newly_indexed = len(page_hash_map)
     pages_skipped = len(page_set) - pages_newly_indexed
     chunks_created = 0
-
+    # Delete obsolete chunks for all changed/emptied pages BEFORE writing replacements
+    _delete_local_page_chunks(user_id, doc_id, changed_pages, delete_page_meta=False)
     if not all_chunk_records:
         for page_num, p_hash_val in page_hash_map.items():
             store_page_hash_local_redis(user_id, doc_id, page_num, p_hash_val, [])
@@ -695,12 +845,11 @@ def process_set_local(
             "set_id": set_id, "chunks_created": 0,
             "pages_newly_indexed": pages_newly_indexed, "pages_skipped": pages_skipped,
         }
-
     embeddings = get_jina_embeddings([r[0] for r in all_chunk_records], is_image=is_image)
     page_chunk_ids: Dict[int, List[str]] = {pn: [] for pn in page_hash_map}
-
     try:
         pipeline = redis_client.pipeline()
+        now_iso = datetime.now(timezone.utc).isoformat()
         for (chunk_text, page_num, chunk_idx), embedding in zip(all_chunk_records, embeddings):
             chunk_id = generate_chunk_id()
             page_chunk_ids[page_num].append(chunk_id)
@@ -708,30 +857,63 @@ def process_set_local(
                 "chunk_id": chunk_id, "doc_id": doc_id, "user_id": user_id,
                 "org_id": org_id, "file_name": filename, "doc_type": doc_type.value,
                 "chunk_index": chunk_idx, "page_number": page_num, "text": chunk_text,
-                "embedding": embedding, "set_id": set_id,
-                "stored_at": datetime.now(timezone.utc).isoformat()
+                "embedding": embedding, "upload_mode": "local",
+                "set_id": set_id, "file_hash": file_hash_val,
+                "stored_at": now_iso,
             })
             pipeline.setex(
                 f"local:{user_id}:{doc_id}:chunk:{chunk_id}",
                 LOCAL_SESSION_TTL, chunk_payload
             )
             chunks_created += 1
-
         pipeline.execute()
-
+        # Store page hash and chunk list ONLY after chunks succeed
         for page_num, p_hash_val in page_hash_map.items():
             store_page_hash_local_redis(user_id, doc_id, page_num, p_hash_val, page_chunk_ids[page_num])
-
     except Exception as e:
         logger.error(f"[set_local] {set_id} error: {e}")
-
+        raise
     return {
         "set_id": set_id,
         "chunks_created": chunks_created,
         "pages_newly_indexed": pages_newly_indexed,
         "pages_skipped": pages_skipped,
     }
-
+    
+def finalize_local_docmeta(
+    user_id: str, org_id: str, doc_id: str, filename: str, file_hash_val: str, total_pages: int
+) -> None:
+    """Removes pages that disappeared in newer versions and updates local:docmeta."""
+    if not redis_client:
+        return
+    docmeta_key = f"local:docmeta:{user_id}:{doc_id}"
+    previous_pages: List[int] = []
+    created_at = datetime.now(timezone.utc).isoformat()
+    raw_meta = redis_client.get(docmeta_key)
+    if raw_meta:
+        try:
+            old_meta = json.loads(raw_meta)
+            previous_pages = old_meta.get("pages", [])
+            created_at = old_meta.get("created_at", created_at)
+        except Exception:
+            pass
+    current_pages = list(range(1, total_pages + 1))
+    removed_pages = [p for p in previous_pages if p not in current_pages]
+    if removed_pages:
+        _delete_local_page_chunks(user_id, doc_id, removed_pages, delete_page_meta=True)
+    new_meta = {
+        "doc_id": doc_id,
+        "user_id": user_id,
+        "org_id": org_id,
+        "file_name": filename,
+        "file_hash": file_hash_val,
+        "total_pages": total_pages,
+        "pages": current_pages,
+        "upload_mode": "local",
+        "created_at": created_at,
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }
+    redis_client.setex(docmeta_key, LOCAL_SESSION_TTL, json.dumps(new_meta))
 
 
 def delete_raw_files_global_supabase(org_id: str, doc_id: str) -> None:

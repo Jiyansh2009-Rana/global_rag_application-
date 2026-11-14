@@ -5,8 +5,20 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '@/hooks/useContextHooks';
 import { useIsMobile } from '@/hooks/useContextHooks';
 import { parseApiError, isRoleConflictError } from '@/api/client';
-import { LoginPayloadSchema, SignupPayloadSchema } from '@/api/types';
-import type { LoginPayload, SignupPayload } from '@/api/types';
+import {
+  LoginPayloadSchema,
+  SignupPayloadSchema,
+  VerifySignupPayloadSchema,
+  ForgotPasswordPayloadSchema,
+  ResetPasswordPayloadSchema,
+} from '@/api/types';
+import type {
+  LoginPayload,
+  SignupPayload,
+  VerifySignupPayload,
+  ForgotPasswordPayload,
+  ResetPasswordPayload,
+} from '@/api/types';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Input';
@@ -218,11 +230,20 @@ function AlertBox({ type, children }: { type: 'error' | 'success'; children: Rea
 }
 
 /* ── Login Form ── */
-function LoginForm() {
+function LoginForm({
+  initialEmail = '',
+  onForgotPassword,
+}: {
+  initialEmail?: string;
+  onForgotPassword: () => void;
+}) {
   const { signIn } = useAuth();
   const [apiError, setApiError] = useState<string | null>(null);
   const { register, handleSubmit, formState: { errors, isSubmitting } } =
-    useForm<LoginPayload>({ resolver: zodResolver(LoginPayloadSchema) });
+    useForm<LoginPayload>({
+      resolver: zodResolver(LoginPayloadSchema),
+      defaultValues: { email: initialEmail, password: '' },
+    });
 
   const onSubmit = async (data: LoginPayload) => {
     setApiError(null);
@@ -236,9 +257,29 @@ function LoginForm() {
       {apiError && <AlertBox type="error">{apiError}</AlertBox>}
       <Input label="Work email" type="email" placeholder="you@company.com"
         autoComplete="email" error={errors.email?.message} {...register('email')} />
-      <Input label="Password" type="password" placeholder="At least 8 characters"
-        autoComplete="current-password" error={errors.password?.message} {...register('password')} />
-      <Button type="submit" fullWidth loading={isSubmitting} size="md" style={{ marginTop: 8 }}>
+      <div>
+        <Input label="Password" type="password" placeholder="At least 8 characters"
+          autoComplete="current-password" error={errors.password?.message} {...register('password')} />
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
+          <button
+            type="button"
+            onClick={onForgotPassword}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: 'var(--accent)',
+              fontSize: '0.74rem',
+              cursor: 'pointer',
+              padding: 0,
+              fontFamily: '"Inter", sans-serif',
+              fontWeight: 500,
+            }}
+          >
+            Forgot password?
+          </button>
+        </div>
+      </div>
+      <Button type="submit" fullWidth loading={isSubmitting} size="md" style={{ marginTop: 6 }}>
         Sign in →
       </Button>
     </form>
@@ -246,11 +287,14 @@ function LoginForm() {
 }
 
 /* ── Signup Form ── */
-function SignupForm({ onSuccess }: { onSuccess: () => void }) {
+function SignupForm({
+  onOtpRequested,
+}: {
+  onOtpRequested: (email: string, payload: SignupPayload) => void;
+}) {
   const { signUp } = useAuth();
   const [apiError,  setApiError]  = useState<string | null>(null);
   const [roleError, setRoleError] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } =
     useForm<SignupPayload>({ resolver: zodResolver(SignupPayloadSchema), defaultValues: { Role: 'User' } });
@@ -264,8 +308,7 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
     };
     try {
       await signUp(payload);
-      setSuccessMsg('Account created! Switching to sign in…');
-      setTimeout(() => onSuccess(), 1400);
+      onOtpRequested(payload.email, payload);
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err);
       const friendly = parseApiError(err);
@@ -276,8 +319,7 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
   return (
     <form onSubmit={handleSubmit(onSubmit)} noValidate
       style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {apiError   && <AlertBox type="error">{apiError}</AlertBox>}
-      {successMsg && <AlertBox type="success">{successMsg}</AlertBox>}
+      {apiError && <AlertBox type="error">{apiError}</AlertBox>}
       <Input label="Username" type="text" placeholder="e.g. alex_doe"
         autoComplete="username" error={errors.username?.message} {...register('username')} />
       <Input label="Work email" type="email" placeholder="you@company.com"
@@ -299,6 +341,315 @@ function SignupForm({ onSuccess }: { onSuccess: () => void }) {
       <Button type="submit" fullWidth loading={isSubmitting} size="md" style={{ marginTop: 6 }}>
         Create account →
       </Button>
+    </form>
+  );
+}
+
+/* ── Verify Signup Form ── */
+function VerifySignupForm({
+  email,
+  onVerified,
+  onBack,
+  resendPayload,
+}: {
+  email: string;
+  onVerified: () => void;
+  onBack: () => void;
+  resendPayload?: SignupPayload | null;
+}) {
+  const { verifySignup, signUp } = useAuth();
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
+
+  const { register, handleSubmit, formState: { errors, isSubmitting } } =
+    useForm<VerifySignupPayload>({
+      resolver: zodResolver(VerifySignupPayloadSchema),
+      defaultValues: { email, otp: '' },
+    });
+
+  const onSubmit = async (data: VerifySignupPayload) => {
+    setApiError(null);
+    setResendStatus(null);
+    try {
+      await verifySignup(data.email, data.otp.trim());
+      onVerified();
+    } catch (err) {
+      setApiError(parseApiError(err));
+    }
+  };
+
+  const handleResend = async () => {
+    if (!resendPayload) return;
+    setIsResending(true);
+    setApiError(null);
+    setResendStatus(null);
+    try {
+      await signUp(resendPayload);
+      setResendStatus('A fresh 6-digit code has been sent to your email.');
+    } catch (err) {
+      setApiError(parseApiError(err));
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} noValidate
+      style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {apiError && <AlertBox type="error">{apiError}</AlertBox>}
+      {resendStatus && <AlertBox type="success">{resendStatus}</AlertBox>}
+
+      <div style={{
+        padding: '10px 14px',
+        borderRadius: 10,
+        background: 'rgba(70,183,255,0.06)',
+        border: '1px solid rgba(70,183,255,0.18)',
+        fontSize: '0.8rem',
+        color: 'var(--text)',
+      }}>
+        Code sent to: <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{email}</span>
+      </div>
+
+      <Input
+        label="6-Digit Verification Code"
+        type="text"
+        placeholder="123456"
+        maxLength={6}
+        autoComplete="one-time-code"
+        error={errors.otp?.message}
+        {...register('otp')}
+      />
+
+      <Button type="submit" fullWidth loading={isSubmitting} size="md" style={{ marginTop: 4 }}>
+        Verify & Activate Account →
+      </Button>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+        <button
+          type="button"
+          onClick={onBack}
+          style={{
+            background: 'none', border: 'none', color: 'var(--muted)',
+            fontSize: '0.76rem', cursor: 'pointer', padding: 0, fontFamily: 'inherit',
+          }}
+        >
+          ← Back to signup
+        </button>
+
+        {resendPayload && (
+          <button
+            type="button"
+            disabled={isResending}
+            onClick={handleResend}
+            style={{
+              background: 'none', border: 'none', color: 'var(--accent)',
+              fontSize: '0.76rem', cursor: isResending ? 'not-allowed' : 'pointer',
+              padding: 0, fontFamily: 'inherit', opacity: isResending ? 0.6 : 1,
+            }}
+          >
+            {isResending ? 'Resending…' : 'Resend code'}
+          </button>
+        )}
+      </div>
+    </form>
+  );
+}
+
+/* ── Forgot Password Form ── */
+function ForgotPasswordForm({
+  initialEmail = '',
+  onCodeSent,
+  onBack,
+}: {
+  initialEmail?: string;
+  onCodeSent: (email: string) => void;
+  onBack: () => void;
+}) {
+  const { forgotPassword } = useAuth();
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const { register, handleSubmit, formState: { errors, isSubmitting } } =
+    useForm<ForgotPasswordPayload>({
+      resolver: zodResolver(ForgotPasswordPayloadSchema),
+      defaultValues: { email: initialEmail },
+    });
+
+  const onSubmit = async (data: ForgotPasswordPayload) => {
+    setApiError(null);
+    try {
+      await forgotPassword(data.email.trim());
+      onCodeSent(data.email.trim());
+    } catch (err) {
+      setApiError(parseApiError(err));
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} noValidate
+      style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {apiError && <AlertBox type="error">{apiError}</AlertBox>}
+
+      <Input
+        label="Work email"
+        type="email"
+        placeholder="you@company.com"
+        autoComplete="email"
+        error={errors.email?.message}
+        {...register('email')}
+      />
+
+      <Button type="submit" fullWidth loading={isSubmitting} size="md" style={{ marginTop: 6 }}>
+        Send Reset Code →
+      </Button>
+
+      <button
+        type="button"
+        onClick={onBack}
+        style={{
+          background: 'none', border: 'none', color: 'var(--muted)',
+          fontSize: '0.78rem', cursor: 'pointer', padding: '6px 0',
+          fontFamily: 'inherit', textAlign: 'center', marginTop: 4,
+        }}
+      >
+        ← Back to sign in
+      </button>
+    </form>
+  );
+}
+
+/* ── Reset Password Form ── */
+function ResetPasswordForm({
+  email,
+  onSuccess,
+  onBack,
+  onResend,
+}: {
+  email: string;
+  onSuccess: () => void;
+  onBack: () => void;
+  onResend: () => Promise<void>;
+}) {
+  const { resetPassword } = useAuth();
+  const [apiError, setApiError] = useState<string | null>(null);
+  const [resendStatus, setResendStatus] = useState<string | null>(null);
+  const [isResending, setIsResending] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [confirmError, setConfirmError] = useState<string | null>(null);
+
+  const { register, handleSubmit, formState: { errors, isSubmitting } } =
+    useForm<ResetPasswordPayload>({
+      resolver: zodResolver(ResetPasswordPayloadSchema),
+      defaultValues: { email, otp: '', new_password: '' },
+    });
+
+  const onSubmit = async (data: ResetPasswordPayload) => {
+    setApiError(null);
+    setConfirmError(null);
+    setResendStatus(null);
+
+    if (data.new_password !== confirmPassword) {
+      setConfirmError('Passwords do not match.');
+      return;
+    }
+
+    try {
+      await resetPassword(data.email, data.otp.trim(), data.new_password);
+      onSuccess();
+    } catch (err) {
+      setApiError(parseApiError(err));
+    }
+  };
+
+  const handleResend = async () => {
+    setIsResending(true);
+    setApiError(null);
+    setResendStatus(null);
+    try {
+      await onResend();
+      setResendStatus('A fresh reset code has been sent to your email.');
+    } catch (err) {
+      setApiError(parseApiError(err));
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} noValidate
+      style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {apiError && <AlertBox type="error">{apiError}</AlertBox>}
+      {resendStatus && <AlertBox type="success">{resendStatus}</AlertBox>}
+
+      <div style={{
+        padding: '10px 14px',
+        borderRadius: 10,
+        background: 'rgba(70,183,255,0.06)',
+        border: '1px solid rgba(70,183,255,0.18)',
+        fontSize: '0.8rem',
+        color: 'var(--text)',
+      }}>
+        Resetting password for: <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{email}</span>
+      </div>
+
+      <Input
+        label="6-Digit Reset Code"
+        type="text"
+        placeholder="123456"
+        maxLength={6}
+        autoComplete="one-time-code"
+        error={errors.otp?.message}
+        {...register('otp')}
+      />
+
+      <Input
+        label="New Password"
+        type="password"
+        placeholder="At least 8 characters"
+        autoComplete="new-password"
+        error={errors.new_password?.message}
+        {...register('new_password')}
+      />
+
+      <Input
+        label="Confirm New Password"
+        type="password"
+        placeholder="Re-enter new password"
+        autoComplete="new-password"
+        value={confirmPassword}
+        onChange={e => setConfirmPassword(e.target.value)}
+        error={confirmError ?? undefined}
+      />
+
+      <Button type="submit" fullWidth loading={isSubmitting} size="md" style={{ marginTop: 6 }}>
+        Reset Password →
+      </Button>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+        <button
+          type="button"
+          onClick={onBack}
+          style={{
+            background: 'none', border: 'none', color: 'var(--muted)',
+            fontSize: '0.76rem', cursor: 'pointer', padding: 0, fontFamily: 'inherit',
+          }}
+        >
+          ← Back to sign in
+        </button>
+
+        <button
+          type="button"
+          disabled={isResending}
+          onClick={handleResend}
+          style={{
+            background: 'none', border: 'none', color: 'var(--accent)',
+            fontSize: '0.76rem', cursor: isResending ? 'not-allowed' : 'pointer',
+            padding: 0, fontFamily: 'inherit', opacity: isResending ? 0.6 : 1,
+          }}
+        >
+          {isResending ? 'Resending…' : 'Resend code'}
+        </button>
+      </div>
     </form>
   );
 }
@@ -450,52 +801,95 @@ function ZigZagFeatures() {
    SHARED AUTH CARD CONTENT (tab switcher + forms)
    Used by both desktop right-panel and mobile slide-up sheet
 ─────────────────────────────────────────────────────────────────────────────── */
+type AuthMode = 'login' | 'signup' | 'verify-signup' | 'forgot-password' | 'reset-password';
+
 function AuthCardContent({
-  tab,
-  setTab,
+  initialMode = 'login',
 }: {
-  tab: 'login' | 'signup';
-  setTab: (t: 'login' | 'signup') => void;
+  initialMode?: 'login' | 'signup';
 }) {
+  const [mode, setMode] = useState<AuthMode>(initialMode);
+  const [email, setEmail] = useState<string>('');
+  const [savedSignup, setSavedSignup] = useState<SignupPayload | null>(null);
+  const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const { forgotPassword } = useAuth();
+
+  const handleTabChange = (t: 'login' | 'signup') => {
+    setMode(t);
+    setBanner(null);
+  };
+
+  const titles: Record<AuthMode, { title: string; subtitle: string }> = {
+    login: {
+      title: 'Welcome back',
+      subtitle: 'Use your organisation credentials to access the retrieval console.',
+    },
+    signup: {
+      title: 'Create an account',
+      subtitle: 'Sign up to gain access to enterprise document retrieval.',
+    },
+    'verify-signup': {
+      title: 'Verify your email',
+      subtitle: 'Please enter the 6-digit verification code sent to your inbox.',
+    },
+    'forgot-password': {
+      title: 'Reset your password',
+      subtitle: "Enter your work email address and we'll send you a 6-digit verification code.",
+    },
+    'reset-password': {
+      title: 'Set new password',
+      subtitle: 'Enter the verification code from your email and your new password.',
+    },
+  };
+
   return (
     <div className="glass-deep" style={{ padding: '2.25rem 1.75rem 2rem', borderRadius: 22 }}>
-      {/* Tab switcher */}
-      <div style={{
-        display: 'flex', marginBottom: 28, padding: 4, borderRadius: 14,
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(70,183,255,0.10)',
-        boxShadow: '0 2px 10px rgba(0,0,0,0.35) inset',
-      }}>
-        {(['login', 'signup'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            style={{
-              flex: 1, padding: '10px 0', borderRadius: 11,
-              fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', border: 'none',
-              fontFamily: '"Bricolage Grotesque", "Inter", sans-serif',
-              transition: 'all 0.2s ease',
-              background: tab === t
-                ? 'linear-gradient(135deg, rgba(70,183,255,0.16), rgba(168,85,247,0.12))'
-                : 'transparent',
-              color: tab === t ? 'var(--text)' : 'var(--muted)',
-              outline: tab === t ? '1px solid rgba(70,183,255,0.24)' : 'none',
-              boxShadow: tab === t
-                ? '0 2px 10px rgba(0,0,0,0.32), 0 1px 0 rgba(255,255,255,0.08) inset'
-                : 'none',
-            }}
-          >
-            {t === 'login' ? 'Sign in' : 'Create account'}
-          </button>
-        ))}
-      </div>
+      {/* Tab switcher shown for login & signup modes */}
+      {(mode === 'login' || mode === 'signup') && (
+        <div style={{
+          display: 'flex', marginBottom: 28, padding: 4, borderRadius: 14,
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(70,183,255,0.10)',
+          boxShadow: '0 2px 10px rgba(0,0,0,0.35) inset',
+        }}>
+          {(['login', 'signup'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => handleTabChange(t)}
+              style={{
+                flex: 1, padding: '10px 0', borderRadius: 11,
+                fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', border: 'none',
+                fontFamily: '"Bricolage Grotesque", "Inter", sans-serif',
+                transition: 'all 0.2s ease',
+                background: mode === t
+                  ? 'linear-gradient(135deg, rgba(70,183,255,0.16), rgba(168,85,247,0.12))'
+                  : 'transparent',
+                color: mode === t ? 'var(--text)' : 'var(--muted)',
+                outline: mode === t ? '1px solid rgba(70,183,255,0.24)' : 'none',
+                boxShadow: mode === t
+                  ? '0 2px 10px rgba(0,0,0,0.32), 0 1px 0 rgba(255,255,255,0.08) inset'
+                  : 'none',
+              }}
+            >
+              {t === 'login' ? 'Sign in' : 'Create account'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Global banner (e.g. success messages after verify or reset) */}
+      {banner && (
+        <div style={{ marginBottom: 16 }}>
+          <AlertBox type={banner.type}>{banner.text}</AlertBox>
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
         <motion.div
-          key={tab}
-          initial={{ opacity: 0, x: tab === 'login' ? -14 : 14 }}
+          key={mode}
+          initial={{ opacity: 0, x: mode === 'login' ? -14 : 14 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: tab === 'login' ? 14 : -14 }}
+          exit={{ opacity: 0, x: mode === 'login' ? 14 : -14 }}
           transition={{ duration: 0.17 }}
         >
           <h2 style={{
@@ -503,18 +897,95 @@ function AuthCardContent({
             fontSize: '1.25rem', fontWeight: 600,
             letterSpacing: '-0.025em', marginBottom: 5, color: 'var(--text)',
           }}>
-            {tab === 'login' ? 'Welcome back' : 'Create an account'}
+            {titles[mode].title}
           </h2>
           <p style={{
             fontSize: '0.8rem', color: 'var(--muted)',
             lineHeight: 1.6, marginBottom: '1.6rem',
             fontFamily: '"Inter", sans-serif',
           }}>
-            {tab === 'login'
-              ? 'Use your organisation credentials to access the retrieval console.'
-              : 'Sign up to gain access to enterprise document retrieval.'}
+            {titles[mode].subtitle}
           </p>
-          {tab === 'login' ? <LoginForm /> : <SignupForm onSuccess={() => setTab('login')} />}
+
+          {mode === 'login' && (
+            <LoginForm
+              initialEmail={email}
+              onForgotPassword={() => {
+                setBanner(null);
+                setMode('forgot-password');
+              }}
+            />
+          )}
+
+          {mode === 'signup' && (
+            <SignupForm
+              onOtpRequested={(submittedEmail, payload) => {
+                setEmail(submittedEmail);
+                setSavedSignup(payload);
+                setBanner({
+                  type: 'success',
+                  text: 'Verification code sent to your email. Please verify within 5 minutes.',
+                });
+                setMode('verify-signup');
+              }}
+            />
+          )}
+
+          {mode === 'verify-signup' && (
+            <VerifySignupForm
+              email={email}
+              resendPayload={savedSignup}
+              onVerified={() => {
+                setBanner({
+                  type: 'success',
+                  text: 'Email verified successfully! You can now sign in.',
+                });
+                setMode('login');
+              }}
+              onBack={() => {
+                setBanner(null);
+                setMode('signup');
+              }}
+            />
+          )}
+
+          {mode === 'forgot-password' && (
+            <ForgotPasswordForm
+              initialEmail={email}
+              onCodeSent={(submittedEmail) => {
+                setEmail(submittedEmail);
+                setBanner({
+                  type: 'success',
+                  text: 'If an account exists, a 6-digit reset code has been sent.',
+                });
+                setMode('reset-password');
+              }}
+              onBack={() => {
+                setBanner(null);
+                setMode('login');
+              }}
+            />
+          )}
+
+          {mode === 'reset-password' && (
+            <ResetPasswordForm
+              email={email}
+              onSuccess={() => {
+                setBanner({
+                  type: 'success',
+                  text: 'Password successfully reset! You can now sign in with your new password.',
+                });
+                setMode('login');
+              }}
+              onBack={() => {
+                setBanner(null);
+                setMode('login');
+              }}
+              onResend={async () => {
+                await forgotPassword(email);
+              }}
+            />
+          )}
         </motion.div>
       </AnimatePresence>
     </div>
@@ -525,7 +996,6 @@ function AuthCardContent({
    AUTH PAGE
 ─────────────────────────────────────────────────────────────────────────────── */
 export function AuthPage() {
-  const [tab, setTab] = useState<'login' | 'signup'>('login');
   const [mobileView, setMobileView] = useState<'hero' | 'auth'>('hero');
   const isMobile = useIsMobile(768);
 
@@ -680,7 +1150,7 @@ export function AuthPage() {
                 </button>
 
                 {/* Auth card */}
-                <AuthCardContent tab={tab} setTab={setTab} />
+                <AuthCardContent />
 
                 <p style={{ textAlign: 'center', fontSize: '0.62rem', color: 'var(--muted)', marginTop: '0.75rem', opacity: 0.45 }}>
                   Secured with JWT · RBAC · TLS in transit
@@ -795,7 +1265,7 @@ export function AuthPage() {
           transition={{ type: 'spring', damping: 22, stiffness: 250 }}
           style={{ width: '100%', maxWidth: 420 }}
         >
-          <AuthCardContent tab={tab} setTab={setTab} />
+          <AuthCardContent />
           <p style={{
             textAlign: 'center', fontSize: '0.65rem',
             color: 'var(--muted)', marginTop: '1rem', opacity: 0.5,

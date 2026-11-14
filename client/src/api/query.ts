@@ -1,4 +1,4 @@
-import { apiGet, apiPost, tokenStore, BASE_URL, onUnauthorized } from './client';
+import { apiGet, apiPost, tokenStore, BASE_URL, onUnauthorized, refreshAccessToken } from './client';
 import type { QueryRequest, QueryResponse, ChatHistoryItem, QuerySSEEvent } from './types';
 
 /* ── Legacy blocking ask — kept for history replay ── */
@@ -17,15 +17,29 @@ export const queryApi = {
  * Returns the raw Response — the caller must stream it via parseQuerySSEStream().
  */
 export async function streamQuery(payload: QueryRequest): Promise<Response> {
-  const token = tokenStore.get();
+  let token = tokenStore.get();
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${BASE_URL}/query`, {
+  let res = await fetch(`${BASE_URL}/query`, {
     method: 'POST',
     headers,
+    credentials: 'include',
     body: JSON.stringify(payload),
   });
+
+  if (res.status === 401) {
+    const refreshedToken = await refreshAccessToken();
+    if (refreshedToken) {
+      headers['Authorization'] = `Bearer ${refreshedToken}`;
+      res = await fetch(`${BASE_URL}/query`, {
+        method: 'POST',
+        headers,
+        credentials: 'include',
+        body: JSON.stringify(payload),
+      });
+    }
+  }
 
   if (res.status === 401) {
     tokenStore.clear();

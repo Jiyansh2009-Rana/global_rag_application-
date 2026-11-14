@@ -4,9 +4,9 @@ from typing import Dict, Any, Optional, List
 from fastapi import HTTPException, status, Header, Cookie, Depends
 from passlib.context import CryptContext
 from jose import JWTError, jwt
-from core.config import SECRET_KEY, ALGORITHM , ACCESS_TOKEN_EXPIRE_MINUTES 
+from core.config import SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
 from service.common.models import Role, TokenClaims
-from core.database import supabase_client
+from core.database import supabase_client, redis_client
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -17,21 +17,34 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 def create_access_token(
-    user_id: str, email: str, role: Role, 
-    org_id: Optional[str] = None, 
-    username: Optional[str] = None,                      
-    allow_global_upload: bool = False                    
+    user_id: str, email: str, role: Role,
+    org_id: Optional[str] = None,
+    username: Optional[str] = None,
+    allow_global_upload: bool = False
 ) -> str:
+    now = datetime.now(timezone.utc)
     payload = {
         "sub": user_id,
         "user_id": user_id,
-        "username": username or email.split("@")[0],     
+        "username": username or email.split("@")[0],
         "email": email,
         "role": role.value,
         "org_id": org_id,
         "allow_global_upload": allow_global_upload,
-        "exp": datetime.now(timezone.utc) + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
-        "iat": datetime.now(timezone.utc),
+        "type": "access",
+        "exp": now + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES),
+        "iat": now,
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+def create_refresh_token(user_id: str, org_id: Optional[str] = None) -> str:
+    now = datetime.now(timezone.utc)
+    payload = {
+        "sub": user_id,
+        "org_id": org_id,
+        "type": "refresh",
+        "exp": now + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS),
+        "iat": now,
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
@@ -70,7 +83,18 @@ async def get_current_user(
             detail="No token provided"
         )
     payload = decode_jwt_token(token)
-
+    if payload.get("type") not in (None, "access"):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token type")
+    user_id = payload.get("user_id") or payload.get("sub")
+    if redis_client and user_id:
+        try:
+            revoked_at = redis_client.get(f"blacklist:{user_id}")
+            if revoked_at and int(payload.get("iat", 0)) <= int(revoked_at):
+                raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Session has been logged out")
+        except HTTPException:
+            raise
+        except Exception:
+            pass
     role = Role(payload.get("role", "User"))
     org_id = payload.get("org_id")
 

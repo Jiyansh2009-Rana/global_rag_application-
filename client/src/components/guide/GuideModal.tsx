@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getPlatformGuide } from '@/api/guide';
 import type { PlatformGuide } from '@/api/types';

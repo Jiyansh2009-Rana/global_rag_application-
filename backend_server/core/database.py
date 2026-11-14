@@ -7,8 +7,7 @@ from core.config import (
     NEON_DATABASE_URL,
     SUPABASE_URL,
     SUPABASE_KEY,
-    REDIS_HOST,
-    REDIS_PORT,
+    REDIS_URL,
     GROQ_API_KEY,
 )
 
@@ -31,15 +30,15 @@ except Exception as e:
 
 # ── Redis Client (Lazy connection) ──
 try:
-    redis_client = redis.Redis(
-        host=REDIS_HOST,
-        port=REDIS_PORT,
-        db=0,
-        
+    redis_client = redis.from_url(
+        REDIS_URL,
+        decode_responses=True,
+        socket_timeout=3.0,
+        socket_connect_timeout=3.0,
     )
 except Exception as e:
     logger.warning(f"Redis initialization failed: {e}")
     redis_client = None
-
+    
 # ── Groq Client ──
 groq_client = groq.Groq(api_key=GROQ_API_KEY)
