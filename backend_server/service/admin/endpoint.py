@@ -1,4 +1,5 @@
-from fastapi import APIRouter, HTTPException, Depends
+import math
+from fastapi import APIRouter, HTTPException, Depends , Query
 from core.database import supabase_client
 from core.security import RoleChecker
 from service.common.models import (
@@ -21,16 +22,33 @@ admin_only = RoleChecker([Role.ADMIN, Role.SUPER_ADMIN])
 any_auth_user = RoleChecker([Role.USER, Role.ADMIN, Role.SUPER_ADMIN])
 
 @router.get("/users")
-async def get_organization_users(current_user: TokenClaims = Depends(admin_only)):
+async def get_organization_users(page: int = Query(1, ge=1, description="Page number starting from 1"),
+    limit: int = Query(30, ge=1, le=100, description="Items per page"),current_user: TokenClaims = Depends(admin_only)):
     if not supabase_client:
         raise HTTPException(status_code=500, detail="Supabase client not initialized")
 
     try:
-        query = supabase_client.table("users").select("id, username, email, role, org_id, allow_global_upload, created_at")
+        start = (page-1)*limit
+        end = start + limit - 1 
+
+        query = (supabase_client.table("users").select("id, username, email, role, org_id, allow_global_upload, created_at", count="exact"))
+
         if current_user.org_id:
             query = query.eq("org_id", current_user.org_id)
-        response = query.order("created_at", desc=True).execute()
-        return {"users": response.data}
+        response = query.order("created_at", desc=True).range(start, end ).execute()
+
+        total_items = response.count if response.count is not None else len(response.data or [])
+        total_pages = math.ceil(total_items / limit) if total_items > 0 else 1 
+
+        return {
+            "users": response.data or [],
+            "page": page,
+            "limit": limit,
+            "total": total_items,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch users: {e}")
 
@@ -90,16 +108,31 @@ async def delete_organization_user(
     return {"message": f"User {target_user_id} removed successfully."}
 
 @router.get("/documents")
-async def get_organization_documents(current_user: TokenClaims = Depends(admin_only)):
+async def get_organization_documents(page: int = Query(1, ge=1, description="Page number starting from 1"),
+    limit: int = Query(30, ge=1, le=100, description="Items per page"),current_user: TokenClaims = Depends(admin_only)):
     if not supabase_client:
         raise HTTPException(status_code=500, detail="Supabase client not initialized")
 
     try:
-        query = supabase_client.table("document_registry").select("*")
+        start = (page - 1) * limit
+        end = start + limit - 1
+
+        query = supabase_client.table("document_registry",count="exact").select("*")
         if current_user.org_id:
             query = query.eq("org_id", current_user.org_id)
-        response = query.order("uploaded_at", desc=True).execute()
-        return {"documents": response.data}
+        response = query.order("uploaded_at", desc=True).range(start,end).execute()
+
+        total_items = response.count if response.count is not None else len(response.data or [])
+        total_pages = math.ceil(total_items / limit) if total_items > 0 else 1
+        return {
+            "documents": response.data or [],
+            "page": page,
+            "limit": limit,
+            "total": total_items,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch documents: {e}")
 

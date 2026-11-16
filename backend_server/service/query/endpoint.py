@@ -18,6 +18,7 @@ from service.query.helper import (
     retrieve_global_neon,
     retrieve_local_redis,
     stream_llm_answer,
+    rerank_context_chunks,
     save_chat_history,
 )
 
@@ -38,16 +39,20 @@ async def query_rag(
     query_embedding = query_embeddings[0]
 
     retrieved_chunks = []
+    candidate_k = max(body.top_k * 2, 10)
+
     if body.upload_mode == QueryMode.GLOBAL:
-        retrieved_chunks = retrieve_global_neon(query_embedding, org_id, user_id, current_user.role.value, body.top_k)
+        retrieved_chunks = retrieve_global_neon(query_embedding, org_id, user_id, current_user.role.value, candidate_k)
     elif body.upload_mode == QueryMode.LOCAL:
-        retrieved_chunks = retrieve_local_redis(query_embedding, user_id, org_id, body.top_k)
+        retrieved_chunks = retrieve_local_redis(query_embedding, user_id, org_id, candidate_k)
     elif body.upload_mode == QueryMode.BOTH:
-        local_chunks = retrieve_local_redis(query_embedding, user_id, org_id, body.top_k)
-        global_chunks = retrieve_global_neon(query_embedding, org_id, user_id, current_user.role.value, body.top_k)
+        local_chunks = retrieve_local_redis(query_embedding, user_id, org_id, candidate_k)
+        global_chunks = retrieve_global_neon(query_embedding, org_id, user_id, current_user.role.value, candidate_k)
         merged = local_chunks + global_chunks
         merged.sort(key=lambda x: x["similarity_score"], reverse=True)
         retrieved_chunks = merged[:body.top_k]
+
+    final_chunks = rerank_context_chunks(body.query, retrieved_chunks, top_n=body.top_k)
 
     current_session_id = body.session_id or f"session_{uuid.uuid4().hex[:12]}"
 
@@ -96,7 +101,7 @@ async def query_rag(
             full_answer = ""
             async for token in stream_llm_answer(
                 user_query=body.query,
-                context_chunks=retrieved_chunks,
+                context_chunks=final_chunks,
                 user_name=current_user.email.split("@")[0] if current_user.email else "user",
                 language=body.language,
                 system_prompt=body.system_prompt

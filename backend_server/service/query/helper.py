@@ -5,6 +5,8 @@ from typing import List, Dict, Any, Optional
 from psycopg2.extras import RealDictCursor
 from fastapi import HTTPException
 import groq
+import requests
+from core.config import JINA_API_KEY
 
 from core.database import get_neon_connection, supabase_client, redis_client, groq_client
 
@@ -271,3 +273,63 @@ def log_query_event(
         }).execute()
     except Exception as e:
         logger.error(f"Query audit log failed: {e}")
+
+def rerank_context_chunks(
+    query_text: str,
+    chunks: List[Dict[str, Any]],
+    top_n: int = 5
+) -> List[Dict[str, Any]]:
+    """
+    Reranks retrieved context chunks down to top_n using Jina Reranker v3.
+    Matches Lambda 6 implementation from serverless-rag.
+    """
+    if not chunks:
+        return []
+
+    # If already fewer or equal to desired top_n, no need to rerank
+    if len(chunks) <= top_n:
+        return chunks
+
+    if not JINA_API_KEY or JINA_API_KEY.startswith("your-"):
+        logger.warning("JINA_API_KEY not configured. Skipping reranking.")
+        return chunks[:top_n]
+
+    url = "https://api.jina.ai/v1/rerank"
+    headers = {
+        "Authorization": f"Bearer {JINA_API_KEY}",
+        "Content-Type": "application/json"
+    }
+
+    # For multimodal image chunks, use filename description to avoid sending huge base64 strings
+    doc_texts = [
+        f"Image document: {c.get('document_name', '')}"
+        if isinstance(c.get("text", ""), str) and c.get("text", "").startswith("data:image/")
+        else c.get("text", "")
+        for c in chunks
+    ]
+
+    payload = {
+        "model": "jina-reranker-v3",
+        "query": query_text,
+        "documents": doc_texts,
+        "top_n": top_n
+    }
+
+    try:
+        res = requests.post(url, json=payload, headers=headers, timeout=15)
+        res.raise_for_status()
+        reranked_data = res.json().get("results", [])
+
+        reranked_chunks = []
+        for item in reranked_data:
+            idx = item["index"]
+            chunk = chunks[idx].copy()
+            relevance = float(item.get("relevance_score", chunk.get("similarity_score", 0.0)))
+            chunk["rerank_score"] = relevance
+            chunk["similarity_score"] = relevance
+            reranked_chunks.append(chunk)
+
+        return reranked_chunks
+    except Exception as e:
+        logger.error(f"Jina Reranker v3 error: {e}. Falling back to top {top_n} similarity results.")
+        return chunks[:top_n]

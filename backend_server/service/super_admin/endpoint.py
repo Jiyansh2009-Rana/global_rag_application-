@@ -1,9 +1,9 @@
+import math
 import logging
 from typing import Optional
 from datetime import datetime, timezone
 from pydantic import BaseModel
-from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks
-
+from fastapi import APIRouter, HTTPException, Depends, BackgroundTasks , Query
 from core.database import supabase_client
 from core.security import RoleChecker
 from service.common.models import Role, TokenClaims
@@ -28,7 +28,8 @@ class OrgStatusToggle(BaseModel):
 
 
 @router.get("/organizations")
-async def super_admin_get_all_organizations(current_user: TokenClaims = Depends(super_admin_only)):
+async def super_admin_get_all_organizations(page: int = Query(1, ge=1, description="Page number starting from 1"),
+    limit: int = Query(30, ge=1, le=100, description="Items per page"),current_user: TokenClaims = Depends(super_admin_only)):
     """List all organizations with their admin email, user count, and active/disabled status."""
     if not supabase_client:
         raise HTTPException(status_code=500, detail="Supabase client not initialized")
@@ -59,7 +60,27 @@ async def super_admin_get_all_organizations(current_user: TokenClaims = Depends(
             if u.get("role") in ["Admin", "Super Admin"] and not orgs_dict[org]["admin_email"]:
                 orgs_dict[org]["admin_email"] = u.get("email")
 
-        return {"organizations": list(orgs_dict.values())}
+        all_orgs = list(orgs_dict.values())
+        total_items = len(all_orgs)
+        total_pages = math.ceil(total_items / limit) if total_items > 0 else 1
+
+        start = (page - 1) * limit
+        end = start + limit
+        paginated_orgs = all_orgs[start:end]
+
+        
+
+        
+        return {
+            "organizations": paginated_orgs,
+            "page": page,
+            "limit": limit,
+            "total": total_items,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1,
+        }
+    
     except Exception as e:
         logger.error(f"Failed to fetch organisations: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to fetch organisations: {e}")
@@ -130,17 +151,32 @@ async def super_admin_toggle_org_status(
 
 
 @router.get("/users")
-async def super_admin_get_all_users(current_user: TokenClaims = Depends(super_admin_only)):
+async def super_admin_get_all_users(page: int = Query(1, ge=1, description="Page number starting from 1"),
+    limit: int = Query(30, ge=1, le=100, description="Items per page"),current_user: TokenClaims = Depends(super_admin_only)):
     if not supabase_client:
         raise HTTPException(status_code=500, detail="Supabase client not initialized")
 
     try:
-        response = (
+        start = (page - 1) * limit
+        end = start + limit - 1 
+        response  = (
             supabase_client.table("users")
-            .select("id, email, role, org_id, created_at")
+            .select("id, email, role, org_id, created_at", count="exact")
+            .range(start , end)
             .execute()
         )
-        return {"users": response.data}
+        total_items = response.count if response.count is not None else len(response.data or [])
+        total_pages = math.ceil(total_items / limit) if total_items > 0 else 1
+        
+        return {
+            "users": response.data or [],
+            "page": page,
+            "limit": limit,
+            "total": total_items,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1,
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch users globally: {e}")
 
@@ -158,13 +194,33 @@ async def super_admin_delete_user(
 
 
 @router.get("/documents")
-async def super_admin_get_all_documents(current_user: TokenClaims = Depends(super_admin_only)):
+async def super_admin_get_all_documents(page: int = Query(1, ge=1, description="Page number starting from 1"),
+    limit: int = Query(30, ge=1, le=100, description="Items per page"),current_user: TokenClaims = Depends(super_admin_only)):
     if not supabase_client:
         raise HTTPException(status_code=500, detail="Supabase client not initialized")
 
     try:
-        response = supabase_client.table("document_registry").select("*").order("uploaded_at", desc=True).execute()
-        return {"documents": response.data}
+        start = (page - 1) * limit
+        end = start + limit - 1 
+
+        response =( supabase_client.table("document_registry")
+        .select("*",count="exact")
+        .order("uploaded_at", desc=True)
+        .range(start,end)
+        .execute())
+
+        total_items = response.count if response.count is not None else len(response.data or [])
+        total_pages = math.ceil(total_items / limit) if total_items > 0 else 1
+        return {
+            "documents": response.data or [],
+            "page": page,
+            "limit": limit,
+            "total": total_items,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1,
+        }
+    
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch documents globally: {e}")
 
