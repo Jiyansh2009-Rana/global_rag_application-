@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional , Dict, Any
 from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, status, Response, Depends, Cookie
 from core.config import ACCESS_TOKEN_EXPIRE_MINUTES, REFRESH_TOKEN_EXPIRE_DAYS
@@ -19,6 +19,8 @@ from service.common.models import (
     TokenResponse,
     UserInfo,
     TokenClaims,
+    GoogleOAuthExchangeRequest,
+    GoogleAuthUrlResponse,
 )
 from service.auth.helper import (
     check_existing_user,
@@ -28,6 +30,10 @@ from service.auth.helper import (
     initiate_forgot_password,
     reset_user_password,
     blacklist_user_session,
+    construct_google_authorization_url,
+    exchange_authorization_code_for_google_tokens,
+    retrieve_google_user_profile,
+    resolve_or_register_oauth_user,
 )
 from core.database import supabase_client
 
@@ -86,7 +92,7 @@ async def login(payload: UserLogin, response: Response):
         key="access_token",
         value=token,
         httponly=True,
-        secure=False,
+        secure=True,
         samesite="lax",
         max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
     )
@@ -94,7 +100,7 @@ async def login(payload: UserLogin, response: Response):
         key="refresh_token",
         value=refresh_token,
         httponly=True,
-        secure=False,
+        secure=True,
         samesite="lax",
         path="/api/v1/auth",
         max_age=REFRESH_TOKEN_EXPIRE_DAYS * 86400,
@@ -178,4 +184,106 @@ async def get_me(current_user: TokenClaims = Depends(get_current_user)):
         org_id=current_user.org_id,
         allow_global_upload=bool(current_user.allow_global_upload),
         created_at=datetime.now(timezone.utc).isoformat(),
+    )
+
+# STEP 1 & 2: USER INITIATES ACCESS -> REDIRECT TO GOOGLE AUTHORIZATION SERVER
+# ============================================================================
+@router.get("/google/authorize-url", response_model=GoogleAuthUrlResponse)
+async def get_google_authorization_url(redirect_uri: Optional[str] = None):
+    """
+    Returns the Google consent URL. The frontend redirects the user's browser here.
+    """
+    target_authorization_url = construct_google_authorization_url(
+        custom_redirect_uri=redirect_uri
+    )
+    return GoogleAuthUrlResponse(authorization_url=target_authorization_url)
+
+# STEPS 4, 5, 6, 7: RECEIVE CODE, ISSUE TOKEN, ACCESS RESOURCES, LOGIN/SIGNUP
+# ============================================================================
+@router.post("/google/exchange", response_model=TokenResponse)
+async def exchange_google_authorization_code(
+    payload: GoogleOAuthExchangeRequest,
+    response: Response
+):
+    """
+    Executes the OAuth 2.0 Authorization Code exchange:
+    1. Sends the authorization code + client credentials to Google Token Server.
+    2. Receives the Google access token (temporary key with scope & expiry).
+    3. Accesses Google's Resource Server (UserInfo) with the access token.
+    4. Automatically logs in existing user or registers a new user.
+    5. Checks tenant organization suspension policy.
+    6. Issues Askmydocsai JWT cookies (access_token, refresh_token).
+    """
+    # Step 4 & 5: Exchange authorization code for Google access token
+    google_tokens: Dict[str, Any] = await exchange_authorization_code_for_google_tokens(
+        authorization_code=payload.authorization_code,
+        registered_redirect_uri=payload.redirect_uri,
+    )
+    google_access_token: str = google_tokens.get("access_token", "")
+    # Step 6: Present access token to Google Resource Server
+    google_user_profile: Dict[str, Any] = await retrieve_google_user_profile(
+        google_access_token=google_access_token
+    )
+    # Step 7: Match existing user (Login) or auto-register new user (Sign Up)
+    authenticated_user_record: Dict[str, Any] = resolve_or_register_oauth_user(
+        google_profile=google_user_profile,
+        requested_organization_id=payload.organization_identifier,
+    )
+    user_identifier: str = authenticated_user_record["id"]
+    user_email_address: str = authenticated_user_record["email"]
+    user_account_role: str = authenticated_user_record["role"]
+    assigned_organization_id: Optional[str] = authenticated_user_record.get("org_id")
+    has_global_upload_permission: bool = authenticated_user_record.get("allow_global_upload", False)
+    # Tenant Governance Enforcement: Ensure organization is not disabled
+    if user_account_role != "Super Admin" and assigned_organization_id and supabase_client:
+        organization_status_query = (
+            supabase_client.table("organization_settings")
+            .select("is_disabled, disabled_reason")
+            .eq("org_id", assigned_organization_id)
+            .execute()
+        )
+        if organization_status_query.data and organization_status_query.data[0].get("is_disabled"):
+            suspension_reason = (
+                organization_status_query.data[0].get("disabled_reason")
+                or "Please contact your Super Administrator."
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Organisation '{assigned_organization_id}' is suspended. Reason: {suspension_reason}"
+            )
+    # Issue platform JWT tokens
+    platform_access_token: str = create_access_token(
+        user_id=user_identifier,
+        email=user_email_address,
+        username=authenticated_user_record.get("username"),
+        role=Role(user_account_role),
+        org_id=assigned_organization_id,
+        allow_global_upload=has_global_upload_permission,
+    )
+    platform_refresh_token: str = create_refresh_token(
+        user_id=user_identifier,
+        org_id=assigned_organization_id
+    )
+    # Set secure, HTTP-only session cookies
+    response.set_cookie(
+        key="access_token",
+        value=platform_access_token,
+        httponly=True,
+        secure=True,  # Set to True in HTTPS production environments
+        samesite="lax",
+        max_age=ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=platform_refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        path="/api/v1/auth",
+        max_age=REFRESH_TOKEN_EXPIRE_DAYS * 86400,
+    )
+    return TokenResponse(
+        access_token=platform_access_token,
+        role=Role(user_account_role),
+        org_id=assigned_organization_id,
     )

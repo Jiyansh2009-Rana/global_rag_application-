@@ -66,6 +66,30 @@ class TokenClaims(BaseModel):
     exp: Optional[int] = None
     iat: Optional[int] = None
 
+class GoogleOAuthExchangeRequest(BaseModel):
+    """
+    Payload sent by the client application containing the authorization code
+    received from Google after the user grants consent.
+    """
+    authorization_code: str = Field(
+        ...,
+        description="The short-lived authorization code issued by Google's Authorization Server"
+    )
+    redirect_uri: str = Field(
+        ...,
+        description="The exact callback redirect URI registered in Google Cloud Console"
+    )
+    organization_identifier: Optional[str] = Field(
+        None,
+        description="Optional tenant organization ID for new user onboarding"
+    )
+
+class GoogleAuthUrlResponse(BaseModel):
+    """Response containing the constructed Google OAuth authorization URL."""
+    authorization_url: str = Field(
+        ...,
+        description="Target Google URL to redirect the user for consent"
+    )
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"

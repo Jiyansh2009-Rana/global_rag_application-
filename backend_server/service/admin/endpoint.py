@@ -117,7 +117,7 @@ async def get_organization_documents(page: int = Query(1, ge=1, description="Pag
         start = (page - 1) * limit
         end = start + limit - 1
 
-        query = supabase_client.table("document_registry",count="exact").select("*")
+        query = supabase_client.table("document_registry").select("*", count="exact")
         if current_user.org_id:
             query = query.eq("org_id", current_user.org_id)
         response = query.order("uploaded_at", desc=True).range(start,end).execute()

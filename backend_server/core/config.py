@@ -30,8 +30,20 @@ REDIS_URL = os.getenv("REDIS_URL") or f"redis://{REDIS_HOST}:{REDIS_PORT}/0"
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "your-groq-api-key")
 JINA_API_KEY = os.getenv("JINA_API_KEY", "your-jina-api-key")
 
-GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "your-google-client-id")
-GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "your-google-client-secret")
+import os
+
+# Google OAuth 2.0 Credentials
+GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET: str = os.getenv("GOOGLE_CLIENT_SECRET", "")
+GOOGLE_REDIRECT_URI: str = os.getenv(
+    "GOOGLE_REDIRECT_URI",
+    "http://localhost:5173/auth/callback/google"
+)
+
+# Standard Google OAuth 2.0 Protocol Endpoints
+GOOGLE_AUTHORIZATION_ENDPOINT: str = "https://accounts.google.com/o/oauth2/v2/auth"
+GOOGLE_TOKEN_EXCHANGE_ENDPOINT: str = "https://oauth2.googleapis.com/token"
+GOOGLE_USERINFO_RESOURCE_ENDPOINT: str = "https://www.googleapis.com/oauth2/v3/userinfo"
 
 
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
