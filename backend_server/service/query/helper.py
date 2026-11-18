@@ -198,8 +198,11 @@ async def stream_llm_answer(
     )
 
     models_to_try = [
-        "qwen/qwen3.6-27b",
-        "llama-3.3-70b-versatile"
+        "qwen/qwen3.8-27b",
+        "openai/gpt-oss-120b",
+        "openai/gpt-oss-20b",
+        "allam-2-7b",
+        "meta-llama/llama-prompt-guard-2-86m"
     ]
 
     stream = None

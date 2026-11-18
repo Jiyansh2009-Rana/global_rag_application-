@@ -356,6 +356,9 @@ def chunk_by_type(doc_type: DocumentType, text: str) -> List[str]:
 # JINA EMBEDDINGS
 # ─────────────────────────────────────────────────────────────────────────────
 def get_jina_embeddings(texts: List[str], is_image: bool = False) -> List[List[float]]:
+    
+    if not texts:
+        return []
     url = "https://api.jina.ai/v1/embeddings"
     headers = {
         "Content-Type": "application/json",

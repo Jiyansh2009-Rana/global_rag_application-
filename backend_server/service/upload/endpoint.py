@@ -154,121 +154,131 @@ async def upload_document(
         store_raw_file_local_redis(current_user.user_id, doc_id, filename, file_bytes)
 
     async def process_and_stream_upload():
-        # 1. Fast exit for local duplicates/aliases (skips OCR and chunking)
-        if upload_mode == UploadMode.LOCAL and local_status and local_status.get("is_duplicate"):
-            if local_status.get("is_alias"):
-                orig_name = local_status.get("original_filename") or "unknown"
-                alias_msg = f"Duplicate content detected. Alias recorded: {filename} (original: {orig_name})"
-                yield f"data: {json.dumps({'status': 'alias_detected', 'message': alias_msg})}\n\n"
-            yield f"data: {json.dumps({'status': 'upload_complete', 'doc_id': doc_id, 'total_chunks': 0})}\n\n"
-            return
-        # 2. Extraction & OCR
-        yield f"data: {json.dumps({'status': 'extracting_text', 'message': 'Running OCR and extracting text. This may take a moment for large files...'})}\n\n"
-        extraction_task = asyncio.create_task(
-            asyncio.to_thread(extract_text_by_type, doc_type, file_bytes, filename)
-        )
-        while not extraction_task.done():
-            yield ": heartbeat\n\n"
-            await asyncio.sleep(15)
         try:
-            raw_text, total_pages = extraction_task.result()
-        except Exception as e:
-            yield f"data: {json.dumps({'status': 'error', 'message': f'Extraction failed: {e}'})}\n\n"
-            return
-        pages = extract_pages_as_list(raw_text, doc_type)
-        yield f"data: {json.dumps({'status': 'extraction_complete', 'total_pages': len(pages), 'filename': filename})}\n\n"
-        # 3. Global alias detection audit
-        if upload_mode == UploadMode.GLOBAL and existing_global_doc:
-            original_filename = existing_global_doc.get("file_name", "unknown")
-            if original_filename and original_filename != filename:
-                if supabase_client:
-                    try:
-                        await asyncio.to_thread(
-                            lambda: supabase_client.table("audit_log").insert({
-                                "event_type": "duplicate_file_detected",
-                                "doc_id": doc_id,
-                                "alias_filename": filename,
-                                "original_filename": original_filename,
-                                "file_hash": file_hash_val,
-                                "file_name": filename,
-                                "doc_type": doc_type.value,
-                                "user_id": current_user.user_id,
-                                "org_id": org_id,
-                                "role": current_user.role.value,
-                                "timestamp": datetime.now(timezone.utc).isoformat()
-                            }).execute()
-                        )
-                    except Exception as e:
-                        logger.error(f"Global alias audit log write failed: {e}")
-                yield f"data: {json.dumps({'status': 'alias_detected', 'message': f'Duplicate content detected. Alias recorded: {filename} (original: {original_filename})'})}\n\n"
-        # 4. Process page sets
-        page_sets = split_pages_into_sets(pages, PAGES_PER_SET)
-        total_chunks = 0
-        for set_index, page_set in enumerate(page_sets):
-            set_id = generate_set_id(doc_id, set_index)
-            start_page = (set_index * PAGES_PER_SET) + 1
-            page_offsets = list(range(start_page, start_page + len(page_set)))
-            yield f"data: {json.dumps({'status': 'processing_set', 'set_id': set_id, 'pages': page_offsets})}\n\n"
-            if upload_mode == UploadMode.GLOBAL:
-                report = await asyncio.to_thread(
-                    process_set_global, set_id, doc_id, org_id, page_set, page_offsets,
-                    doc_type, current_user.user_id, upload_mode, current_user.role.value
-                )
-            else:
-                report = await asyncio.to_thread(
-                    lambda: process_set_local(
-                        set_id=set_id,
-                        doc_id=doc_id,
-                        user_id=current_user.user_id,
-                        org_id=org_id,
-                        filename=filename,
-                        page_set=page_set,
-                        page_offsets=page_offsets,
-                        doc_type=doc_type,
-                        file_hash_val=file_hash_val,
-                    )
-                )
-            total_chunks += report.get("chunks_created", 0)
-            yield f"data: {json.dumps({'status': 'set_complete', 'set_id': set_id, 'report': report})}\n\n"
-        # 5. Final post-processing (runs ONCE after all sets complete)
-        if upload_mode == UploadMode.GLOBAL:
-            is_new_document = existing_global_doc is None
-            has_new_pages_indexed = total_chunks > 0
-            if is_new_document or has_new_pages_indexed:
-                # Upload to Supabase Storage
-                await asyncio.to_thread(
-                    store_raw_file_global_supabase,
-                    org_id=org_id,
-                    doc_id=doc_id,
-                    filename=filename,
-                    file_bytes=file_bytes,
-                    delete_old=not is_new_document
-                )
-                # Store in Document Registry
-                if is_new_document:
-                    await asyncio.to_thread(
-                        store_file_in_registry,
-                        file_hash_val=file_hash_val,
-                        org_id=org_id,
-                        doc_id=doc_id,
-                        file_name=filename,
-                        total_pages=len(pages),
-                        uploaded_by=current_user.user_id
-                    )
-            else:
-                logger.info(f"Skipping Supabase Storage upload for duplicate/fully-indexed file: {filename}")
-        else:
-            # Local mode: purge removed pages and record local:docmeta
-            await asyncio.to_thread(
-                finalize_local_docmeta,
-                current_user.user_id,
-                org_id,
-                doc_id,
-                filename,
-                file_hash_val,
-                len(pages),
+            # 1. Fast exit for local duplicates/aliases (skips OCR and chunking)
+            if upload_mode == UploadMode.LOCAL and local_status and local_status.get("is_duplicate"):
+                if local_status.get("is_alias"):
+                    orig_name = local_status.get("original_filename") or "unknown"
+                    alias_msg = f"Duplicate content detected. Alias recorded: {filename} (original: {orig_name})"
+                    yield f"data: {json.dumps({'status': 'alias_detected', 'message': alias_msg})}\n\n"
+                yield f"data: {json.dumps({'status': 'upload_complete', 'doc_id': doc_id, 'total_chunks': 0})}\n\n"
+                return
+            # 2. Extraction & OCR
+            yield f"data: {json.dumps({'status': 'extracting_text', 'message': 'Running OCR and extracting text. This may take a moment for large files...'})}\n\n"
+            extraction_task = asyncio.create_task(
+                asyncio.to_thread(extract_text_by_type, doc_type, file_bytes, filename)
             )
-        yield f"data: {json.dumps({'status': 'upload_complete', 'doc_id': doc_id, 'total_chunks': total_chunks})}\n\n"
+            while not extraction_task.done():
+                yield ": heartbeat\n\n"
+                try:
+                # Wait up to 1.0s for the task without blocking after completion
+                    await asyncio.wait_for(asyncio.shield(extraction_task), timeout=1.0)
+                except asyncio.TimeoutError:
+                    pass
+            try:
+                raw_text, total_pages = extraction_task.result()
+            except Exception as e:
+                err_detail = getattr(e, "detail", str(e))
+                yield f"data: {json.dumps({'status': 'error', 'message': f'Extraction failed: {err_detail}'})}\n\n"
+                return
+            pages = extract_pages_as_list(raw_text, doc_type)
+            yield f"data: {json.dumps({'status': 'extraction_complete', 'total_pages': len(pages), 'filename': filename})}\n\n"
+            # 3. Global alias detection audit
+            if upload_mode == UploadMode.GLOBAL and existing_global_doc:
+                original_filename = existing_global_doc.get("file_name", "unknown")
+                if original_filename and original_filename != filename:
+                    if supabase_client:
+                        try:
+                            await asyncio.to_thread(
+                                lambda: supabase_client.table("audit_log").insert({
+                                    "event_type": "duplicate_file_detected",
+                                    "doc_id": doc_id,
+                                    "alias_filename": filename,
+                                    "original_filename": original_filename,
+                                    "file_hash": file_hash_val,
+                                    "file_name": filename,
+                                    "doc_type": doc_type.value,
+                                    "user_id": current_user.user_id,
+                                    "org_id": org_id,
+                                    "role": current_user.role.value,
+                                    "timestamp": datetime.now(timezone.utc).isoformat()
+                                }).execute()
+                            )
+                        except Exception as e:
+                            logger.error(f"Global alias audit log write failed: {e}")
+                    yield f"data: {json.dumps({'status': 'alias_detected', 'message': f'Duplicate content detected. Alias recorded: {filename} (original: {original_filename})'})}\n\n"
+            # 4. Process page sets
+            page_sets = split_pages_into_sets(pages, PAGES_PER_SET)
+            total_chunks = 0
+            for set_index, page_set in enumerate(page_sets):
+                set_id = generate_set_id(doc_id, set_index)
+                start_page = (set_index * PAGES_PER_SET) + 1
+                page_offsets = list(range(start_page, start_page + len(page_set)))
+                yield f"data: {json.dumps({'status': 'processing_set', 'set_id': set_id, 'pages': page_offsets})}\n\n"
+                if upload_mode == UploadMode.GLOBAL:
+                    report = await asyncio.to_thread(
+                        process_set_global, set_id, doc_id, org_id, page_set, page_offsets,
+                        doc_type, current_user.user_id, upload_mode, current_user.role.value
+                    )
+                else:
+                    report = await asyncio.to_thread(
+                        lambda: process_set_local(
+                            set_id=set_id,
+                            doc_id=doc_id,
+                            user_id=current_user.user_id,
+                            org_id=org_id,
+                            filename=filename,
+                            page_set=page_set,
+                            page_offsets=page_offsets,
+                            doc_type=doc_type,
+                            file_hash_val=file_hash_val,
+                        )
+                    )
+                total_chunks += report.get("chunks_created", 0)
+                yield f"data: {json.dumps({'status': 'set_complete', 'set_id': set_id, 'report': report})}\n\n"
+            # 5. Final post-processing (runs ONCE after all sets complete)
+            if upload_mode == UploadMode.GLOBAL:
+                is_new_document = existing_global_doc is None
+                has_new_pages_indexed = total_chunks > 0
+                if is_new_document or has_new_pages_indexed:
+                    # Upload to Supabase Storage
+                    await asyncio.to_thread(
+                        store_raw_file_global_supabase,
+                        org_id=org_id,
+                        doc_id=doc_id,
+                        filename=filename,
+                        file_bytes=file_bytes,
+                        delete_old=not is_new_document
+                    )
+                    # Store in Document Registry
+                    if is_new_document:
+                        await asyncio.to_thread(
+                            store_file_in_registry,
+                            file_hash_val=file_hash_val,
+                            org_id=org_id,
+                            doc_id=doc_id,
+                            file_name=filename,
+                            total_pages=len(pages),
+                            uploaded_by=current_user.user_id
+                        )
+                else:
+                    logger.info(f"Skipping Supabase Storage upload for duplicate/fully-indexed file: {filename}")
+            else:
+                # Local mode: purge removed pages and record local:docmeta
+                await asyncio.to_thread(
+                    finalize_local_docmeta,
+                    current_user.user_id,
+                    org_id,
+                    doc_id,
+                    filename,
+                    file_hash_val,
+                    len(pages),
+                )
+            yield f"data: {json.dumps({'status': 'upload_complete', 'doc_id': doc_id, 'total_chunks': total_chunks})}\n\n"
+        except Exception as e:
+            logger.error(f"Upload processing failed for {filename}: {e}", exc_info=True)
+            err_msg = getattr(e, "detail", str(e))
+            yield f"data: {json.dumps({'status': 'error', 'message': f'Upload processing failed: {err_msg}'})}\n\n"
     return StreamingResponse(
         process_and_stream_upload(),
         media_type="text/event-stream",
