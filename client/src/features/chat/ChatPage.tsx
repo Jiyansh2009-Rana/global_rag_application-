@@ -1,10 +1,31 @@
+import { Logo } from '@/components/common/Logo';
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
+import { useChatSession, saveSourcesToCache } from '@/features/chat/ChatContext';
+import {
+  Globe,
+  Shield,
+  Cpu,
+  Settings,
+  CornerDownLeft,
+  Download,
+  Image as ImageIcon,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  Check,
+  Brain,
+  X,
+  AlertTriangle,
+  Eye,
+  History as HistoryIcon,
+} from 'lucide-react';
+
 import { useAuth, useIsMobile } from '@/hooks/useContextHooks';
-import { queryApi, downloadFile, streamQuery, parseQuerySSEStream } from '@/api/query';
+import { downloadFile, streamQuery, parseQuerySSEStream } from '@/api/query';
 import { parseApiError, tokenStore } from '@/api/client';
-import type { QueryResponse, Source, QueryRequest, ChatHistoryItem } from '@/api/types';
+import type { QueryResponse, Source, QueryRequest } from '@/api/types';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { ScoreBar } from '@/components/ui/ScoreBar';
@@ -121,15 +142,15 @@ function ImageLightboxModal({
           gap: 14,
           background: 'linear-gradient(145deg, rgba(15, 16, 20, 0.95) 0%, rgba(7, 8, 10, 0.98) 100%)',
           borderRadius: 20,
-          border: '1px solid rgba(70,183,255,0.25)',
-          boxShadow: '0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(70,183,255,0.1)',
+          border: '1px solid rgba(0,194,222,0.25)',
+          boxShadow: '0 20px 60px rgba(0,0,0,0.7), 0 0 0 1px rgba(0,194,222,0.1)',
           padding: '1.5rem',
         }}
       >
         {/* Header */}
         <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0, flex: 1 }}>
-            <span style={{ fontSize: '1.2rem', color: 'var(--accent)' }}>🖼</span>
+            <ImageIcon size={20} className="text-[#00C2DE]" />
             <div style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {source.document_name}
             </div>
@@ -142,7 +163,7 @@ function ImageLightboxModal({
 
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
             <Button size="sm" variant="primary" loading={downloading} onClick={handleDownload}>
-              ⬇ Download Image
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Download size={14} /> Download Image</span>
             </Button>
             <button
               onClick={onClose}
@@ -154,8 +175,9 @@ function ImageLightboxModal({
               }}
               onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.18)')}
               onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.08)')}
+              aria-label="Close"
             >
-              ✕
+              <X size={16} />
             </button>
           </div>
         </div>
@@ -176,7 +198,7 @@ function ImageLightboxModal({
         }}>
           {loading ? (
             <div style={{ padding: '2rem', color: 'var(--muted)', fontSize: '0.82rem' }}>
-              Loading image preview…
+              Loading image preview...
             </div>
           ) : loadedUrl ? (
             <img
@@ -266,7 +288,7 @@ function SourceCard({
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.04 }}
       className="glass-card"
-      style={{ padding: '14px 16px', borderRadius: 12, border: '1px solid rgba(70,183,255,0.12)' }}
+      style={{ padding: '14px 16px', borderRadius: 12, border: '1px solid rgba(0,194,222,0.12)' }}
     >
       <div
         onClick={onToggle}
@@ -274,7 +296,7 @@ function SourceCard({
       >
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            {isImg && <span style={{ fontSize: '0.85rem' }}>🖼</span>}
+            {isImg && <ImageIcon size={14} className="inline mr-1 text-[#00C2DE]" />}
             <div style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: '"Inter", sans-serif' }}>
               {source.document_name}
             </div>
@@ -309,13 +331,13 @@ function SourceCard({
               transition: 'all 0.15s',
               fontFamily: '"Inter", sans-serif',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(70,183,255,0.12)')}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0,194,222,0.12)')}
             onMouseLeave={(e) => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
           >
-            {downloading ? '⏳ Downloading…' : '⬇ Download'}
+            {downloading ? 'Downloading...' : 'Download'}
           </button>
           <span style={{ fontSize: '0.68rem', color: 'var(--muted)', flexShrink: 0 }}>
-            <span style={{ fontWeight: 600, color: 'var(--text)' }}>[{index + 1}]</span> {expanded ? '▲' : '▼'}
+            <span style={{ fontWeight: 600, color: 'var(--text)' }}>[{index + 1}]</span> {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </span>
         </div>
       </div>
@@ -336,7 +358,7 @@ function SourceCard({
               borderRadius: 8,
               overflow: 'hidden',
               background: 'rgba(0,0,0,0.3)',
-              border: '1px solid rgba(70,183,255,0.18)',
+              border: '1px solid rgba(0,194,222,0.18)',
               display: 'flex',
               justifyContent: 'center',
               alignItems: 'center',
@@ -359,7 +381,7 @@ function SourceCard({
               />
             ) : (
               <div style={{ color: 'var(--muted)', fontSize: '0.75rem', padding: '1.5rem' }}>
-                🖼 Click to preview {source.document_name}
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><ImageIcon size={14} /> Click to preview {source.document_name}</span>
               </div>
             )}
             <div style={{
@@ -377,7 +399,7 @@ function SourceCard({
               gap: 4,
               fontFamily: '"Inter", sans-serif',
             }}>
-              🔍 Click to preview
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Eye size={12} /> Click to preview</span>
             </div>
           </div>
         </div>
@@ -421,7 +443,7 @@ function SourcesRail({ sources, loading }: { sources: Source[]; loading?: boolea
         onMouseEnter={e => (e.currentTarget.style.color = 'var(--text)')}
         onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}
       >
-        <span>{open ? '▼' : '▶'}</span>
+        <span>{open ? <ChevronDown size={14} /> : <ChevronRight size={14} />}</span>
         Source Citations
         {sources.length > 0 && (
           <span style={{ padding: '1px 8px', borderRadius: 999, background: 'var(--accent-dim)', color: 'var(--accent)', border: '1px solid var(--border-accent)', fontSize: '0.65rem', fontWeight: 600 }}>
@@ -506,7 +528,7 @@ function StatusStepper({ stage }: { stage: Stage }) {
               }}
             >
               {isActive && <span style={{ width: 10, height: 10, borderRadius: '50%', border: '1.5px solid currentColor', borderTopColor: 'transparent', animation: 'spin 0.7s linear infinite', display: 'inline-block', flexShrink: 0 }} />}
-              {isDone && '✓ '}
+              {isDone && <Check size={12} className="inline mr-1 text-emerald-400" />}
               {s.label}
             </div>
             {i < 2 && <div style={{ width: 20, height: 1, background: isDone ? 'var(--success)' : 'var(--border)', transition: 'background 0.4s' }} />}
@@ -517,7 +539,7 @@ function StatusStepper({ stage }: { stage: Stage }) {
   );
 }
 
-/* ── Helpers for parsing <think> / <thought> tags ── */
+/* --- Helpers for parsing <think> / <thought> tags --- */
 export interface ParsedAnswer {
   thought: string | null;
   answer: string;
@@ -580,9 +602,9 @@ function ThinkingBlock({
         marginBottom: 16,
         borderRadius: 14,
         background: 'linear-gradient(145deg, rgba(6,20,28,0.75) 0%, rgba(4,14,22,0.9) 100%)',
-        border: expanded ? '1px solid rgba(70,183,255,0.32)' : '1px solid rgba(70,183,255,0.15)',
+        border: expanded ? '1px solid rgba(0,194,222,0.32)' : '1px solid rgba(0,194,222,0.15)',
         boxShadow: expanded
-          ? '0 6px 20px rgba(0,0,0,0.35), 0 0 16px rgba(70,183,255,0.06)'
+          ? '0 6px 20px rgba(0,0,0,0.35), 0 0 16px rgba(0,194,222,0.06)'
           : '0 2px 10px rgba(0,0,0,0.2)',
         overflow: 'hidden',
         transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
@@ -598,7 +620,7 @@ function ThinkingBlock({
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '10px 14px',
-          background: expanded ? 'rgba(70,183,255,0.05)' : 'transparent',
+          background: expanded ? 'rgba(0,194,222,0.05)' : 'transparent',
           border: 'none',
           cursor: 'pointer',
           color: 'inherit',
@@ -607,7 +629,7 @@ function ThinkingBlock({
           gap: 10,
         }}
         onMouseEnter={(e) => {
-          if (!expanded) e.currentTarget.style.background = 'rgba(70,183,255,0.03)';
+          if (!expanded) e.currentTarget.style.background = 'rgba(0,194,222,0.03)';
         }}
         onMouseLeave={(e) => {
           if (!expanded) e.currentTarget.style.background = 'transparent';
@@ -624,13 +646,13 @@ function ThinkingBlock({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              background: 'linear-gradient(135deg, rgba(70,183,255,0.18), rgba(168,85,247,0.18))',
-              border: '1px solid rgba(70,183,255,0.28)',
+              background: 'linear-gradient(135deg, rgba(0,194,222,0.18), rgba(168,85,247,0.18))',
+              border: '1px solid rgba(0,194,222,0.28)',
               fontSize: '0.85rem',
               flexShrink: 0,
             }}
           >
-            🧠
+            <Brain size={15} className="text-[#00C2DE]" /> 
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minWidth: 0 }}>
             <span
@@ -690,7 +712,7 @@ function ThinkingBlock({
             transition={{ duration: 0.2 }}
             style={{ display: 'inline-block', fontSize: '0.65rem', marginLeft: 2 }}
           >
-            ▼
+            <ChevronDown size={14} />
           </motion.span>
         </div>
       </button>
@@ -715,7 +737,7 @@ function ThinkingBlock({
               <div
                 className="prose thinking-prose"
                 style={{
-                  borderLeft: '2px solid rgba(70,183,255,0.4)',
+                  borderLeft: '2px solid rgba(0,194,222,0.4)',
                   paddingLeft: 12,
                   fontSize: '0.8rem',
                   lineHeight: 1.65,
@@ -804,11 +826,11 @@ function AnswerBubble({
   const bubbleStyle = {
     padding: '1.25rem 1.5rem',
     borderRadius: 16,
-    borderColor: 'rgba(70,183,255,0.18)',
-    boxShadow: '0 8px 32px rgba(0,0,0,0.32), 0 0 0 1px rgba(70,183,255,0.07)',
+    borderColor: 'rgba(0,194,222,0.18)',
+    boxShadow: '0 8px 32px rgba(0,0,0,0.32), 0 0 0 1px rgba(0,194,222,0.07)',
   };
 
-  /* ── Live SSE streaming view ── */
+  /* --- Live SSE streaming view --- */
   if (isStreaming) {
     const hasTokens = (streamingAnswer?.length ?? 0) > 0;
     return (
@@ -836,7 +858,7 @@ function AnswerBubble({
     );
   }
 
-  /* ── Fallback loading skeleton (no stream, just boolean isLoading) ── */
+  /* --- Fallback loading skeleton (no stream, just boolean isLoading) --- */
   if (isLoading) {
     return (
       <div className="glass" style={bubbleStyle}>
@@ -850,7 +872,7 @@ function AnswerBubble({
     );
   }
 
-  /* ── Final / history response view (unchanged behaviour) ── */
+  /* --- Final / history response view (unchanged behaviour) --- */
   return (
     <div className="glass" style={bubbleStyle}>
       {response && (
@@ -885,12 +907,56 @@ function AnswerBubble({
 }
 
 
+const SETTINGS_STORAGE_KEY = 'askmydocs_retrieval_settings';
+
+const DEFAULT_SETTINGS: RetrievalSettings = {
+  topK: 5,
+  vectorWeight: 0.7,
+  language: 'English',
+  systemPrompt: '',
+};
+
+function loadSavedSettings(): RetrievalSettings {
+  try {
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return {
+        topK: typeof parsed.topK === 'number' ? parsed.topK : DEFAULT_SETTINGS.topK,
+        vectorWeight: typeof parsed.vectorWeight === 'number' ? parsed.vectorWeight : DEFAULT_SETTINGS.vectorWeight,
+        language: typeof parsed.language === 'string' ? parsed.language : DEFAULT_SETTINGS.language,
+        systemPrompt: typeof parsed.systemPrompt === 'string' ? parsed.systemPrompt : DEFAULT_SETTINGS.systemPrompt,
+      };
+    }
+  } catch {
+    /* fallback to defaults */
+  }
+  return DEFAULT_SETTINGS;
+}
+
 /* ── Settings Content ── */
-/* ── Settings Content ── */
-function SettingsContent({ settings, onChange }: { settings: RetrievalSettings; onChange: (s: RetrievalSettings) => void }) {
-  const kwWeight = +(1 - settings.vectorWeight).toFixed(2);
-  const vectorPct = Math.round(settings.vectorWeight * 100);
+function SettingsContent({
+  initialSettings,
+  onApply,
+  onCancel,
+}: {
+  initialSettings: RetrievalSettings;
+  onApply: (s: RetrievalSettings) => void;
+  onCancel: () => void;
+}) {
+  const [draft, setDraft] = useState<RetrievalSettings>(initialSettings);
+
+  const kwWeight = +(1 - draft.vectorWeight).toFixed(2);
+  const vectorPct = Math.round(draft.vectorWeight * 100);
   const keywordPct = Math.round(kwWeight * 100);
+
+  const handleApply = () => {
+    onApply(draft);
+  };
+
+  const handleReset = () => {
+    setDraft(DEFAULT_SETTINGS);
+  };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16, fontFamily: '"Inter", sans-serif' }}>
@@ -901,8 +967,8 @@ function SettingsContent({ settings, onChange }: { settings: RetrievalSettings; 
             <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#e8e6e0' }}>Retrieval Depth (Top K)</div>
             <div style={{ fontSize: '0.74rem', color: '#9a9690', marginTop: 2 }}>Number of highest-ranked chunks passed to the LLM</div>
           </div>
-          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#46b7ff', background: 'rgba(70,183,255,0.12)', border: '1px solid rgba(70,183,255,0.25)', padding: '3px 10px', borderRadius: 999 }}>
-            K = {settings.topK}
+          <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#00C2DE', background: 'rgba(0,194,222,0.12)', border: '1px solid rgba(0,194,222,0.25)', padding: '3px 10px', borderRadius: 999 }}>
+            K = {draft.topK}
           </span>
         </div>
         <input
@@ -910,9 +976,9 @@ function SettingsContent({ settings, onChange }: { settings: RetrievalSettings; 
           min={1}
           max={20}
           step={1}
-          value={settings.topK}
-          onChange={(e) => onChange({ ...settings, topK: +e.target.value })}
-          style={{ width: '100%', accentColor: '#46b7ff', cursor: 'pointer', height: 6 }}
+          value={draft.topK}
+          onChange={(e) => setDraft({ ...draft, topK: +e.target.value })}
+          style={{ width: '100%', accentColor: '#00C2DE', cursor: 'pointer', height: 6 }}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: '#5a5852', marginTop: 6, fontFamily: 'Space Mono, monospace' }}>
           <span>1 chunk</span>
@@ -929,10 +995,10 @@ function SettingsContent({ settings, onChange }: { settings: RetrievalSettings; 
             <div style={{ fontSize: '0.74rem', color: '#9a9690', marginTop: 2 }}>Blend dense semantic embeddings with BM25 keywords</div>
           </div>
           <div style={{ display: 'flex', gap: 6 }}>
-            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#46b7ff', background: 'rgba(70,183,255,0.12)', border: '1px solid rgba(70,183,255,0.25)', padding: '2px 8px', borderRadius: 999 }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#00C2DE', background: 'rgba(0,194,222,0.12)', border: '1px solid rgba(0,194,222,0.25)', padding: '2px 8px', borderRadius: 999 }}>
               Dense: {vectorPct}%
             </span>
-            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#8bf3e6', background: 'rgba(139,243,230,0.1)', border: '1px solid rgba(139,243,230,0.2)', padding: '2px 8px', borderRadius: 999 }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 600, color: '#00C2DE', background: 'rgba(0,81,198,0.1)', border: '1px solid rgba(0,81,198,0.2)', padding: '2px 8px', borderRadius: 999 }}>
               BM25: {keywordPct}%
             </span>
           </div>
@@ -940,8 +1006,8 @@ function SettingsContent({ settings, onChange }: { settings: RetrievalSettings; 
 
         {/* Visual Balance Bar */}
         <div style={{ display: 'flex', height: 6, borderRadius: 999, overflow: 'hidden', marginBottom: 10, background: 'rgba(255,255,255,0.08)' }}>
-          <div style={{ width: `${vectorPct}%`, background: 'linear-gradient(90deg, #46b7ff, #38bdf8)', transition: 'width 0.15s' }} />
-          <div style={{ width: `${keywordPct}%`, background: 'linear-gradient(90deg, #8bf3e6, #5eead4)', transition: 'width 0.15s' }} />
+          <div style={{ width: `${vectorPct}%`, background: 'linear-gradient(90deg, #00C2DE, #38bdf8)', transition: 'width 0.15s' }} />
+          <div style={{ width: `${keywordPct}%`, background: 'linear-gradient(90deg, #00C2DE, #5eead4)', transition: 'width 0.15s' }} />
         </div>
 
         <input
@@ -949,9 +1015,9 @@ function SettingsContent({ settings, onChange }: { settings: RetrievalSettings; 
           min={0}
           max={1}
           step={0.05}
-          value={settings.vectorWeight}
-          onChange={(e) => onChange({ ...settings, vectorWeight: +e.target.value })}
-          style={{ width: '100%', accentColor: '#46b7ff', cursor: 'pointer', height: 6 }}
+          value={draft.vectorWeight}
+          onChange={(e) => setDraft({ ...draft, vectorWeight: +e.target.value })}
+          style={{ width: '100%', accentColor: '#00C2DE', cursor: 'pointer', height: 6 }}
         />
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.68rem', color: '#5a5852', marginTop: 6, fontFamily: 'Space Mono, monospace' }}>
           <span>100% Keyword</span>
@@ -964,8 +1030,8 @@ function SettingsContent({ settings, onChange }: { settings: RetrievalSettings; 
       <div style={{ padding: '16px 18px', borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
         <Select
           label="Response Synthesis Language"
-          value={settings.language}
-          onChange={(e) => onChange({ ...settings, language: e.target.value })}
+          value={draft.language}
+          onChange={(e) => setDraft({ ...draft, language: e.target.value })}
         >
           {['English', 'Hindi', 'French', 'German', 'Spanish', 'Arabic', 'Chinese', 'Japanese', 'Portuguese'].map((l) => (
             <option key={l} value={l}>{l}</option>
@@ -977,337 +1043,143 @@ function SettingsContent({ settings, onChange }: { settings: RetrievalSettings; 
       <div style={{ padding: '16px 18px', borderRadius: 16, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.06)' }}>
         <Textarea
           label="Custom Agent System Instructions (optional)"
-          placeholder="e.g. You are an expert enterprise research assistant. Provide concise, bulleted responses with direct source page citations…"
+          placeholder="e.g. You are an expert enterprise research assistant. Provide concise, bulleted responses with direct source page citations..."
           rows={3}
-          value={settings.systemPrompt}
-          onChange={(e) => onChange({ ...settings, systemPrompt: e.target.value })}
+          value={draft.systemPrompt}
+          onChange={(e) => setDraft({ ...draft, systemPrompt: e.target.value })}
         />
       </div>
-    </div>
-  );
-}
 
-/* ── Chat History Content ── */
-interface ChatSession {
-  sessionId: string;
-  messages: ChatHistoryItem[];
-  firstQuery: string;
-  lastAnswer: string;
-  mode: string;
-  lastAt?: string;
-}
-
-function HistoryContent({
-  onSelectSession,
-  onClose,
-}: {
-  onSelectSession: (sessionId: string, messages: ChatHistoryItem[]) => void;
-  onClose?: () => void;
-}) {
-  const [history, setHistory] = useState<ChatHistoryItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchHistory = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const items = await queryApi.getHistory(100);
-      setHistory(items);
-    } catch (err) {
-      setError(parseApiError(err));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetchHistory();
-  }, [fetchHistory]);
-
-  // Group individual rows into sessions by session_id
-  const sessions = useMemo<ChatSession[]>(() => {
-    const map: Record<string, ChatHistoryItem[]> = {};
-    for (const row of history) {
-      const sid = row.session_id || row.id || 'legacy';
-      if (!map[sid]) map[sid] = [];
-      map[sid].push(row);
-    }
-
-    return Object.entries(map)
-      .map(([sid, msgs]) => {
-        const sorted = [...msgs].sort((a, b) => {
-          const timeA = a.created_at ? new Date(a.created_at).getTime() : 0;
-          const timeB = b.created_at ? new Date(b.created_at).getTime() : 0;
-          return timeA - timeB;
-        });
-        const lastMsg = sorted[sorted.length - 1];
-        return {
-          sessionId: sid,
-          messages: sorted,
-          firstQuery: sorted[0]?.query || 'Untitled Question',
-          lastAnswer: getCleanAnswerText(lastMsg?.answer || ''),
-          mode: sorted[0]?.query_mode || 'global',
-          lastAt: lastMsg?.created_at,
-        };
-      })
-      .sort((a, b) => {
-        const timeA = a.lastAt ? new Date(a.lastAt).getTime() : 0;
-        const timeB = b.lastAt ? new Date(b.lastAt).getTime() : 0;
-        return timeB - timeA;
-      });
-  }, [history]);
-
-  const filteredSessions = useMemo(() => {
-    if (!search.trim()) return sessions;
-    const s = search.toLowerCase();
-    return sessions.filter((session) =>
-      session.messages.some(
-        (m) =>
-          m.query?.toLowerCase().includes(s) ||
-          getCleanAnswerText(m.answer).toLowerCase().includes(s) ||
-          m.query_mode?.toLowerCase().includes(s)
-      )
-    );
-  }, [sessions, search]);
-
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, fontFamily: '"Inter", sans-serif', width: '100%' }}>
-      {/* Search & Refresh Bar */}
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-        <div style={{ position: 'relative', flex: 1 }}>
-          <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#5a5852', fontSize: '0.85rem' }}>🔍</span>
-          <input
-            type="text"
-            placeholder="Search past conversations by query, keywords or mode…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{
-              width: '100%',
-              height: 40,
-              padding: '0 14px 0 38px',
-              borderRadius: 12,
-              background: 'rgba(255,255,255,0.03)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              color: '#e8e6e0',
-              fontSize: '0.84rem',
-              outline: 'none',
-              fontFamily: 'inherit',
-              transition: 'border-color 0.18s ease',
-            }}
-            onFocus={(e) => (e.target.style.borderColor = 'rgba(70,183,255,0.4)')}
-            onBlur={(e) => (e.target.style.borderColor = 'rgba(255,255,255,0.08)')}
-          />
-        </div>
+      {/* 5. Action Footer with Apply & Reset Buttons */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          paddingTop: 16,
+          marginTop: 4,
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)',
+          gap: 12,
+          flexWrap: 'wrap',
+        }}
+      >
         <button
           type="button"
-          onClick={() => void fetchHistory()}
-          disabled={loading}
-          title="Refresh history"
+          onClick={handleReset}
           style={{
-            height: 40,
-            padding: '0 14px',
-            borderRadius: 12,
-            background: 'rgba(255,255,255,0.03)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            color: '#9a9690',
-            fontSize: '0.8rem',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.18s ease',
-            display: 'flex',
+            display: 'inline-flex',
             alignItems: 'center',
             gap: 6,
+            padding: '8px 14px',
+            borderRadius: 10,
+            fontSize: '0.8rem',
+            fontWeight: 500,
+            color: 'var(--muted)',
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.color = '#e8e6e0';
-            e.currentTarget.style.background = 'rgba(70,183,255,0.1)';
-            e.currentTarget.style.borderColor = 'rgba(70,183,255,0.25)';
+            e.currentTarget.style.color = 'var(--text)';
+            e.currentTarget.style.background = 'rgba(255,255,255,0.08)';
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.color = '#9a9690';
-            e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-            e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
+            e.currentTarget.style.color = 'var(--muted)';
+            e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
           }}
         >
-          <span>↻</span>
-          <span>Refresh</span>
+          Reset Defaults
         </button>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button
+            type="button"
+            onClick={onCancel}
+            style={{
+              padding: '8px 16px',
+              borderRadius: 10,
+              fontSize: '0.82rem',
+              fontWeight: 500,
+              color: 'var(--text-secondary)',
+              background: 'transparent',
+              border: '1px solid rgba(255,255,255,0.1)',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+            }}
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={handleApply}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '8px 20px',
+              borderRadius: 10,
+              fontSize: '0.82rem',
+              fontWeight: 600,
+              color: '#000',
+              background: 'linear-gradient(135deg, #00C2DE, #38bdf8)',
+              border: 'none',
+              cursor: 'pointer',
+              boxShadow: '0 2px 14px rgba(0, 194, 222, 0.35)',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-1px)';
+              e.currentTarget.style.boxShadow = '0 4px 18px rgba(0, 194, 222, 0.5)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 14px rgba(0, 194, 222, 0.35)';
+            }}
+          >
+            <Check size={14} />
+            Apply Settings
+          </button>
+        </div>
       </div>
-
-      {error && (
-        <div style={{ padding: '12px 14px', borderRadius: 12, background: 'var(--danger-dim)', border: '1px solid rgba(248,113,113,0.25)', color: 'var(--danger)', fontSize: '0.82rem' }}>
-          ⚠ {error}
-        </div>
-      )}
-
-      {loading && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 0' }}>
-          {[1, 2].map((i) => (
-            <div key={i} className="skeleton" style={{ height: 74, borderRadius: 14 }} />
-          ))}
-        </div>
-      )}
-
-      {!loading && filteredSessions.length === 0 && !error && (
-        <div style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
-          padding: '2.5rem 1.5rem',
-          borderRadius: 16,
-          background: 'rgba(255,255,255,0.015)',
-          border: '1px dashed rgba(255,255,255,0.07)',
-        }}>
-          <div style={{
-            width: 44,
-            height: 44,
-            borderRadius: '50%',
-            background: 'rgba(70,183,255,0.08)',
-            border: '1px solid rgba(70,183,255,0.18)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '1.15rem',
-            marginBottom: 10,
-          }}>
-            📜
-          </div>
-          <div style={{ fontSize: '0.92rem', fontWeight: 600, color: '#e8e6e0', marginBottom: 4, fontFamily: '"Bricolage Grotesque", "Inter", sans-serif' }}>
-            {search ? 'No matching conversations' : 'No chat history recorded yet'}
-          </div>
-          <p style={{ fontSize: '0.76rem', color: '#9a9690', maxWidth: 360, lineHeight: 1.5, margin: 0 }}>
-            {search ? `No questions or answers matched "${search}". Try searching with different keywords.` : 'Ask questions across your documents to automatically archive and restore multi-turn discussions here.'}
-          </p>
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              style={{
-                marginTop: 16,
-                padding: '6px 16px',
-                borderRadius: 999,
-                background: 'linear-gradient(135deg, #46b7ff, #8bf3e6)',
-                color: '#04121f',
-                fontSize: '0.78rem',
-                fontWeight: 700,
-                border: 'none',
-                cursor: 'pointer',
-                boxShadow: '0 0 14px rgba(70,183,255,0.25)',
-              }}
-            >
-              + Start a New Query
-            </button>
-          )}
-        </div>
-      )}
-
-      {!loading && filteredSessions.length > 0 && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, maxHeight: '380px', overflowY: 'auto', paddingRight: 4 }}>
-          {filteredSessions.map((session) => (
-            <div
-              key={session.sessionId}
-              onClick={() => onSelectSession(session.sessionId, session.messages)}
-              style={{
-                padding: '14px 16px',
-                borderRadius: 14,
-                background: 'rgba(255,255,255,0.025)',
-                border: '1px solid rgba(255,255,255,0.06)',
-                cursor: 'pointer',
-                transition: 'all 0.18s ease',
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(70,183,255,0.06)';
-                e.currentTarget.style.borderColor = 'rgba(70,183,255,0.25)';
-                e.currentTarget.style.transform = 'translateY(-1px)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.025)';
-                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
-                e.currentTarget.style.transform = 'translateY(0)';
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 6 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span
-                    style={{
-                      fontSize: '0.66rem',
-                      fontWeight: 700,
-                      textTransform: 'uppercase',
-                      padding: '2px 8px',
-                      borderRadius: 999,
-                      background: session.mode === 'global' ? 'rgba(70,183,255,0.12)' : 'rgba(255,255,255,0.05)',
-                      color: session.mode === 'global' ? '#46b7ff' : '#9a9690',
-                      border: session.mode === 'global' ? '1px solid rgba(70,183,255,0.25)' : '1px solid rgba(255,255,255,0.08)',
-                    }}
-                  >
-                    {session.mode === 'global' ? '🌐 Global' : session.mode === 'local' ? '💾 Session' : '🔀 Hybrid'}
-                  </span>
-                  <span style={{ fontSize: '0.7rem', color: '#9a9690' }}>
-                    {session.messages.length} interaction{session.messages.length !== 1 ? 's' : ''}
-                  </span>
-                </div>
-                {session.lastAt && (
-                  <span style={{ fontSize: '0.68rem', color: '#5a5852', fontFamily: 'Space Mono, monospace' }}>
-                    {new Date(session.lastAt).toLocaleDateString('en-IN', {
-                      day: '2-digit',
-                      month: 'short',
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    })}
-                  </span>
-                )}
-              </div>
-
-              <div style={{ fontSize: '0.86rem', fontWeight: 600, color: '#e8e6e0', marginBottom: 4, lineHeight: 1.35 }}>
-                {session.firstQuery}
-              </div>
-
-              <div
-                style={{
-                  fontSize: '0.74rem',
-                  color: '#9a9690',
-                  lineHeight: 1.45,
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  display: '-webkit-box',
-                  WebkitLineClamp: 2,
-                  WebkitBoxOrient: 'vertical',
-                }}
-              >
-                {session.lastAnswer}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
     </div>
   );
 }
 
-
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   CHAT PAGE
-─────────────────────────────────────────────────────────────────────────────── */
+/* --- CHAT PAGE --- */
 export function ChatPage() {
   const { user } = useAuth();
   const isMobile = useIsMobile(768);
   const displayName = user?.username || user?.email?.split('@')[0] || 'there';
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const { messages, setMessages, activeSessionId, setActiveSessionId, refreshSessions } = useChatSession();
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<UploadMode>('global');
   const [isLoading, setIsLoading] = useState(false);
   const [stage, setStage] = useState<Stage>('embedding');
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [isHistoryView, setIsHistoryView] = useState(false);
-  const [settings, setSettings] = useState<RetrievalSettings>({ topK: 5, vectorWeight: 0.7, language: 'English', systemPrompt: '' });
+  const [settings, setSettings] = useState<RetrievalSettings>(loadSavedSettings);
+  const [settingsSavedToast, setSettingsSavedToast] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  const handleApplySettings = (newSettings: RetrievalSettings) => {
+    setSettings(newSettings);
+    try {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(newSettings));
+    } catch {
+      /* ignore storage errors */
+    }
+    setSettingsOpen(false);
+    setSettingsSavedToast(true);
+    setTimeout(() => setSettingsSavedToast(false), 2500);
+  };
 
   const scrollToBottom = useCallback(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, []);
   useEffect(() => { scrollToBottom(); }, [messages, isLoading, scrollToBottom]);
@@ -1350,38 +1222,51 @@ export function ChatPage() {
 
       const res = await streamQuery(payload);
 
+      let collectedSources: Source[] = [];
+      let accumulatedAnswer = '';
+
       for await (const event of parseQuerySSEStream(res)) {
         if (event.event === 'sources') {
-          // Sources arrived → retrieval is done, generation is starting
+          collectedSources = event.data || [];
           setStage('generating');
           setMessages(m => m.map(msg =>
-            msg.id === assistantId ? { ...msg, streamingSources: event.data } : msg
+            msg.id === assistantId ? { ...msg, streamingSources: collectedSources } : msg
           ));
         } else if (event.event === 'token') {
+          accumulatedAnswer += event.data;
+          // Ensure stage transitions to 'generating' on first token even if sources arrive at the end
+          setStage('generating');
           setMessages(m => m.map(msg =>
             msg.id === assistantId
-              ? { ...msg, streamingAnswer: (msg.streamingAnswer ?? '') + event.data }
+              ? { ...msg, streamingAnswer: accumulatedAnswer }
               : msg
           ));
+        } else if (event.event === 'error') {
+          throw new Error(parseApiError(event.data || 'LLM generation failed.'));
         } else if (event.event === 'done') {
+          void refreshSessions();
           if (!activeSessionId && event.session_id) {
             setActiveSessionId(event.session_id);
           }
-          // Promote the streaming message to a final response message
+          // Promote the streaming message to a final response message and persist sources
           setMessages(m => m.map(msg => {
             if (msg.id !== assistantId) return msg;
+            const sourcesList = collectedSources.length > 0 ? collectedSources : (msg.streamingSources ?? []);
+            if (sourcesList.length > 0) {
+              saveSourcesToCache(event.session_id || activeSessionId || undefined, q, sourcesList);
+            }
             const finalResponse: QueryResponse = {
-              answer: msg.streamingAnswer ?? '',
+              answer: accumulatedAnswer || msg.streamingAnswer || '',
               query_mode: mode,
-              total_sources_found: (msg.streamingSources ?? []).length,
+              total_sources_found: sourcesList.length,
               language: settings.language,
               session_id: event.session_id,
-              sources: msg.streamingSources ?? [],
+              sources: sourcesList,
             };
             return {
               ...msg,
               isStreaming: false,
-              content: msg.streamingAnswer ?? '',
+              content: accumulatedAnswer || msg.streamingAnswer || '',
               response: finalResponse,
               animate: false, // already streamed in real time
             };
@@ -1397,7 +1282,7 @@ export function ChatPage() {
             ? {
                 ...msg,
                 type: 'error',
-                content: `Query failed: ${errMsg}`,
+                content: errMsg,
                 isStreaming: false,
                 streamingAnswer: undefined,
                 streamingSources: undefined,
@@ -1421,42 +1306,7 @@ export function ChatPage() {
     setIsHistoryView(false);
   };
 
-  const handleSelectSession = (sessionId: string, sessionMessages: ChatHistoryItem[]) => {
-    setHistoryOpen(false);
-    setIsHistoryView(true);
-    setActiveSessionId(sessionId);
-    setQuery('');
-
-    const loadedMessages: Message[] = [];
-    for (const item of sessionMessages) {
-      const userMsg: Message = {
-        id: safeUUID(),
-        type: 'user',
-        content: item.query,
-        timestamp: item.created_at ? new Date(item.created_at) : new Date(),
-      };
-      const mockResponse: QueryResponse = {
-        answer: item.answer,
-        language: 'English',
-        query_mode: (item.query_mode as 'global' | 'local' | 'both') || 'global',
-        session_id: sessionId,
-        sources: [],
-        total_sources_found: 0,
-      };
-      const assistantMsg: Message = {
-        id: safeUUID(),
-        type: 'assistant',
-        content: item.answer,
-        response: mockResponse,
-        timestamp: item.created_at ? new Date(item.created_at) : new Date(),
-        animate: false,
-      };
-      loadedMessages.push(userMsg, assistantMsg);
-    }
-    setMessages(loadedMessages);
-  };
-
-  /* ── Query Composer Form (Shared between floating center and docked bottom) ── */
+  /* ── Query Composer Form ── */
   const renderComposer = (isCentered: boolean = false) => (
     <form
       onSubmit={(e) => {
@@ -1486,47 +1336,6 @@ export function ChatPage() {
           paddingBottom: isMobile ? 2 : 0,
         }}
       >
-        {/* Prominent + (New Session) Button */}
-        <button
-          type="button"
-          onClick={handleNewChat}
-          title="Start a new session"
-          aria-label="New Session"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 5,
-            padding: isMobile ? '5px 11px' : '6px 14px',
-            borderRadius: 999,
-            fontSize: isMobile ? '0.72rem' : '0.76rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            transition: 'all 0.18s ease',
-            fontFamily: '"Inter", sans-serif',
-            background: 'linear-gradient(135deg, rgba(70,183,255,0.22), rgba(139,243,230,0.22))',
-            color: '#46b7ff',
-            border: '1px solid rgba(70,183,255,0.45)',
-            boxShadow: '0 0 14px rgba(70,183,255,0.25)',
-            flexShrink: 0,
-            whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, #46b7ff, #8bf3e6)';
-            e.currentTarget.style.color = '#04121f';
-            e.currentTarget.style.boxShadow = '0 0 20px rgba(70,183,255,0.55)';
-            e.currentTarget.style.transform = 'translateY(-1px)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'linear-gradient(135deg, rgba(70,183,255,0.22), rgba(139,243,230,0.22))';
-            e.currentTarget.style.color = '#46b7ff';
-            e.currentTarget.style.boxShadow = '0 0 14px rgba(70,183,255,0.25)';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}
-        >
-          <span style={{ fontSize: '0.95rem', lineHeight: 1, fontWeight: 800 }}>+</span>
-          <span>New Session</span>
-        </button>
-
         {/* 1. Knowledge Base */}
         <button
           type="button"
@@ -1538,10 +1347,10 @@ export function ChatPage() {
             background: mode === 'global' ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
             color: mode === 'global' ? '#04121f' : 'var(--muted)',
             border: mode === 'global' ? '1px solid var(--primary-glow)' : '1px solid var(--border)',
-            boxShadow: mode === 'global' ? '0 0 16px rgba(70,183,255,0.45)' : 'none',
+            boxShadow: mode === 'global' ? '0 0 16px rgba(0,194,222,0.45)' : 'none',
           }}
         >
-          🌐 Knowledge Base
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Globe size={14} /> Knowledge Base</span>
         </button>
 
         {/* 2. Sandbox */}
@@ -1555,10 +1364,10 @@ export function ChatPage() {
             background: mode === 'local' ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
             color: mode === 'local' ? '#04121f' : 'var(--muted)',
             border: mode === 'local' ? '1px solid var(--primary-glow)' : '1px solid var(--border)',
-            boxShadow: mode === 'local' ? '0 0 16px rgba(70,183,255,0.45)' : 'none',
+            boxShadow: mode === 'local' ? '0 0 16px rgba(0,194,222,0.45)' : 'none',
           }}
         >
-          💾 Sandbox
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Shield size={14} /> Sandbox</span>
         </button>
 
         {/* 3. Hybrid Fusions */}
@@ -1572,40 +1381,13 @@ export function ChatPage() {
             background: mode === 'both' ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
             color: mode === 'both' ? '#04121f' : 'var(--muted)',
             border: mode === 'both' ? '1px solid var(--primary-glow)' : '1px solid var(--border)',
-            boxShadow: mode === 'both' ? '0 0 16px rgba(70,183,255,0.45)' : 'none',
+            boxShadow: mode === 'both' ? '0 0 16px rgba(0,194,222,0.45)' : 'none',
           }}
         >
-          🔀 Hybrid Fusions
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Cpu size={14} /> Hybrid Fusions</span>
         </button>
 
         {!isCentered && !isMobile && <div style={{ flex: 1, minWidth: 8 }} />}
-
-        {/* 4. History Button */}
-        <button
-          type="button"
-          onClick={() => setHistoryOpen(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            padding: isMobile ? '5px 10px' : '6px 13px', borderRadius: 999,
-            fontSize: isMobile ? '0.70rem' : '0.74rem', color: 'var(--muted)',
-            background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
-            cursor: 'pointer', transition: 'all 0.18s',
-            fontFamily: '"Inter", sans-serif', flexShrink: 0,
-            fontWeight: 500, whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.color = 'var(--text)';
-            (e.currentTarget as HTMLElement).style.background = 'rgba(70,183,255,0.08)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(70,183,255,0.3)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
-            (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
-          }}
-        >
-          📜 <span>History</span>
-        </button>
 
         {/* 5. Settings Button */}
         <button
@@ -1622,8 +1404,8 @@ export function ChatPage() {
           }}
           onMouseEnter={e => {
             (e.currentTarget as HTMLElement).style.color = 'var(--text)';
-            (e.currentTarget as HTMLElement).style.background = 'rgba(70,183,255,0.08)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(70,183,255,0.3)';
+            (e.currentTarget as HTMLElement).style.background = 'rgba(0,194,222,0.08)';
+            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,194,222,0.3)';
           }}
           onMouseLeave={e => {
             (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
@@ -1631,7 +1413,7 @@ export function ChatPage() {
             (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
           }}
         >
-          ⚙ <span>Settings</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Settings size={14} /> <span>Settings</span></span>
         </button>
       </div>
 
@@ -1642,18 +1424,18 @@ export function ChatPage() {
           gap: isMobile ? 6 : 10,
           alignItems: 'flex-end',
           position: 'relative',
-          background: '#0f1014',
+          background: '#1A1A1B',
           borderRadius: isMobile ? 16 : 20,
           border: '1px solid rgba(255, 255, 255, 0.1)',
           padding: isMobile ? '6px 8px' : '8px 10px',
-          boxShadow: isCentered ? '0 24px 64px -12px rgba(0,0,0,0.8), 0 0 32px -8px rgba(70,183,255,0.18)' : '0 8px 24px rgba(0,0,0,0.4)',
+          boxShadow: isCentered ? '0 24px 64px -12px rgba(0,0,0,0.8), 0 0 32px -8px rgba(0,194,222,0.18)' : '0 8px 24px rgba(0,0,0,0.4)',
           transition: 'all 0.25s ease',
         }}
       >
         {/* Floating Slash Command Helper */}
         {query.startsWith('/') && (
-          <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, right: 0, padding: 8, borderRadius: 14, background: '#0f1014', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 36px rgba(0,0,0,0.8)', zIndex: 120, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ fontSize: '0.62rem', fontFamily: 'var(--font-mono)', color: '#6e7681', padding: '2px 8px' }}>RAG-AGENT SHORTCUT COMMANDS</div>
+          <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, right: 0, padding: 8, borderRadius: 14, background: '#1A1A1B', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 36px rgba(0,0,0,0.8)', zIndex: 120, display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ fontSize: '0.62rem', fontFamily: 'var(--font-mono)', color: '#6e7681', padding: '2px 8px' }}>ASKMYDOCSAI SHORTCUT COMMANDS</div>
             {[
               { cmd: '/search', label: 'Multi-hop semantic vector search' },
               { cmd: '/deep', label: 'Chain-of-thought deep reasoning' },
@@ -1664,10 +1446,10 @@ export function ChatPage() {
                 type="button"
                 onClick={() => setQuery(s.cmd + ' ')}
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '8px 10px', borderRadius: 8, background: 'rgba(255,255,255,0.03)', border: 'none', color: '#f0f6fc', cursor: 'pointer', textAlign: 'left' }}
-                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(70,183,255,0.15)'; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(0,194,222,0.15)'; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = 'rgba(255,255,255,0.03)'; }}
               >
-                <span style={{ fontFamily: 'var(--font-mono)', color: '#46b7ff', fontWeight: 600, fontSize: '0.78rem' }}>{s.cmd}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', color: '#00C2DE', fontWeight: 600, fontSize: '0.78rem' }}>{s.cmd}</span>
                 <span style={{ fontSize: '0.72rem', color: '#9da7b3' }}>{s.label}</span>
               </button>
             ))}
@@ -1683,7 +1465,7 @@ export function ChatPage() {
               void handleSubmit();
             }
           }}
-          placeholder={isMobile ? "Ask anything about documents…" : "Ask anything about your documents… (Type '/' for shortcuts, ↵ to submit)"}
+          placeholder={isMobile ? "Ask anything about documents..." : "Ask anything about your documents... (Type '/' for shortcuts, Enter to submit)"}
           rows={isCentered ? (isMobile ? 2 : 3) : (isMobile ? 1 : 2)}
           disabled={isLoading}
           style={{
@@ -1694,7 +1476,7 @@ export function ChatPage() {
             background: 'transparent',
             border: 'none',
             color: '#e8e6e0',
-            caretColor: '#46b7ff',
+            caretColor: '#00C2DE',
             fontSize: '16px',
             fontFamily: 'inherit',
             outline: 'none',
@@ -1705,43 +1487,36 @@ export function ChatPage() {
         />
         <Button
           type="submit"
-          variant="primary"
+          variant="solid-accent"
           loading={isLoading}
           disabled={!query.trim() || isLoading}
           className="flex-shrink-0 self-end"
           style={{
             height: isCentered ? (isMobile ? 38 : 42) : (isMobile ? 36 : 38),
             padding: isMobile ? '0 14px' : (isCentered ? '0 20px' : '0 16px'),
-            borderRadius: isCentered ? (isMobile ? 10 : 12) : 10,
             fontSize: isCentered ? (isMobile ? '0.80rem' : '0.86rem') : (isMobile ? '0.78rem' : '0.82rem'),
             fontWeight: 700,
-            background: 'linear-gradient(135deg, #46b7ff, #8bf3e6)',
-            color: '#04121f',
-            boxShadow: '0 0 18px rgba(70, 183, 255, 0.45)',
-            fontFamily: 'var(--font-heading)',
             marginBottom: 2,
           }}
         >
           {isLoading ? (
-            '…'
+            '...'
           ) : (
             <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
               <span>Query</span>
-              <span style={{ fontSize: isCentered ? '0.95rem' : '0.88rem', lineHeight: 1 }}>↵</span>
+              <CornerDownLeft size={13} />
             </span>
           )}
         </Button>
       </div>
 
       <p style={{ textAlign: 'center', fontSize: isMobile ? '0.62rem' : '0.68rem', color: 'var(--muted)', opacity: 0.7, fontFamily: 'var(--font-mono)' }}>
-        Rag-Agent Engine · Grounded across verified vectors & multi-hop citations.
+        Askmydocsai Engine • Grounded across verified vectors & multi-hop citations.
       </p>
     </form>
   );
 
-  /* ─────────────────────────────────────────────────────────────
-     RENDER: Centered Floating Query Box vs. Active Chat Thread
-  ───────────────────────────────────────────────────────────── */
+  /* --- RENDER: Centered Floating Query Box vs. Active Chat Thread --- */
   const isCenteredState = messages.length === 0 && !isLoading;
 
   return (
@@ -1753,14 +1528,14 @@ export function ChatPage() {
         fontFamily: '"Inter", sans-serif',
         position: 'relative',
         overflow: 'hidden',
-        background: '#07080a',
+        background: '#000000',
         color: '#e8e6e0',
       }}
     >
-      
-      {/* ── 1. CENTERED FLOATING STATE (Horizontal & Vertical Center) ── */}
+
+      {/* --- 1. CENTERED FLOATING STATE (Horizontal & Vertical Center) --- */}
       {isCenteredState ? (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '1.25rem 0.875rem' : '2rem 1.5rem', overflowY: 'auto', background: '#07080a' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: isMobile ? '1.25rem 0.875rem' : '2rem 1.5rem', overflowY: 'auto', background: '#000000' }}>
           <motion.div
             initial={{ opacity: 0, y: 24 }}
             animate={{ opacity: 1, y: 0 }}
@@ -1768,11 +1543,11 @@ export function ChatPage() {
             style={{ width: '100%', maxWidth: 760, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}
           >
             {/* Header Hero */}
-            <div style={{ width: isMobile ? 46 : 56, height: isMobile ? 46 : 56, borderRadius: isMobile ? 13 : 16, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isMobile ? '0.8rem' : '0.9rem', fontWeight: 900, color: '#04121f', background: 'linear-gradient(135deg, #46b7ff, #8bf3e6)', boxShadow: '0 0 28px rgba(70,183,255,0.4)', marginBottom: isMobile ? 12 : 18 }}>
-              RA
+            <div style={{ marginBottom: isMobile ? 12 : 18 }}>
+              <Logo size={isMobile ? "md" : "lg"} showText={false} />
             </div>
-            <h1 style={{ fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', fontSize: isMobile ? 'clamp(1.4rem, 5.5vw, 1.85rem)' : 'clamp(1.8rem, 4vw, 2.4rem)', fontWeight: 800, letterSpacing: '-0.03em', color: '#e8e6e0', marginBottom: 8, lineHeight: 1.15 }}>
-              Hello, {displayName}! What would you like to query?
+            <h1 style={{ fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', fontSize: isMobile ? 'clamp(1.4rem, 5.5vw, 1.85rem)' : 'clamp(1.8rem, 4vw, 2.4rem)', fontWeight: 600, letterSpacing: '-0.03em', color: '#e8e6e0', marginBottom: 8, lineHeight: 1.15 }}>
+              Hello, {displayName}. What would you like to query?
             </h1>
             <p style={{ fontSize: isMobile ? '0.82rem' : '0.92rem', color: '#9a9690', maxWidth: 480, margin: isMobile ? '0 auto 1.25rem' : '0 auto 2rem', lineHeight: 1.55 }}>
               Ask questions across your indexed knowledge base, extract data, or generate grounded synthesis with verified citations.
@@ -1810,9 +1585,9 @@ export function ChatPage() {
                     transition: 'all 0.18s ease',
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#46b7ff';
-                    e.currentTarget.style.borderColor = 'rgba(70,183,255,0.3)';
-                    e.currentTarget.style.background = 'rgba(70,183,255,0.08)';
+                    e.currentTarget.style.color = '#00C2DE';
+                    e.currentTarget.style.borderColor = 'rgba(0,194,222,0.3)';
+                    e.currentTarget.style.background = 'rgba(0,194,222,0.08)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.color = '#9a9690';
@@ -1827,10 +1602,10 @@ export function ChatPage() {
           </motion.div>
         </div>
       ) : (
-        /* ── 2. ACTIVE THREAD STATE WITH DOCKED COMPOSER ── */
+        /* --- 2. ACTIVE THREAD STATE WITH DOCKED COMPOSER --- */
         <>
           {/* Thread */}
-          <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '0.75rem 0.5rem 0.5rem' : '1rem 0.75rem 0.75rem', background: '#07080a' }}>
+          <div style={{ flex: 1, overflowY: 'auto', padding: isMobile ? '0.75rem 0.5rem 0.5rem' : '1rem 0.75rem 0.75rem', background: '#000000' }}>
             <div style={{ maxWidth: 760, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: isMobile ? 12 : 16 }}>
 
               {/* History View Banner */}
@@ -1838,10 +1613,10 @@ export function ChatPage() {
                 <div style={{
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '8px 14px', borderRadius: 10,
-                  background: 'rgba(70,183,255,0.06)', border: '1px solid rgba(70,183,255,0.2)',
+                  background: 'rgba(0,194,222,0.06)', border: '1px solid rgba(0,194,222,0.2)',
                   fontSize: '0.75rem', color: 'var(--muted)',
                 }}>
-                  <span>📜 Viewing saved history — type below to ask a new question</span>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><HistoryIcon size={14} /> Viewing saved history — type below to ask a new question</span>
                   <button
                     onClick={handleNewChat}
                     style={{
@@ -1851,17 +1626,23 @@ export function ChatPage() {
                       fontFamily: 'inherit', fontWeight: 600,
                     }}
                   >
-                    ✕ Clear
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><X size={12} /> Clear</span>
                   </button>
                 </div>
               )}
 
               <AnimatePresence initial={false}>
                 {messages.map((msg) => (
-                  <motion.div key={msg.id} initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.22 }}>
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity: 0, y: msg.type === 'user' ? 12 : 16, scale: msg.type === 'user' ? 0.97 : 1 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                    transition={{ type: 'spring', stiffness: 420, damping: 32, mass: 0.8 }}
+                  >
                     {msg.type === 'user' && (
                       <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-                        <div style={{ maxWidth: isMobile ? '88%' : '82%', padding: isMobile ? '8px 14px' : '10px 16px', borderRadius: '18px 18px 4px 18px', fontSize: isMobile ? '0.84rem' : '0.88rem', lineHeight: 1.55, background: 'linear-gradient(135deg, #46b7ff, #8bf3e6)', color: '#04121f', fontWeight: 600 }}>
+                        <div style={{ maxWidth: isMobile ? '88%' : '82%', padding: isMobile ? '8px 14px' : '10px 16px', borderRadius: '18px 18px 4px 18px', fontSize: isMobile ? '0.84rem' : '0.88rem', lineHeight: 1.55, background: '#0051C6', color: '#FFFFFF', fontWeight: 600 }}>
                           {msg.content}
                         </div>
                       </div>
@@ -1878,8 +1659,22 @@ export function ChatPage() {
                       />
                     )}
                     {msg.type === 'error' && (
-                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '12px 16px', borderRadius: 12, background: 'var(--danger-dim)', border: '1px solid rgba(248,113,113,0.22)', color: 'var(--danger)', fontSize: '0.85rem' }}>
-                        <span>⚠</span><span>{msg.content}</span>
+                      <div
+                        style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: 10,
+                          padding: '12px 14px',
+                          borderRadius: 10,
+                          background: 'rgba(245, 158, 11, 0.06)',
+                          border: '1px solid rgba(245, 158, 11, 0.18)',
+                          color: '#f59e0b',
+                          fontSize: '0.84rem',
+                          lineHeight: 1.5,
+                        }}
+                      >
+                        <AlertTriangle size={15} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 2 }} />
+                        <span style={{ flex: 1 }}>{parseApiError(msg.content)}</span>
                       </div>
                     )}
                   </motion.div>
@@ -1897,7 +1692,7 @@ export function ChatPage() {
               borderLeft: 'none', borderRight: 'none', borderBottom: 'none',
               borderTop: '1px solid rgba(255, 255, 255, 0.08)',
               padding: isMobile ? '0.5rem 0.625rem 0.625rem' : '0.75rem 1rem 1rem',
-              background: '#07080a',
+              background: '#000000',
             }}
           >
             {renderComposer(false)}
@@ -1907,14 +1702,48 @@ export function ChatPage() {
 
       {/* Settings Dialog Modal */}
       <Dialog open={settingsOpen} onClose={() => setSettingsOpen(false)} title="Retrieval Settings" maxWidth="580px">
-        {settingsOpen && <SettingsContent settings={settings} onChange={setSettings} />}
+        {settingsOpen && (
+          <SettingsContent
+            initialSettings={settings}
+            onApply={handleApplySettings}
+            onCancel={() => setSettingsOpen(false)}
+          />
+        )}
       </Dialog>
 
+      {/* Settings Applied Notification Toast (Unslopped: quiet surface step, no colored glow) */}
+      <AnimatePresence>
+        {settingsSavedToast && (
+          <motion.div
+            initial={{ opacity: 0, y: 12, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 12, scale: 0.96 }}
+            style={{
+              position: 'fixed',
+              bottom: 24,
+              right: 24,
+              zIndex: 350,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              padding: '10px 16px',
+              borderRadius: 8,
+              background: '#19191b',
+              border: '1px solid rgba(255, 255, 255, 0.12)',
+              boxShadow: '0 8px 24px rgba(0, 0, 0, 0.55)',
+              color: '#ededed',
+              fontSize: '0.82rem',
+              fontWeight: 500,
+            }}
+          >
+            <Check size={14} style={{ color: '#00C2DE' }} />
+            <span>Retrieval settings applied</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* History Dialog Modal */}
-      <Dialog open={historyOpen} onClose={() => setHistoryOpen(false)} title="Chat History" maxWidth="620px">
-        {historyOpen && <HistoryContent onSelectSession={handleSelectSession} onClose={() => setHistoryOpen(false)} />}
-      </Dialog>
-    </div>
+      </div>
   );
 }
 

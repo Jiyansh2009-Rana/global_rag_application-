@@ -160,7 +160,7 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                   </h2>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
                     <p style={{ fontSize: '0.74rem', color: 'var(--muted)' }}>
-                      How to use the Rag-Agent Platform &amp; Best Practices
+                      How to use the Askmydocsai Platform &amp; Best Practices
                     </p>
                     {loading && (
                       <span

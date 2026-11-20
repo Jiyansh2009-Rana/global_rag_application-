@@ -217,6 +217,7 @@ export const ChatHistoryItemSchema = z.object({
   answer:     z.string(),
   query_mode: z.string().optional(),
   created_at: z.string().optional(),
+  sources:    z.array(z.any()).optional(),
 });
 export type ChatHistoryItem = z.infer<typeof ChatHistoryItemSchema>;
 
@@ -242,15 +243,17 @@ export type UploadSSEEvent =
   | { status: 'extracting_text' }
   | { status: 'extraction_complete'; total_pages: number }
   | { status: 'processing_set'; set_id: string; pages: number[] }
-  | { status: 'set_complete'; report: { chunks_created: number } }
+  | { status: 'set_complete'; set_id?: string; report: { chunks_created: number; pages_newly_indexed?: number; pages_skipped?: number } }
   | { status: 'alias_detected'; message?: string }
-  | { status: 'upload_complete'; doc_id: string };
+  | { status: 'upload_complete'; doc_id: string; total_chunks?: number; pages_skipped?: number }
+  | { status: 'error'; message?: string };
 
 /* ── Query SSE Event Types ── */
 export type QuerySSEEvent =
   | { event: 'sources'; data: Source[] }
   | { event: 'token'; data: string }
-  | { event: 'done'; session_id: string };
+  | { event: 'done'; session_id: string }
+  | { event: 'error'; data: string };
 
 /* ── Per-file Upload Progress State (used in UploadPage) ── */
 export interface FileUploadState {
@@ -259,6 +262,7 @@ export interface FileUploadState {
   totalPages: number;
   processedPages: number;
   chunksCreated: number;
+  pagesSkipped: number;
   progress: number;           // 0–100
   docId: string | null;
   aliasDetected: boolean;

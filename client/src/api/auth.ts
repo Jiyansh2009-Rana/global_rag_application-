@@ -37,4 +37,29 @@ export const authApi = {
 
   me: () =>
     apiGet<UserMe>('/auth/me'),
+
+  // ── Google OAuth: Step 2 — fetch Google consent/authorization URL ──
+  // The backend constructs the full Google consent URL with scopes, client_id,
+  // redirect_uri, and CSRF state token. We redirect the browser there.
+  getGoogleAuthUrl: (redirectUri?: string) =>
+    apiGet<{ authorization_url: string }>(
+      redirectUri
+        ? `/auth/google/authorize-url?redirect_uri=${encodeURIComponent(redirectUri)}`
+        : '/auth/google/authorize-url',
+    ),
+
+  // ── Google OAuth: Step 4 — exchange authorization code for platform JWT ──
+  // After Google redirects back with ?code=..., the frontend sends that code
+  // here. The backend exchanges it with Google for an access token, fetches
+  // the user profile, then issues our own JWT cookies.
+  exchangeGoogleCode: (
+    authorizationCode: string,
+    redirectUri: string,
+    organizationIdentifier?: string,
+  ) =>
+    apiPost<LoginResponse>('/auth/google/exchange', {
+      authorization_code: authorizationCode,
+      redirect_uri: redirectUri,
+      organization_identifier: organizationIdentifier,
+    }),
 };

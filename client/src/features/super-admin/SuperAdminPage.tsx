@@ -1,5 +1,17 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Globe,
+  Building2,
+  Users,
+  FileText,
+  AlertTriangle,
+  RefreshCw,
+  Check,
+  Lock,
+  Unlock,
+} from 'lucide-react';
+
 import { useAuth } from '@/hooks/useContextHooks';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -14,18 +26,15 @@ import {
 import { parseApiError, BASE_URL, tokenStore } from '@/api/client';
 import type { SuperAdminUser, SuperAdminDocument, SuperAdminOrg } from '@/api/types';
 
-/* ─── shared glass card style ─── */
+/* --- shared glass card style --- */
 const glassPanel = {
-  background: 'linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(168,85,247,0.04) 50%, rgba(70,183,255,0.025) 100%)',
-  backdropFilter: 'blur(32px) saturate(170%)',
-  WebkitBackdropFilter: 'blur(32px) saturate(170%)',
-  border: '1px solid rgba(168,85,247,0.18)',
-  borderTopColor: 'rgba(255,255,255,0.22)',
-  borderRadius: 20,
-  boxShadow: '0 8px 40px rgba(0,0,0,0.50), 0 1px 0 rgba(255,255,255,0.10) inset, 0 0 0 1px rgba(168,85,247,0.08)',
+  background: '#1A1A1B',
+  border: '1px solid rgba(255, 255, 255, 0.10)',
+  borderRadius: 4,
+  boxShadow: '0 8px 28px rgba(0,0,0,0.45)',
 } as const;
 
-/* ─── capability matrix ─── */
+/* --- capability matrix --- */
 const GLOBAL_CAPABILITIES = [
   { capability: 'Query global index across own org',           user: true,  admin: true,  superAdmin: true  },
   { capability: 'Query local session index (Redis)',          user: true,  admin: true,  superAdmin: true  },
@@ -41,14 +50,11 @@ const GLOBAL_CAPABILITIES = [
 function Tick({ yes }: { yes: boolean }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-      <span style={{
-        fontSize: yes ? '1.05rem' : '0.85rem',
-        color: yes ? 'var(--success)' : 'var(--border)',
-        fontWeight: yes ? 700 : 400,
-        filter: yes ? 'drop-shadow(0 0 5px rgba(52,211,153,0.55))' : 'none',
-      }}>
-        {yes ? '✓' : '—'}
-      </span>
+      {yes ? (
+        <Check size={16} className="text-emerald-400" />
+      ) : (
+        <span style={{ fontSize: '0.85rem', color: 'var(--muted)', opacity: 0.4 }}>—</span>
+      )}
     </div>
   );
 }
@@ -66,7 +72,7 @@ function SectionCard({ children, title, subtitle, delay = 0 }: {
       transition={{ delay, duration: 0.38 }}
       style={{ ...glassPanel, padding: '1.5rem 1.5rem' }}
     >
-      <div style={{ marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(168,85,247,0.12)' }}>
+      <div style={{ marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(0,194,222,0.12)' }}>
         <h2 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: subtitle ? 4 : 0 }}>
           {title}
         </h2>
@@ -77,7 +83,7 @@ function SectionCard({ children, title, subtitle, delay = 0 }: {
   );
 }
 
-/* ── Inline status ── */
+/* --- Inline status --- */
 function StatusMsg({ msg, type }: { msg: string; type: 'error' | 'success' }) {
   return (
     <motion.div
@@ -90,13 +96,13 @@ function StatusMsg({ msg, type }: { msg: string; type: 'error' | 'success' }) {
         display: 'flex', alignItems: 'center', gap: 8,
       }}
     >
-      <span>{type === 'error' ? '⚠' : '✓'}</span>
+      <span>{type === "error" ? <AlertTriangle size={15} /> : <Check size={15} />}</span>
       {msg}
     </motion.div>
   );
 }
 
-/* ── Confirm-delete dialog ── */
+/* --- Confirm-delete dialog --- */
 function ConfirmDialog({
   message,
   onConfirm,
@@ -131,7 +137,7 @@ function ConfirmDialog({
           boxShadow: '0 20px 60px rgba(0,0,0,0.7), 0 0 30px rgba(248,113,113,0.15)',
         }}
       >
-        <div style={{ fontSize: '1.6rem', marginBottom: 12 }}>⚠️</div>
+        <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><AlertTriangle size={32} className="text-amber-400" /></div>
         <h3 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
           Super Admin Global Action
         </h3>
@@ -156,9 +162,9 @@ function ConfirmDialog({
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
+/* --- ----------------------------------------------------------------------
    TAB 1 — GLOBAL OVERVIEW
-════════════════════════════════════════════════════════════════════════ */
+------------------------------------------------------------------------ */
 function GlobalOverviewTab({
   users,
   documents,
@@ -186,18 +192,18 @@ function GlobalOverviewTab({
   }, [users]);
 
   const statCards = [
-    { label: 'Global Users', value: loading ? '—' : String(users.length), sub: `${adminCount} Admins / Super Admins`, icon: '◈', color: '#00d2c8' },
-    { label: 'Active Organisations', value: loading ? '—' : String(uniqueOrgs.length), sub: 'Isolated tenant boundaries', icon: '⊞', color: '#a855f7' },
-    { label: 'Global Documents', value: loading ? '—' : String(documents.length), sub: 'Permanently indexed on Neon', icon: '◆', color: '#38bdf8' },
-    { label: 'Total Pages Indexed', value: loading ? '—' : String(totalPages), sub: 'Chunked & vector embedded', icon: '⬡', color: '#34d399' },
+    { label: 'Global Users', value: loading ? '—' : String(users.length), sub: `${adminCount} Admins / Super Admins`, icon: 'users', color: '#00d2c8' },
+    { label: 'Active Organisations', value: loading ? '—' : String(uniqueOrgs.length), sub: 'Isolated tenant boundaries', icon: 'overview', color: '#00C2DE' },
+    { label: 'Global Documents', value: loading ? '—' : String(documents.length), sub: 'Permanently indexed on Neon', icon: 'docs', color: '#38bdf8' },
+    { label: 'Total Pages Indexed', value: loading ? '—' : String(totalPages), sub: 'Chunked & vector embedded', icon: 'pages', color: '#34d399' },
   ];
 
   const infrastructureInfo = [
-    { label: 'Global Vector Store',   value: 'pgvector on Neon PostgreSQL — multi-tenant isolation with global RLS policies', icon: '◆' },
-    { label: 'Session Indexing',      value: 'Redis Cluster — 3600s TTL per-session ephemeral vector cache', icon: '◷' },
-    { label: 'Auth & Audit Engine',   value: 'Supabase Registry + JWT HS256 with cross-tenant Super Admin escalation', icon: '⊠' },
-    { label: 'Embedding & LLM Model', value: 'Jina Clip v2 (1024-dim) + Groq LLaMA 3.3 70B Versatile with page citations', icon: '◈' },
-    { label: 'Super Admin Identity',  value: `${user?.email ?? '—'} (ID: ${user?.user_id ?? '—'})`, icon: '⚡' },
+    { label: 'Global Vector Store',   value: 'pgvector on Neon PostgreSQL — multi-tenant isolation with global RLS policies', icon: 'docs' },
+    { label: 'Session Indexing',      value: 'Redis Cluster — 3600s TTL per-session ephemeral vector cache', icon: 'redis' },
+    { label: 'Auth & Audit Engine',   value: 'Supabase Registry + JWT HS256 with cross-tenant Super Admin escalation', icon: 'auth' },
+    { label: 'Embedding & LLM Model', value: 'Jina Clip v2 (1024-dim) + Groq LLaMA 3.3 70B Versatile with page citations', icon: 'users' },
+    { label: 'Super Admin Identity',  value: `${user?.email ?? '—'} (ID: ${user?.user_id ?? '—'})`, icon: '' },
   ];
 
   return (
@@ -240,7 +246,7 @@ function GlobalOverviewTab({
         <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
           <table style={{ width: '100%', minWidth: 480, borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(168,85,247,0.18)' }}>
+              <tr style={{ borderBottom: '1px solid rgba(0,194,222,0.18)' }}>
                 <th style={{ textAlign: 'left', padding: '0 0 12px 0', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.10em', color: 'var(--muted)', fontWeight: 500, width: '48%' }}>Permission</th>
                 {['User', 'Admin', 'Super Admin'].map(r => (
                   <th key={r} style={{ padding: '0 8px 12px', textAlign: 'center', minWidth: 85 }}>
@@ -285,9 +291,9 @@ function GlobalOverviewTab({
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
+/* --- ----------------------------------------------------------------------
    TAB 2 — ORGANISATIONS MANAGEMENT & GOVERNANCE
-════════════════════════════════════════════════════════════════════════ */
+------------------------------------------------------------------------ */
 function OrganisationsTab({
   orgs,
   loading,
@@ -366,10 +372,8 @@ function OrganisationsTab({
                 boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
               }}
             >
-              <div style={{ fontSize: '1.6rem', marginBottom: 12 }}>
-                {actionOrg.is_disabled ? '🔓' : '⚠️'}
-              </div>
-              <h3 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
+              <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>{actionOrg.is_disabled ? <Unlock size={28} className="text-emerald-400" /> : <Lock size={28} className="text-amber-400" />}</div>
+        <h3 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1.05rem', fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
                 {actionOrg.is_disabled ? `Activate Organisation: ${actionOrg.org_id}` : `Suspend Organisation: ${actionOrg.org_id}`}
               </h3>
               <p style={{ fontSize: '0.82rem', color: 'var(--muted)', lineHeight: 1.6, marginBottom: 14 }}>
@@ -422,17 +426,17 @@ function OrganisationsTab({
         style={{ ...glassPanel, padding: '1.5rem 1.5rem' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(168,85,247,0.12)', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(0,194,222,0.12)', flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h2 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Organisation Access Governance
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-              {loading ? 'Loading…' : `${filteredOrgs.length} of ${orgs.length} organisations registered`}
+              {loading ? 'Loading...' : `${filteredOrgs.length} of ${orgs.length} organisations registered`}
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={onRefresh} disabled={loading}>
-            {loading ? 'Refreshing…' : '↻ Refresh'}
+            {loading ? 'Refreshing...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><RefreshCw size={13} /> Refresh</span>}
           </Button>
         </div>
 
@@ -450,7 +454,7 @@ function OrganisationsTab({
             onChange={e => setSearch(e.target.value)}
             style={{
               flex: 1, minWidth: 200, padding: '8px 12px', borderRadius: 10,
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(168,85,247,0.20)',
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(0,194,222,0.20)',
               color: 'var(--text)', fontSize: '0.78rem', outline: 'none',
               fontFamily: 'inherit',
             }}
@@ -461,7 +465,7 @@ function OrganisationsTab({
             onChange={e => setStatusFilter(e.target.value as any)}
             style={{
               padding: '8px 12px', borderRadius: 10,
-              background: 'rgba(20,20,30,0.85)', border: '1px solid rgba(168,85,247,0.20)',
+              background: 'rgba(20,20,30,0.85)', border: '1px solid rgba(0,194,222,0.20)',
               color: 'var(--text)', fontSize: '0.78rem', outline: 'none',
               cursor: 'pointer', fontFamily: 'inherit',
             }}
@@ -528,7 +532,7 @@ function OrganisationsTab({
                       background: org.is_disabled ? 'rgba(248,113,113,0.2)' : 'rgba(70,183,255,0.15)',
                       color: org.is_disabled ? 'var(--danger)' : 'var(--accent)',
                     }}>
-                      🏢
+                      <Building2 size={14} />
                     </div>
                     <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.82rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {org.org_id}
@@ -588,9 +592,9 @@ function OrganisationsTab({
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
+/* --- ----------------------------------------------------------------------
    TAB 3 — ALL USERS & ADMINS
-════════════════════════════════════════════════════════════════════════ */
+------------------------------------------------------------------------ */
 function AllUsersTab({
   users,
   loading,
@@ -645,7 +649,7 @@ function AllUsersTab({
       <AnimatePresence>
         {confirmId && (
           <ConfirmDialog
-            message={`Permanently delete user "${confirmUser?.email}" (${confirmUser?.role} · Org: ${confirmUser?.org_id ?? 'None'}) platform-wide? This cannot be undone.`}
+            message={`Permanently delete user "${confirmUser?.email}" (${confirmUser?.role} • Org: ${confirmUser?.org_id ?? 'None'}) platform-wide? This cannot be undone.`}
             onConfirm={() => void handleConfirmDelete()}
             onCancel={() => setConfirmId(null)}
             loading={deleting}
@@ -657,17 +661,17 @@ function AllUsersTab({
         style={{ ...glassPanel, padding: '1.5rem 1.5rem' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(168,85,247,0.12)', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(0,194,222,0.12)', flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h2 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Platform Users & Admins
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-              {loading ? 'Loading…' : `${filteredUsers.length} of ${users.length} cross-org accounts found`}
+              {loading ? 'Loading...' : `${filteredUsers.length} of ${users.length} cross-org accounts found`}
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={onRefresh} disabled={loading}>
-            {loading ? 'Refreshing…' : '↻ Refresh'}
+            {loading ? 'Refreshing...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><RefreshCw size={13} /> Refresh</span>}
           </Button>
         </div>
 
@@ -680,7 +684,7 @@ function AllUsersTab({
             onChange={e => setSearch(e.target.value)}
             style={{
               flex: 1, minWidth: 200, padding: '8px 12px', borderRadius: 10,
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(168,85,247,0.20)',
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(0,194,222,0.20)',
               color: 'var(--text)', fontSize: '0.78rem', outline: 'none',
               fontFamily: 'inherit',
             }}
@@ -691,7 +695,7 @@ function AllUsersTab({
             onChange={e => setRoleFilter(e.target.value)}
             style={{
               padding: '8px 12px', borderRadius: 10,
-              background: 'rgba(20,20,30,0.85)', border: '1px solid rgba(168,85,247,0.20)',
+              background: 'rgba(20,20,30,0.85)', border: '1px solid rgba(0,194,222,0.20)',
               color: 'var(--text)', fontSize: '0.78rem', outline: 'none',
               cursor: 'pointer', fontFamily: 'inherit',
             }}
@@ -707,7 +711,7 @@ function AllUsersTab({
             onChange={e => setOrgFilter(e.target.value)}
             style={{
               padding: '8px 12px', borderRadius: 10,
-              background: 'rgba(20,20,30,0.85)', border: '1px solid rgba(168,85,247,0.20)',
+              background: 'rgba(20,20,30,0.85)', border: '1px solid rgba(0,194,222,0.20)',
               color: 'var(--text)', fontSize: '0.78rem', outline: 'none',
               cursor: 'pointer', fontFamily: 'inherit',
             }}
@@ -765,8 +769,8 @@ function AllUsersTab({
                       alignItems: 'center',
                       padding: '12px 14px',
                       borderRadius: 13,
-                      background: isSelf ? 'rgba(168,85,247,0.09)' : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${isSelf ? 'rgba(168,85,247,0.30)' : 'rgba(255,255,255,0.06)'}`,
+                      background: isSelf ? 'rgba(0,194,222,0.09)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${isSelf ? 'rgba(0,194,222,0.30)' : 'rgba(255,255,255,0.06)'}`,
                       transition: 'background 0.18s',
                     }}
                   >
@@ -777,8 +781,8 @@ function AllUsersTab({
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                         fontSize: '0.75rem', fontWeight: 700, color: '#fff',
                         background: isSuper
-                          ? 'linear-gradient(135deg, #a855f7, #ec4899)'
-                          : 'linear-gradient(135deg, rgba(70,183,255,0.35), rgba(168,85,247,0.25))',
+                          ? 'linear-gradient(135deg, #00C2DE, #ec4899)'
+                          : 'linear-gradient(135deg, rgba(70,183,255,0.35), rgba(0,194,222,0.25))',
                         border: `1px solid ${isSuper ? '#ec4899' : 'rgba(70,183,255,0.3)'}`,
                       }}>
                         {displayName.charAt(0).toUpperCase()}
@@ -786,7 +790,7 @@ function AllUsersTab({
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {displayName}
-                          {isSelf && <span style={{ marginLeft: 6, fontSize: '0.62rem', color: '#a855f7', fontWeight: 600 }}>(you)</span>}
+                          {isSelf && <span style={{ marginLeft: 6, fontSize: '0.62rem', color: '#00C2DE', fontWeight: 600 }}>(you)</span>}
                         </div>
                         <div style={{ fontSize: '0.66rem', color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.email}</div>
                       </div>
@@ -843,9 +847,9 @@ function AllUsersTab({
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
+/* --- ----------------------------------------------------------------------
    TAB 3 — ALL GLOBAL DOCUMENTS
-════════════════════════════════════════════════════════════════════════ */
+------------------------------------------------------------------------ */
 function AllDocumentsTab({
   documents,
   loading,
@@ -886,7 +890,7 @@ function AllDocumentsTab({
 
   const fileExt = (name: string) => name.split('.').pop()?.toUpperCase() ?? 'FILE';
   const extColor: Record<string, string> = {
-    PDF: '#00d2c8', DOCX: '#a855f7', PPTX: '#f97316', XLSX: '#22c55e', TXT: '#94a3b8', PNG: '#ec4899', JPG: '#ec4899', JPEG: '#ec4899', HTML: '#eab308'
+    PDF: '#00d2c8', DOCX: '#00C2DE', PPTX: '#f97316', XLSX: '#22c55e', TXT: '#94a3b8', PNG: '#ec4899', JPG: '#ec4899', JPEG: '#ec4899', HTML: '#eab308'
   };
 
   const handleConfirmDelete = async () => {
@@ -971,17 +975,17 @@ function AllDocumentsTab({
         style={{ ...glassPanel, padding: '1.5rem 1.5rem' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(168,85,247,0.12)', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(0,194,222,0.12)', flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h2 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Global Platform Documents
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-              {loading ? 'Loading…' : `${filteredDocs.length} of ${documents.length} cross-org documents indexed`}
+              {loading ? 'Loading...' : `${filteredDocs.length} of ${documents.length} cross-org documents indexed`}
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={onRefresh} disabled={loading}>
-            {loading ? 'Refreshing…' : '↻ Refresh'}
+            {loading ? 'Refreshing...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><RefreshCw size={13} /> Refresh</span>}
           </Button>
         </div>
 
@@ -1003,7 +1007,7 @@ function AllDocumentsTab({
             onChange={e => setSearch(e.target.value)}
             style={{
               flex: 1, minWidth: 200, padding: '8px 12px', borderRadius: 10,
-              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(168,85,247,0.20)',
+              background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(0,194,222,0.20)',
               color: 'var(--text)', fontSize: '0.78rem', outline: 'none',
               fontFamily: 'inherit',
             }}
@@ -1014,7 +1018,7 @@ function AllDocumentsTab({
             onChange={e => setOrgFilter(e.target.value)}
             style={{
               padding: '8px 12px', borderRadius: 10,
-              background: 'rgba(20,20,30,0.85)', border: '1px solid rgba(168,85,247,0.20)',
+              background: 'rgba(20,20,30,0.85)', border: '1px solid rgba(0,194,222,0.20)',
               color: 'var(--text)', fontSize: '0.78rem', outline: 'none',
               cursor: 'pointer', fontFamily: 'inherit',
             }}
@@ -1101,7 +1105,7 @@ function AllDocumentsTab({
                     {/* Org */}
                     <div>
                       {doc.org_id ? (
-                        <span style={{ padding: '2px 7px', borderRadius: 6, background: 'rgba(168,85,247,0.10)', border: '1px solid rgba(168,85,247,0.25)', color: '#c084fc', fontSize: '0.70rem', fontWeight: 500 }}>
+                        <span style={{ padding: '2px 7px', borderRadius: 6, background: 'rgba(0,194,222,0.10)', border: '1px solid rgba(0,194,222,0.25)', color: '#c084fc', fontSize: '0.70rem', fontWeight: 500 }}>
                           {doc.org_id}
                         </span>
                       ) : '—'}
@@ -1132,8 +1136,8 @@ function AllDocumentsTab({
                         style={{
                           padding: '5px 9px',
                           borderRadius: 8,
-                          border: '1px solid rgba(168,85,247,0.30)',
-                          background: 'rgba(168,85,247,0.10)',
+                          border: '1px solid rgba(0,194,222,0.30)',
+                          background: 'rgba(0,194,222,0.10)',
                           color: '#c084fc',
                           fontSize: '0.70rem',
                           fontWeight: 600,
@@ -1146,7 +1150,7 @@ function AllDocumentsTab({
                           opacity: isCurrentViewing ? 0.6 : 1,
                         }}
                       >
-                        {isCurrentViewing ? '⏳…' : isViewable ? 'View ↗' : 'Download ↓'}
+                        {isCurrentViewing ? 'Loading...' : isViewable ? 'View Document' : 'Download File'}
                       </button>
 
                       <button
@@ -1179,14 +1183,14 @@ function AllDocumentsTab({
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
+/* --- ----------------------------------------------------------------------
    SUPER ADMIN PAGE — ROOT COMPONENT
-════════════════════════════════════════════════════════════════════════ */
+------------------------------------------------------------------------ */
 const TABS = [
-  { id: 'overview',      label: 'Global Overview',  icon: '⊞' },
-  { id: 'organisations', label: 'Organisations',    icon: '🏢' },
-  { id: 'users',         label: 'All Users & Admins', icon: '◈' },
-  { id: 'documents',     label: 'All Documents',    icon: '◆' },
+  { id: 'overview',      label: 'Global Overview',  icon: <Globe size={14} /> },
+  { id: 'organisations', label: 'Organisations',    icon: <Building2 size={14} /> },
+  { id: 'users',         label: 'All Users & Admins', icon: <Users size={14} /> },
+  { id: 'documents',     label: 'All Documents',    icon: <FileText size={14} /> },
 ] as const;
 type TabId = typeof TABS[number]['id'];
 
@@ -1206,9 +1210,9 @@ export function SuperAdminPage() {
         getSuperAdminUsers(),
         getSuperAdminDocuments(),
       ]);
-      setOrgs(o);
-      setUsers(u);
-      setDocuments(d);
+      setOrgs(o.organizations ?? []);
+      setUsers(u.users ?? []);
+      setDocuments(d.documents ?? []);
     } catch (err) {
       setStatusMsg({ msg: parseApiError(err), type: 'error' });
     } finally {
@@ -1260,39 +1264,27 @@ export function SuperAdminPage() {
         {/* Header */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{
-                width: 42, height: 42, borderRadius: 14, flexShrink: 0,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: '1.2rem',
-                background: 'linear-gradient(135deg, rgba(168,85,247,0.30), rgba(236,72,153,0.22))',
-                border: '1px solid rgba(168,85,247,0.35)',
-                boxShadow: '0 4px 20px rgba(168,85,247,0.25)',
-              }}>
-                ⚡
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <h1 style={{ fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', fontSize: '1.45rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', lineHeight: 1.2 }}>
+                  Super Admin Console
+                </h1>
+                <span style={{
+                  padding: '2px 8px', borderRadius: 999, fontSize: '0.62rem', fontWeight: 600,
+                  letterSpacing: '0.04em', textTransform: 'uppercase',
+                  background: 'rgba(236,72,153,0.12)', color: '#f472b6',
+                  border: '1px solid rgba(236,72,153,0.25)',
+                }}>
+                  Global Root
+                </span>
               </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <h1 style={{ fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif', fontSize: '1.5rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', lineHeight: 1.15 }}>
-                    Super Admin Console
-                  </h1>
-                  <span style={{
-                    padding: '2px 8px', borderRadius: 999, fontSize: '0.60rem', fontWeight: 700,
-                    letterSpacing: '0.08em', textTransform: 'uppercase',
-                    background: 'rgba(236,72,153,0.14)', color: '#f472b6',
-                    border: '1px solid rgba(236,72,153,0.30)',
-                  }}>
-                    Global Root
-                  </span>
-                </div>
-                <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 3 }}>
-                  Cross-organisation administration, tenant governance, and global data control.
-                </p>
-              </div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 4 }}>
+                Cross-organisation administration, tenant governance, and global data control.
+              </p>
             </div>
 
             <Button variant="ghost" size="sm" onClick={() => void loadAllData()} disabled={loading}>
-              {loading ? 'Refreshing…' : '↻ Refresh All'}
+              {loading ? 'Refreshing...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><RefreshCw size={13} /> Refresh All</span>}
             </Button>
           </div>
         </motion.div>
@@ -1311,7 +1303,7 @@ export function SuperAdminPage() {
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
           style={{
             display: 'flex', gap: 6, padding: 5, borderRadius: 16,
-            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(168,85,247,0.18)',
+            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(0,194,222,0.18)',
             boxShadow: '0 2px 10px rgba(0,0,0,0.35) inset', width: 'fit-content', flexWrap: 'wrap',
           }}
         >
@@ -1325,10 +1317,10 @@ export function SuperAdminPage() {
                 border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 fontSize: '0.80rem', fontWeight: 500, transition: 'all 0.2s ease',
                 background: activeTab === tab.id
-                  ? 'linear-gradient(135deg, rgba(168,85,247,0.22), rgba(70,183,255,0.14))'
+                  ? 'linear-gradient(135deg, rgba(0,194,222,0.22), rgba(70,183,255,0.14))'
                   : 'transparent',
                 color: activeTab === tab.id ? 'var(--text)' : 'var(--muted)',
-                outline: activeTab === tab.id ? '1px solid rgba(168,85,247,0.35)' : 'none',
+                outline: activeTab === tab.id ? '1px solid rgba(0,194,222,0.35)' : 'none',
                 boxShadow: activeTab === tab.id
                   ? '0 2px 10px rgba(0,0,0,0.32), 0 1px 0 rgba(255,255,255,0.08) inset'
                   : 'none',
@@ -1387,7 +1379,7 @@ export function SuperAdminPage() {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
           style={{ textAlign: 'center', fontSize: '0.65rem', color: 'var(--muted)', opacity: 0.38, letterSpacing: '0.04em' }}
         >
-          Super Admin Console · Cross-Tenant Global Access · Strict Audit Governance
+          Super Admin Console • Cross-Tenant Global Access • Strict Audit Governance
         </motion.p>
       </div>
     </div>

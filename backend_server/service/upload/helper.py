@@ -9,12 +9,14 @@ from datetime import datetime, timezone
 from typing import List, Optional, Dict, Any, Tuple
 import requests
 import pandas as pd
+import zipfile
 from bs4 import BeautifulSoup
 from docx import Document as DocxDocument
 from pptx import Presentation as PptxPresentation
 from pptx.enum.shapes import MSO_SHAPE_TYPE
 from pypdf import PdfReader
 from pdf2image import convert_from_bytes
+from PIL import Image
 import pytesseract
 from fastapi import HTTPException
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -185,6 +187,10 @@ def extract_docx_text(file_bytes: bytes) -> Tuple[str, int]:
             text = para.text.strip()
             if not text:
                 continue
+
+            style_name = ""
+            if getattr(para, "style", None) and getattr(para.style, "name", None):
+                style_name = str(para.style.name).lower()
             style_name = para.style.name.lower()
             if style_name.startswith('heading 1'):
                 text = f"# {text}"
@@ -193,14 +199,32 @@ def extract_docx_text(file_bytes: bytes) -> Tuple[str, int]:
             elif style_name.startswith('heading 3'):
                 text = f"### {text}"
             text_parts.append(text)
+        # 2. Extract table cell text
         for table in doc.tables:
             for row in table.rows:
                 row_data = [cell.text.replace('\n', ' ').strip() for cell in row.cells]
                 if any(row_data):
                     text_parts.append(" | ".join(row_data))
+        # 3. OCR Fallback for scanned / image-only DOCX documents
+        if not text_parts:
+            try:
+                for rel in doc.part.rels.values():
+                    if "image" in rel.target_ref:
+                        image_bytes = rel.target_part.blob
+                        img = Image.open(io.BytesIO(image_bytes))
+                        ocr_txt = pytesseract.image_to_string(img).strip()
+                        if ocr_txt:
+                            text_parts.append(ocr_txt)
+            except Exception as ocr_err:
+                logger.warning(f"DOCX image OCR extraction attempt: {ocr_err}")
         full_text = "\n".join(text_parts)
         block_count = len(doc.paragraphs) + sum(len(t.rows) for t in doc.tables)
-        return full_text, block_count
+        if not full_text.strip():
+            raise HTTPException(
+                status_code=400,
+                detail="DOCX extraction yielded 0 readable text. The document appears to contain scanned images or empty content."
+            )
+        return full_text, max(block_count, 1)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"DOCX extraction failed: {str(e)}")
 
@@ -208,6 +232,7 @@ def extract_xlsx_text(file_bytes: bytes) -> Tuple[str, int]:
     full_text_lines = []
     total_rows = 0
     try:
+        #normal rows text 
         try:
             excel_dict = pd.read_excel(io.BytesIO(file_bytes), sheet_name=None)
         except Exception:
@@ -223,15 +248,36 @@ def extract_xlsx_text(file_bytes: bytes) -> Tuple[str, int]:
                     if val:
                         row_parts.append(f"{col}: {val}")
                 full_text_lines.append(" | ".join(row_parts))
-        return "\n".join(full_text_lines), total_rows
+         # 2. OCR Fallback for embedded images in Excel (e.g. pasted screenshots of tables)
+        try:
+            with zipfile.ZipFile(io.BytesIO(file_bytes)) as z:
+                media_files = [f for f in z.namelist() if f.startswith("xl/media/") and f.lower().endswith((".png", ".jpg", ".jpeg", ".bmp"))]
+                for media_path in media_files:
+                    image_data = z.read(media_path)
+                    img = Image.open(io.BytesIO(image_data))
+                    ocr_res = pytesseract.image_to_string(img).strip()
+                    if ocr_res:
+                        full_text_lines.append(f"[Embedded Sheet Image OCR]:\n{ocr_res}")
+        except Exception as zip_err:
+            logger.debug(f"XLSX media inspection skipped or not an openxml zip: {zip_err}")
+        full_text = "\n".join(full_text_lines).strip()
+
+        if not full_text:
+            raise HTTPException(
+                status_code=400,
+                detail="Spreadsheet extraction yielded 0 readable data. If the sheet contains scanned images of tables, please ensure image text is legible or upload as PDF."
+            )
+        return full_text, max(total_rows, len(full_text_lines), 1)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Spreadsheet extraction failed: {str(e)}")
 
 def extract_text_from_shape(shape) -> str:
     text = ""
+    # 1. Standard text frame
     if hasattr(shape, "text") and shape.text:
         text += shape.text + "\n"
-    if shape.has_table:
+    # 2. Table cells
+    if getattr(shape, "has_table", False):
         for row in shape.table.rows:
             row_data = []
             for cell in row.cells:
@@ -239,25 +285,45 @@ def extract_text_from_shape(shape) -> str:
                 if cell_text:
                     row_data.append(cell_text)
             text += " | ".join(row_data) + "\n"
+    # 3. Group shapes (recursively inspect child shapes)
     if shape.shape_type == MSO_SHAPE_TYPE.GROUP:
         for child_shape in shape.shapes:
             text += extract_text_from_shape(child_shape)
+    # 4. OCR Fallback for Picture shapes
+    if shape.shape_type == MSO_SHAPE_TYPE.PICTURE or hasattr(shape, "image"):
+        try:
+            image_bytes = shape.image.blob
+            img = Image.open(io.BytesIO(image_bytes))
+            ocr_text = pytesseract.image_to_string(img).strip()
+            if ocr_text:
+                text += f"\n[Slide Image OCR]:\n{ocr_text}\n"
+        except Exception as ocr_err:
+            logger.warning(f"PPTX picture OCR failed on shape: {ocr_err}")
     return text
 
 def extract_pptx_text(file_bytes: bytes) -> Tuple[str, int]:
     try:
         prs = PptxPresentation(io.BytesIO(file_bytes))
         full_text = ""
+        total_slides = len(prs.slides)
         for slide_num, slide in enumerate(prs.slides, start=1):
             slide_text = f"Slide {slide_num}:\n"
             for shape in slide.shapes:
                 slide_text += extract_text_from_shape(shape)
+            # Speaker Notes
             if slide.has_notes_slide and slide.notes_slide.notes_text_frame:
                 notes = slide.notes_slide.notes_text_frame.text.strip()
                 if notes:
                     slide_text += f"\nSpeaker Notes:\n{notes}\n"
-            full_text += slide_text + "\n---SLIDE_BREAK---\n"
-        return full_text, len(prs.slides)
+            full_text += slide_text.strip() + "\n---SLIDE_BREAK---\n"
+
+        cleaned_text = full_text.replace("---SLIDE_BREAK---", "").strip()
+        if not cleaned_text:
+            raise HTTPException(
+                status_code=400,
+                detail="PPTX extraction yielded 0 readable text. If this presentation contains scanned slides or images, please ensure text is legible or upload as PDF."
+            )
+        return full_text, max(total_slides, 1)
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"PPTX extraction failed: {str(e)}")
 
@@ -425,6 +491,39 @@ def store_file_in_registry(
     except Exception as e:
         logger.error(f"Registry store error: {e}")
 
+def check_file_by_name_in_registry(file_name: str, org_id: str) -> Optional[Dict[str, Any]]:
+    """Look up an existing document in document_registry by its file_name and org_id for delta updates."""
+    if not supabase_client:
+        return None
+    try:
+        result = (
+            supabase_client.table("document_registry")
+            .select("*")
+            .eq("file_name", file_name)
+            .eq("org_id", org_id)
+            .execute()
+        )
+        if result.data:
+            return result.data[0]
+    except Exception as e:
+        logger.error(f"Registry lookup by name error: {e}")
+    return None
+
+def update_file_in_registry(
+    doc_id: str, file_hash_val: str, total_pages: int
+) -> None:
+    """Updates file_hash, total_pages, and timestamp for an existing document on delta update."""
+    if not supabase_client:
+        return
+    try:
+        supabase_client.table("document_registry").update({
+            "file_hash": file_hash_val,
+            "total_pages": total_pages,
+            "status": "ready",
+            "uploaded_at": datetime.now(timezone.utc).isoformat()
+        }).eq("id", doc_id).execute()
+    except Exception as e:
+        logger.error(f"Registry update error: {e}")
 
 def check_page_hash_in_registry(doc_id: str, page_num: int, page_hash_val: str) -> bool:
     if not supabase_client:
@@ -450,7 +549,6 @@ def store_page_hash(
     try:
         supabase_client.table("page_registry").delete().eq("document_id", doc_id).eq("page_number", page_num).execute()
         supabase_client.table("page_registry").insert({
-            "id": f"page_{uuid.uuid4().hex[:12]}",
             "document_id": doc_id,
             "page_number": page_num,
             "page_hash": page_hash_val,
@@ -487,18 +585,69 @@ def cleanup_removed_global_pages(doc_id: str, org_id: str, total_pages: int) -> 
         except Exception as e:
             logger.warning(f"Failed to cleanup removed page_registry rows: {e}")
 
-def store_raw_file_global_supabase(org_id: str, doc_id: str, filename: str, file_bytes: bytes) -> None:
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SAGA COMPENSATING ROLLBACK ACTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+def compensate_neon_chunks(doc_id: str, org_id: str, page_numbers: Optional[List[int]] = None) -> None:
+    """
+    Saga Compensating Action:
+    Deletes newly inserted chunks from Neon if Supabase metadata storage fails.
+    Prevents zombie/orphan vector chunks in Neon.
+    """
+    conn = get_neon_connection()
+    if not conn:
+        logger.critical(f"[Saga Compensate] Failed to connect to Neon for rollback of doc_id: {doc_id}")
+        return
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT set_config('app.current_org_id', %s, true)", (org_id,))
+            if page_numbers:
+                cur.execute(
+                    "DELETE FROM document_chunks WHERE document_id = %s AND page_number = ANY(%s)",
+                    (doc_id, page_numbers)
+                )
+            else:
+                cur.execute(
+                    "DELETE FROM document_chunks WHERE document_id = %s",
+                    (doc_id,)
+                )
+        conn.commit()
+        logger.info(f"[Saga Compensate] Successfully purged Neon chunks for doc_id: {doc_id}")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"[Saga Compensate] Failed to purge Neon chunks: {e}")
+    finally:
+        conn.close()
+
+
+def compensate_supabase_metadata(doc_id: str, org_id: str, filename: str, is_new_doc: bool = True) -> None:
+    """
+    Saga Compensating Action:
+    Purges uncommitted Supabase registry rows and storage if Neon vector writes fail.
+    """
     if not supabase_client:
         return
     try:
-        path = f"{org_id}/{doc_id}/{filename}"
-        supabase_client.storage.from_("global_documents").upload(
-            file=file_bytes,
-            path=path,
-            file_options={"x-upsert": "true", "content-type": "application/octet-stream"}
-        )
+        # 1. Purge page hashes for this document
+        supabase_client.table("page_registry").delete().eq("document_id", doc_id).execute()
+        
+        # 2. If it was a brand-new file, delete the document_registry row; if update, mark as failed
+        if is_new_doc:
+            supabase_client.table("document_registry").delete().eq("id", doc_id).execute()
+            # Clean up uploaded storage file if any
+            try:
+                folder_path = f"{org_id}/{doc_id}"
+                supabase_client.storage.from_("global_documents").remove([f"{folder_path}/{filename}"])
+            except Exception:
+                pass
+        else:
+            supabase_client.table("document_registry").update({"status": "failed_desync"}).eq("id", doc_id).execute()
+
+        logger.info(f"[Saga Compensate] Rolled back Supabase metadata for doc_id: {doc_id}")
     except Exception as e:
-        logger.error(f"Failed to store raw file in Supabase: {e}")
+        logger.error(f"[Saga Compensate] Failed to rollback Supabase metadata: {e}")
 
 def process_set_global(
     set_id: str,
@@ -582,7 +731,16 @@ def process_set_global(
         conn.commit()
 
         for page_num, p_hash_val in page_hash_map.items():
-            store_page_hash(doc_id, page_num, p_hash_val, page_chunk_ids[page_num], org_id)
+            try:
+                store_page_hash(doc_id, page_num, p_hash_val, page_chunk_ids[page_num], org_id)
+            except Exception as sb_err:
+                logger.error(f"[Saga Failure] Supabase page_registry failed on page {page_num}: {sb_err}")
+                # COMPENSATE: Delete the newly written Neon chunks for this set
+                compensate_neon_chunks(doc_id, org_id, list(page_hash_map.keys()))
+                raise HTTPException(
+                    status_code=503,
+                    detail="METADATA_STORE_UNAVAILABLE: Failed to persist page registry. Rolled back vector chunks."
+                )
 
     except Exception as e:
         conn.rollback()

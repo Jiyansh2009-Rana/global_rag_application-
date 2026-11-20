@@ -2,9 +2,16 @@ import { apiFetch } from './client';
 import type { OrgUser, OrgDocument, OrgSettingsResponse } from './types';
 
 /* ── GET /api/v1/admin/users ── */
-export async function getOrgUsers(): Promise<OrgUser[]> {
-  const res = await apiFetch<{ users: OrgUser[] }>('/admin/users', { method: 'GET' });
-  return res.users ?? [];
+export async function getOrgUsers(page = 1, limit = 30) {
+  return apiFetch<{
+    users: OrgUser[];
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+    has_next: boolean;
+    has_prev: boolean;
+  }>(`/admin/users?page=${page}&limit=${limit}`, { method: 'GET' });
 }
 
 /* ── PATCH /api/v1/admin/users/:id/permissions ── */

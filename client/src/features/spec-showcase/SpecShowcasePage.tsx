@@ -1,47 +1,64 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { Logo } from "@/components/common/Logo";
+import { Button } from "@/components/ui/Button";
+import { Check } from "lucide-react";
 
-const FEATURES = [
+const MODULES = [
   {
     icon: "◆",
     tag: "Chat Studio",
-    title: "Streaming RAG Conversations",
-    desc: "Multi-turn chat with real-time typewriter streaming, reasoning traces, and page-level citation pills linking back to source documents.",
-    color: "#46b7ff",
+    title: "Streaming Multi-Turn RAG",
+    desc: "Conversational document assistant featuring real-time Server-Sent Event streaming, transparent reasoning traces, and exact page-level citations.",
+    accent: "#00C2DE",
     page: "chat",
     items: [
-      "Slash commands /search /doc /deep /audit",
-      "Knowledge Base, Session & Hybrid modes",
+      "Targeted search across Global and Local Session indexes",
+      "Exact page & chunk similarity breakdown for zero hallucination",
       "Collapsible reasoning accordion with source preview",
     ],
   },
   {
     icon: "↑",
     tag: "Ingest Pipeline",
-    title: "Live Document Processing",
-    desc: "Drag-and-drop file ingestion with a 5-stage live pipeline stepper and interactive chunk visualizer to inspect every embedded fragment.",
-    color: "#8bf3e6",
+    title: "Real-Time Document Ingestion",
+    desc: "Drag-and-drop document processing pipeline with chunk visualization, duplicate content detection, and automated delta indexing.",
+    accent: "#0051C6",
     page: "upload",
     items: [
-      "PDF · DOCX · MD · TXT · PPTX support",
-      "Chunk preview with token counts & fragment IDs",
-      "pgvector HNSW indexing with live progress",
+      "PDF, DOCX, TXT, MD, and image format support",
+      "pgvector HNSW vector indexing with Supabase storage",
+      "Automated page hashing to prevent redundant embeddings",
+    ],
+  },
+  {
+    icon: "⊞",
+    tag: "Governance & Control",
+    title: "Multi-Tenant Enterprise Security",
+    desc: "Strict tenant data isolation and role-based access control protecting organization knowledge bases and auditing all actions.",
+    accent: "#00C2DE",
+    page: "admin",
+    items: [
+      "Super Admin, Admin, and User role separation",
+      "Global vs. private 1-hour session isolation",
+      "Complete user activity & document audit logging",
     ],
   },
 ];
 
-const STATS = [
-  { value: "<150ms", label: "Retrieval latency" },
-  { value: "1536-dim", label: "Embedding space" },
-  { value: "Hybrid", label: "Dense + BM25 search" },
-  { value: "Multi-tenant", label: "Row-level isolation" },
+/* Real architectural pillars without any hardcoded fake numbers */
+const PILLARS = [
+  { value: "Hybrid", label: "Dense Vector + Lexical Search" },
+  { value: "pgvector", label: "Neon HNSW Indexing" },
+  { value: "Multi-Tenant", label: "Row-Level Quarantined Access" },
+  { value: "Real-Time", label: "Token-by-Token SSE Stream" },
 ];
 
-const TECH = [
-  "Vector Search", "RAG Pipeline", "pgvector HNSW", "FastAPI", "OpenAI Embeddings",
-  "Streaming SSE", "BM25 Sparse", "Cross-Encoder Rerank", "Multi-tenant",
-  "Vector Search", "RAG Pipeline", "pgvector HNSW", "FastAPI", "OpenAI Embeddings",
-  "Streaming SSE", "BM25 Sparse", "Cross-Encoder Rerank", "Multi-tenant",
+const STACK = [
+  "FastAPI", "Neon PostgreSQL", "pgvector HNSW", "Supabase", "Jina Embeddings",
+  "Groq LLM", "Redis Session Store", "React 18", "Vite", "Tailwind CSS",
+  "FastAPI", "Neon PostgreSQL", "pgvector HNSW", "Supabase", "Jina Embeddings",
+  "Groq LLM", "Redis Session Store", "React 18", "Vite", "Tailwind CSS",
 ];
 
 interface Props {
@@ -52,331 +69,305 @@ export function SpecShowcasePage({ onOpenApp }: Props) {
   const [hovered, setHovered] = useState<number | null>(null);
 
   const scrollVariant = {
-    hidden: { opacity: 0, y: 35 },
+    hidden: { opacity: 0, y: 25 },
     visible: {
       opacity: 1,
       y: 0,
-      transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] },
+      transition: { duration: 0.6, ease: [0.16, 1, 0.3, 1] },
     },
   };
 
   return (
-    <div style={{ background: "#07080a", color: "#e8e6e0", minHeight: "100vh", overflowX: "hidden" }}>
+    <div style={{ background: "#000000", color: "#FFFFFF", minHeight: "100vh", overflowX: "hidden", fontFamily: '"Open Sans", sans-serif' }}>
 
-      {/* ── HERO SECTION WITH SMOOTH REVEAL ── */}
-      <section style={{ position: "relative", overflow: "hidden" }}>
-        <div style={{ position: "absolute", inset: 0, background: "radial-gradient(ellipse 60% 50% at 50% 0%, rgba(70,183,255,0.18) 0%, transparent 70%), radial-gradient(ellipse 45% 35% at 80% 20%, rgba(139,243,230,0.08) 0%, transparent 60%)", pointerEvents: "none", zIndex: 0 }} />
-        <div style={{ position: "absolute", inset: 0, backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E\")", backgroundRepeat: "repeat", backgroundSize: "200px 200px", opacity: 0.1, mixBlendMode: "overlay", pointerEvents: "none", zIndex: 1 }} />
-        <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 160, background: "linear-gradient(to bottom, transparent, #07080a)", zIndex: 2, pointerEvents: "none" }} />
+      {/* ── HERO SECTION WITH AUTHENTIC AMD WAVE BACKGROUND ── */}
+      <section style={{ position: "relative", overflow: "hidden", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
+        {/* Authentic AMD Wave Photo Asset from amd.com */}
+        <div className="amd-wave-backdrop amd-wave-animated" />
+        <div className="amd-wave-vignette" />
 
-        <div style={{ position: "relative", zIndex: 10, maxWidth: 840, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "clamp(3.5rem, 8vw, 7rem) 1rem 3.5rem" }}>
+        <div style={{ position: "relative", zIndex: 10, maxWidth: 960, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "clamp(4.5rem, 9vw, 8.5rem) 1.5rem 5rem" }}>
 
-          {/* Announcement pill with reveal */}
+          {/* Logo badge with soft entrance */}
           <motion.div
-            initial={{ opacity: 0, y: -16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, ease: "easeOut" }}
+            initial={{ opacity: 0, scale: 0.96 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            style={{ marginBottom: "2rem" }}
           >
-            <a
-              href="#features"
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "6px 14px",
-                borderRadius: 9999,
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.1)",
-                fontSize: "0.72rem",
-                fontFamily: "Space Mono, monospace",
-                textTransform: "uppercase",
-                letterSpacing: "0.08em",
-                color: "#9a9690",
-                textDecoration: "none",
-                marginBottom: "1.5rem",
-                backdropFilter: "blur(8px)",
-              }}
-            >
-              <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#8bf3e6", display: "inline-block" }} />
-              Hybrid Vector · BM25 · Cross-Encoder Rerank
-              <span style={{ color: "#5a5852" }}>→</span>
-            </a>
+            <Logo size="lg" showText={false} />
           </motion.div>
 
-          {/* Main Hero title with reveal */}
-          <motion.h1
-            initial={{ opacity: 0, y: 24 }}
+          {/* Announcement pill (Pill capsule shape) */}
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.75, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: 0.5, delay: 0.1, ease: [0.16, 1, 0.3, 1] }}
+          >
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: '5px 14px',
+                borderRadius: 9999,
+                background: 'rgba(255, 255, 255, 0.04)',
+                border: '1px solid rgba(0, 194, 222, 0.3)',
+                fontSize: '0.74rem',
+                fontFamily: '"Space Mono", monospace',
+                letterSpacing: '0.04em',
+                color: '#00C2DE',
+                marginBottom: '1.75rem',
+              }}
+            >
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00C2DE', display: 'inline-block' }} />
+              Enterprise Document Intelligence Platform
+            </div>
+          </motion.div>
+
+          {/* Main Hero title with AMD Boldness */}
+          <motion.h1
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
             style={{
-              fontFamily: '"Bricolage Grotesque", "Inter", sans-serif',
-              fontSize: "clamp(2.2rem, 8.5vw, 5.2rem)",
-              fontWeight: 800,
-              lineHeight: 1.02,
-              letterSpacing: "-0.03em",
-              color: "#e8e6e0",
-              marginBottom: "1.25rem",
+              fontSize: "clamp(2.5rem, 6.5vw, 4.8rem)",
+              fontWeight: 700,
+              lineHeight: 1.05,
+              letterSpacing: "-0.025em",
+              color: "#FFFFFF",
+              marginBottom: "1.5rem",
             }}
           >
-            <span>Query your docs<br />with the power of </span>
-            <span style={{ color: "#46b7ff" }}>intelligence.</span>
+            <span>Ask questions across docs<br />with </span>
+            <span style={{ color: "#00C2DE" }}>deterministic precision.</span>
           </motion.h1>
 
-          {/* Subtext */}
+          {/* Subtext on calm contrast space */}
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.75, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-            style={{ maxWidth: 540, fontSize: "clamp(0.92rem, 2.5vw, 1.12rem)", lineHeight: 1.65, color: "#9a9690", marginBottom: "2rem" }}
+            transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
+            style={{ maxWidth: 640, fontSize: "clamp(1rem, 2vw, 1.15rem)", lineHeight: 1.6, color: "#9D9FA2", marginBottom: "2.75rem" }}
           >
-            Upload documents, ask complex multi-turn questions, and receive precise citations with grounded source verification in real-time.
+            Askmydocsai blends dense vector search with lexical matching and automated delta indexing to deliver verifiable answers with exact source page citations.
           </motion.p>
 
-          {/* Action buttons */}
+          {/* Action buttons (Chamfered Tech & Capsule Pill Shapes) */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 14 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.75, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-            style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 12, marginBottom: "2.5rem" }}
+            transition={{ duration: 0.7, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
+            style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 14, marginBottom: "3rem" }}
           >
-            <button
+            {/* Primary Action Button: Asymmetric Chamfered Shape */}
+            <Button
+              variant="primary"
+              size="lg"
               onClick={() => onOpenApp?.("chat")}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "12px 28px",
-                borderRadius: 9999,
-                background: "#e8e6e0",
-                color: "#07080a",
-                fontSize: "0.9rem",
-                fontWeight: 600,
-                fontFamily: "Inter, sans-serif",
-                border: "none",
-                cursor: "pointer",
-                transition: "background 0.2s, transform 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#ffffff";
-                e.currentTarget.style.transform = "translateY(-1px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#e8e6e0";
-                e.currentTarget.style.transform = "none";
-              }}
             >
-              Get Started / Sign In →
-            </button>
-            <button
-              onClick={() => onOpenApp?.("chat")}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "12px 28px",
-                borderRadius: 9999,
-                background: "transparent",
-                color: "#e8e6e0",
-                fontSize: "0.9rem",
-                fontWeight: 500,
-                fontFamily: "Inter, sans-serif",
-                border: "1px solid rgba(255,255,255,0.16)",
-                cursor: "pointer",
-                transition: "background 0.2s",
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.04)"; }}
-              onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
-            >
-              Explore Features
-            </button>
-          </motion.div>
+              Launch Workspace →
+            </Button>
 
-          {/* Social Proof */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-            style={{ display: "flex", alignItems: "center", gap: 12, fontSize: "0.875rem", color: "#9a9690" }}
-          >
-            <div style={{ display: "flex" }}>
-              {["#2e7dff","#8bf3e6","#46b7ff","#a78bfa"].map((c, i) => (
-                <span key={i} style={{ width: 28, height: 28, borderRadius: "50%", border: "2px solid #07080a", marginLeft: i === 0 ? 0 : -8, background: `radial-gradient(circle at 30% 30%, ${c}, #07080a)`, display: "inline-block" }} />
-              ))}
-            </div>
-            <span><strong style={{ color: "#e8e6e0" }}>Enterprise-grade</strong> document intelligence</span>
+            {/* Secondary Action Button: Capsule Pill Shape */}
+            <Button
+              variant="pill"
+              size="lg"
+              onClick={() => {
+                const el = document.getElementById("modules");
+                el?.scrollIntoView({ behavior: "smooth" });
+              }}
+            >
+              Architecture Overview ↓
+            </Button>
           </motion.div>
         </div>
       </section>
 
-      {/* ── TECH MARQUEE STRIP WITH SCROLL REVEAL ── */}
-      <motion.div
-        variants={scrollVariant}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
-        style={{ borderTop: "1px solid rgba(255,255,255,0.08)", borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "18px 0", overflow: "hidden" }}
-      >
-        <div style={{ display: "flex", gap: 56, whiteSpace: "nowrap", width: "max-content", animation: "marquee 32s linear infinite", maskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)", WebkitMaskImage: "linear-gradient(to right, transparent, black 8%, black 92%, transparent)" }}>
-          {TECH.map((item, i) => (
-            <span key={i} style={{ fontFamily: "Space Mono, monospace", fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.1em", color: "#5a5852" }}>
-              {item}<span style={{ marginLeft: 56, color: "rgba(255,255,255,0.1)" }}>✦</span>
+      {/* ── TECH MARQUEE STRIP ── */}
+      <div style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", padding: "16px 0", overflow: "hidden", background: "#080809" }}>
+        <div style={{ display: "flex", gap: 56, whiteSpace: "nowrap", width: "max-content", animation: "marquee 32s linear infinite" }}>
+          {STACK.map((item, i) => (
+            <span key={i} style={{ fontFamily: '"Space Mono", monospace', fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6C757D" }}>
+              {item}<span style={{ marginLeft: 56, color: "rgba(0,194,222,0.35)" }}>✦</span>
             </span>
           ))}
         </div>
-      </motion.div>
+      </div>
 
-      {/* ── CORE CAPABILITIES (Vector Audit completely deleted) WITH SCROLL REVEAL ── */}
+      {/* ── ARCHITECTURAL PILLARS (Modern Elevated Glass Cards) ── */}
+      <section style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "#0c0d0e" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", padding: "3rem 1.5rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
+          {PILLARS.map((p, i) => (
+            <motion.div
+              key={i}
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+              whileHover={{ y: -4, borderColor: "rgba(0,194,222,0.4)" }}
+              className="card-feature-modern"
+              style={{
+                padding: "1.75rem 1.5rem",
+                textAlign: "left",
+                background: "rgba(22, 23, 25, 0.9)",
+                borderRadius: "16px",
+                border: "1px solid rgba(255, 255, 255, 0.09)",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.3)",
+              }}
+            >
+              <div style={{ fontSize: "1.45rem", fontWeight: 700, color: "#00C2DE", marginBottom: "0.35rem" }}>
+                {p.value}
+              </div>
+              <div style={{ fontSize: "0.82rem", color: "#9D9FA2", lineHeight: 1.4 }}>
+                {p.label}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── MODULE CARDS (Modern Rounded Feature Cards with Staggered Scroll Reveal) ── */}
       <motion.section
-        id="features"
+        id="modules"
         variants={scrollVariant}
         initial="hidden"
         whileInView="visible"
         viewport={{ once: true, amount: 0.15 }}
-        style={{ maxWidth: 1100, margin: "0 auto", padding: "clamp(3rem, 6vw, 5rem) 1rem" }}
+        style={{ maxWidth: 1200, margin: "0 auto", padding: "clamp(3.5rem, 6vw, 6rem) 1.5rem" }}
       >
-        <div style={{ marginBottom: "2.5rem", textAlign: "center" }}>
-          <p style={{ fontFamily: "Space Mono, monospace", fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.12em", color: "#8bf3e6", marginBottom: "0.75rem" }}>
-            Platform Modules
+        <div style={{ marginBottom: "3rem", textAlign: "left" }}>
+          <p style={{ fontFamily: '"Space Mono", monospace', fontSize: "0.75rem", textTransform: "uppercase", letterSpacing: "0.12em", color: "#00C2DE", marginBottom: "0.5rem" }}>
+            Core Modules
           </p>
-          <h2 style={{ fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', fontSize: "clamp(1.75rem, 5vw, 3rem)", fontWeight: 800, letterSpacing: "-0.03em", color: "#e8e6e0" }}>
-            Enterprise Document Intelligence
+          <h2 style={{ fontSize: "clamp(1.8rem, 4vw, 2.6rem)", fontWeight: 700, letterSpacing: "-0.02em", color: "#FFFFFF" }}>
+            Designed for High-Consequence Workspaces
           </h2>
         </div>
 
-        {/* 2-column feature grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 18 }}>
-          {FEATURES.map((f, i) => (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
+          {MODULES.map((m, i) => (
             <motion.div
               key={i}
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 24 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.6, delay: i * 0.15, ease: [0.22, 1, 0.36, 1] }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.55, delay: i * 0.1, ease: [0.16, 1, 0.3, 1] }}
+              className="card-feature-modern"
               onMouseEnter={() => setHovered(i)}
               onMouseLeave={() => setHovered(null)}
               style={{
-                position: "relative",
-                overflow: "hidden",
-                background: "#0f1014",
-                border: `1px solid ${hovered === i ? "rgba(255,255,255,0.16)" : "rgba(255,255,255,0.08)"}`,
-                borderRadius: 18,
-                padding: "clamp(1.25rem, 4vw, 2rem)",
-                cursor: "pointer",
-                transition: "border-color 0.4s, transform 0.5s cubic-bezier(0.22,1,0.36,1), box-shadow 0.5s cubic-bezier(0.22,1,0.36,1)",
-                transform: hovered === i ? "translateY(-4px)" : "none",
-                boxShadow: hovered === i ? "0 18px 60px -18px rgba(70,183,255,0.4)" : "none",
+                padding: "2.25rem 2rem",
+                display: "flex",
+                flexDirection: "column",
+                justifyContent: "space-between",
+                background: "rgba(24, 25, 27, 0.88)",
+                borderRadius: "16px",
+                border: hovered === i ? "1px solid rgba(0,194,222,0.35)" : "1px solid rgba(255,255,255,0.08)",
+                boxShadow: hovered === i ? "0 12px 32px rgba(0,0,0,0.6)" : "0 4px 16px rgba(0,0,0,0.3)",
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
-                <p style={{ fontFamily: "Space Mono, monospace", fontSize: "0.68rem", textTransform: "uppercase", letterSpacing: "0.12em", color: "#8bf3e6" }}>{f.tag}</p>
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 10px", borderRadius: 9999, fontSize: "0.65rem", fontWeight: 600, border: `1px solid ${f.color}55`, background: `${f.color}15`, color: f.color, fontFamily: "Space Mono, monospace" }}>Active</span>
+              <div>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem" }}>
+                  <span style={{ fontSize: "0.72rem", fontWeight: 600, letterSpacing: "0.06em", color: m.accent, fontFamily: '"Space Mono", monospace' }}>
+                    {m.tag}
+                  </span>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: m.accent }} />
+                </div>
+
+                <h3 style={{ fontSize: "1.25rem", fontWeight: 700, color: "#FFFFFF", marginBottom: "0.75rem" }}>
+                  {m.title}
+                </h3>
+                <p style={{ fontSize: "0.88rem", color: "#9D9FA2", lineHeight: 1.6, marginBottom: "1.5rem" }}>
+                  {m.desc}
+                </p>
+
+                <ul style={{ listStyle: "none", padding: 0, margin: 0, display: "flex", flexDirection: "column", gap: 10 }}>
+                  {m.items.map((item, j) => (
+                    <li key={j} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: "0.82rem", color: "#ADB5BD" }}>
+                      <Check size={14} className="text-[#00C2DE] mt-0.5 shrink-0" />
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <div style={{ width: 48, height: 48, borderRadius: 14, display: "flex", alignItems: "center", justifyContent: "center", background: `${f.color}15`, border: `1px solid ${f.color}28`, fontSize: "1.4rem", marginBottom: "1.25rem" }}>{f.icon}</div>
-              <h3 style={{ fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', fontSize: "1.25rem", fontWeight: 700, letterSpacing: "-0.02em", color: "#e8e6e0", marginBottom: "0.75rem" }}>{f.title}</h3>
-              <p style={{ fontSize: "0.9rem", color: "#9a9690", lineHeight: 1.65, marginBottom: "1.5rem" }}>{f.desc}</p>
-              <ul style={{ listStyle: "none", display: "flex", flexDirection: "column", gap: 8 }}>
-                {f.items.map((item, j) => (
-                  <li key={j} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.82rem", color: "#9a9690" }}>
-                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: f.color, flexShrink: 0 }} />{item}
-                  </li>
-                ))}
-              </ul>
-              <button
-                onClick={() => onOpenApp?.("chat")}
-                style={{
-                  marginTop: "1.75rem",
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 6,
-                  fontSize: "0.85rem",
-                  fontWeight: 600,
-                  color: f.color,
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  padding: 0,
-                  fontFamily: "Inter, sans-serif",
-                }}
-              >
-                Launch {f.tag} →
-              </button>
+
+              <div style={{ marginTop: "2rem", paddingTop: "1.25rem", borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <button
+                  onClick={() => onOpenApp?.(m.page)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    background: "none",
+                    border: "none",
+                    color: "#FFFFFF",
+                    fontSize: "0.88rem",
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    padding: 0,
+                    transition: "color 140ms ease, transform 140ms ease",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.color = "#00C2DE";
+                    e.currentTarget.style.transform = "translateX(2px)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.color = "#FFFFFF";
+                    e.currentTarget.style.transform = "translateX(0)";
+                  }}
+                >
+                  Open {m.tag} →
+                </button>
+              </div>
             </motion.div>
           ))}
         </div>
       </motion.section>
 
-      {/* ── STATS SECTION WITH SCROLL REVEAL ── */}
-      <motion.section
-        variants={scrollVariant}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
-        style={{ borderTop: "1px solid rgba(255,255,255,0.08)", borderBottom: "1px solid rgba(255,255,255,0.08)" }}
-      >
-        <div style={{ maxWidth: 1100, margin: "0 auto", padding: "2.5rem 1rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 16 }}>
-          {STATS.map((s, i) => (
-            <div key={i} style={{ textAlign: "center", padding: "0.75rem" }}>
-              <div style={{ fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', fontSize: "clamp(1.6rem, 4vw, 2.2rem)", fontWeight: 800, letterSpacing: "-0.03em", color: "#e8e6e0", marginBottom: "0.35rem" }}>{s.value}</div>
-              <div style={{ fontSize: "0.72rem", color: "#9a9690", fontFamily: "Space Mono, monospace", textTransform: "uppercase", letterSpacing: "0.06em" }}>{s.label}</div>
-            </div>
-          ))}
-        </div>
-      </motion.section>
+      {/* ── CTA BANNER (Modern Elevated Card with Ambient Glow) ── */}
+      <section style={{ borderTop: "1px solid rgba(255,255,255,0.08)", background: "#0c0d0e", padding: "5rem 1.5rem" }}>
+        <motion.div
+          initial={{ opacity: 0, y: 24 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+          className="card-modern-glass"
+          style={{
+            maxWidth: 900,
+            margin: "0 auto",
+            textAlign: "center",
+            padding: "3.5rem 2rem",
+            background: "rgba(22, 23, 25, 0.92)",
+            borderRadius: "20px",
+            border: "1px solid rgba(255, 255, 255, 0.12)",
+            boxShadow: "0 20px 50px rgba(0,0,0,0.65)",
+          }}
+        >
+          <h2 style={{ fontSize: "clamp(1.75rem, 4vw, 2.5rem)", fontWeight: 700, color: "#FFFFFF", marginBottom: "1rem" }}>
+            Ready to explore your enterprise documents?
+          </h2>
+          <p style={{ fontSize: "1rem", color: "#9D9FA2", maxWidth: 540, margin: "0 auto 2.5rem", lineHeight: 1.6 }}>
+            Sign in to start querying, ingest confidential files, and configure organization boundaries.
+          </p>
 
-      {/* ── CTA BANNER WITH SCROLL REVEAL ── */}
-      <motion.section
-        variants={scrollVariant}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.2 }}
-        style={{ maxWidth: 1100, margin: "0 auto", padding: "clamp(3rem, 6vw, 5rem) 1rem" }}
-      >
-        <div style={{ position: "relative", overflow: "hidden", background: "linear-gradient(135deg, rgba(70,183,255,0.06) 0%, rgba(139,243,230,0.04) 100%)", border: "1px solid rgba(70,183,255,0.15)", borderRadius: 24, padding: "clamp(2rem, 5vw, 3.5rem) clamp(1rem, 4vw, 2rem)", textAlign: "center" }}>
-          <div style={{ position: "absolute", right: -40, top: -40, width: 180, height: 180, borderRadius: "50%", background: "rgba(70,183,255,0.15)", filter: "blur(50px)", pointerEvents: "none" }} />
-          <div style={{ position: "relative", zIndex: 2 }}>
-            <p style={{ fontFamily: "Space Mono, monospace", fontSize: "0.72rem", textTransform: "uppercase", letterSpacing: "0.12em", color: "#8bf3e6", marginBottom: "0.75rem" }}>Ready to start</p>
-            <h2 style={{ fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', fontSize: "clamp(1.5rem, 4vw, 2.2rem)", fontWeight: 800, letterSpacing: "-0.03em", color: "#e8e6e0", marginBottom: "0.875rem" }}>Sign in to access your intelligence workspace</h2>
-            <p style={{ fontSize: "0.95rem", color: "#9a9690", marginBottom: "2rem", maxWidth: 500, margin: "0 auto 2rem" }}>Upload documents, query indexed fragments, and leverage high-speed semantic retrieval.</p>
-            <button
-              onClick={() => onOpenApp?.("chat")}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "12px 32px",
-                borderRadius: 9999,
-                background: "#e8e6e0",
-                color: "#07080a",
-                fontSize: "0.9rem",
-                fontWeight: 600,
-                fontFamily: "Inter, sans-serif",
-                border: "none",
-                cursor: "pointer",
-                transition: "background 0.2s, transform 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.background = "#ffffff";
-                e.currentTarget.style.transform = "translateY(-1px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.background = "#e8e6e0";
-                e.currentTarget.style.transform = "none";
-              }}
-            >
-              Sign In / Access Workspace →
-            </button>
-          </div>
-        </div>
-      </motion.section>
+          <Button
+            variant="primary"
+            size="lg"
+            onClick={() => onOpenApp?.("chat")}
+          >
+            Access Workspace →
+          </Button>
+        </motion.div>
+      </section>
 
       {/* ── FOOTER ── */}
-      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.08)", padding: "2.5rem 1.5rem" }}>
-        <div style={{ maxWidth: 1100, margin: "0 auto", display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ display: "inline-flex", width: 24, height: 24, alignItems: "center", justifyContent: "center", borderRadius: 6, background: "linear-gradient(135deg, #46b7ff, #8bf3e6)", fontSize: "0.5rem", fontWeight: 900, color: "#04121f" }}>RA</span>
-            <span style={{ fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', fontSize: "0.9rem", fontWeight: 700, color: "#9a9690", letterSpacing: "-0.02em" }}>Rag-Agent</span>
+      <footer style={{ borderTop: "1px solid rgba(255,255,255,0.08)", background: "#000000", padding: "2.5rem 1.5rem" }}>
+        <div style={{ maxWidth: 1200, margin: "0 auto", display: "flex", flexWrap: "wrap", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+          <Logo size="sm" showText={true} />
+          <div style={{ fontSize: "0.78rem", color: "#6C757D" }}>
+            © {new Date().getFullYear()} Askmydocsai. High-Performance Document Intelligence Platform.
           </div>
-          <p style={{ fontSize: "0.75rem", color: "#5a5852", fontFamily: "Space Mono, monospace" }}>Production Edition v3.0 — FastAPI · pgvector · React</p>
         </div>
       </footer>
     </div>

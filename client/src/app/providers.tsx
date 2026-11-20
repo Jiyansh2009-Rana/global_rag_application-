@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from './theme-provider';
 import { AuthProvider } from './auth-provider';
+import { ChatProvider } from '@/features/chat/ChatContext';
 import { useAuth } from '@/hooks/useContextHooks';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -11,7 +12,11 @@ import { UploadPage } from '@/features/upload/UploadPage';
 import { AdminPage } from '@/features/admin/AdminPage';
 import { SuperAdminPage } from '@/features/super-admin/SuperAdminPage';
 import { SpecShowcasePage } from '@/features/spec-showcase/SpecShowcasePage';
+import { GoogleCallbackPage } from '@/features/auth/GoogleCallbackPage';
 import { GuideModal } from '@/components/guide/GuideModal';
+import { Logo } from '@/components/common/Logo';
+import { Button } from '@/components/ui/Button';
+import { BookOpen, LogIn, LayoutDashboard } from 'lucide-react';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { staleTime: 30_000, retry: 1 } },
@@ -22,49 +27,99 @@ type Page = 'overview' | 'chat' | 'upload' | 'admin' | 'super-admin';
 /* ── Loading screen ── */
 function LoadingScreen() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', gap: '1.5rem', background: '#07080a' }}>
-      <div style={{ width: 56, height: 56, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.88rem', fontWeight: 900, letterSpacing: '0.05em', color: '#04121f', background: 'linear-gradient(135deg, #46b7ff, #8bf3e6)', boxShadow: '0 0 32px rgba(70,183,255,0.45)', animation: 'pulseOpacity 2s ease-in-out infinite' }}>
-        RA
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        gap: '1.5rem',
+        background: '#000000',
+      }}
+    >
+      <div style={{ animation: 'pulseOpacity 2s ease-in-out infinite' }}>
+        <Logo size="lg" showText={false} />
       </div>
-      <div style={{ width: 26, height: 26, borderRadius: '50%', border: '2.5px solid rgba(255,255,255,0.08)', borderTopColor: '#46b7ff', animation: 'spin 0.8s linear infinite' }} />
-      <p style={{ fontSize: '0.8rem', color: '#5a5852', fontFamily: 'Space Mono, monospace' }}>Initializing Rag-Agent…</p>
+      <div
+        style={{
+          width: 28,
+          height: 28,
+          borderRadius: '50%',
+          border: '2.5px solid rgba(255,255,255,0.1)',
+          borderTopColor: '#00C2DE',
+          animation: 'spin 0.8s linear infinite',
+        }}
+      />
+      <p style={{ fontSize: '0.82rem', color: '#9D9FA2', fontFamily: 'Space Mono, monospace' }}>
+        Initializing Askmydocsai…
+      </p>
     </div>
   );
 }
 
-/* ── Pre-auth Navbar (Strictly for unauthenticated users, No Theme Toggle) ── */
+/* ── Pre-auth Navbar (Strictly for unauthenticated users) ── */
 function PreAuthNav({ activePage, onNavigate }: { activePage: Page; onNavigate: (page: Page) => void }) {
   const [guideOpen, setGuideOpen] = useState(false);
 
   return (
     <>
       <header style={{ position: 'sticky', top: 0, zIndex: 100 }}>
-        <div style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', background: 'rgba(7,8,10,0.5)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)' }}>
-          <nav style={{ maxWidth: 1280, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, padding: '0 1.5rem', height: 58 }}>
+        <div
+          style={{
+            borderBottom: '1px solid rgba(255,255,255,0.08)',
+            background: '#000000',
+            boxShadow: '0 2px 6px rgba(0,0,0,0.24)',
+          }}
+        >
+          <nav
+            style={{
+              maxWidth: 1440,
+              margin: '0 auto',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: 16,
+              padding: '0 2rem',
+              height: 64,
+            }}
+          >
             {/* Logo */}
-            <div onClick={() => onNavigate('overview')} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', cursor: 'pointer', flexShrink: 0 }}>
-              <span style={{ display: 'inline-flex', width: 30, height: 30, alignItems: 'center', justifyContent: 'center', borderRadius: 9, background: 'linear-gradient(135deg, #46b7ff, #8bf3e6)', fontSize: '0.58rem', fontWeight: 900, color: '#04121f', letterSpacing: '0.04em', boxShadow: '0 0 12px rgba(70,183,255,0.3)' }}>RA</span>
-              <span style={{ fontSize: '1rem', fontWeight: 700, letterSpacing: '-0.025em', fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', color: '#e8e6e0' }}>
-                Rag<span style={{ color: '#9a9690' }}>-Agent</span>
-              </span>
+            <div
+              onClick={() => onNavigate('overview')}
+              style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', flexShrink: 0 }}
+            >
+              <Logo size="md" showText={true} />
             </div>
 
             {/* Right actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <button
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <Button
+                variant={activePage === 'overview' ? 'primary' : 'pill'}
+                size="sm"
                 onClick={() => onNavigate(activePage === 'overview' ? 'chat' : 'overview')}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 16px', borderRadius: 9999, fontSize: '0.85rem', fontWeight: 500, fontFamily: 'Inter, sans-serif', cursor: 'pointer', border: '1px solid rgba(255,255,255,0.12)', background: activePage === 'overview' ? 'rgba(70,183,255,0.1)' : 'transparent', color: activePage === 'overview' ? '#46b7ff' : '#9a9690', transition: 'all 0.2s ease' }}
               >
-                {activePage === 'overview' ? '⚡ Sign In' : '▲ Overview'}
-              </button>
-              <button
+                {activePage === 'overview' ? (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <LogIn size={13} />
+                    <span>Sign in</span>
+                  </span>
+                ) : (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                    <LayoutDashboard size={13} />
+                    <span>Overview</span>
+                  </span>
+                )}
+              </Button>
+              <Button
+                variant="pill"
+                size="sm"
                 onClick={() => setGuideOpen(true)}
-                style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '6px 12px', borderRadius: 9999, background: 'rgba(139,243,230,0.08)', border: '1px solid rgba(139,243,230,0.18)', color: '#8bf3e6', fontSize: '0.8rem', fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
                 aria-label="Open guide"
               >
-                <span>📖</span>
+                <BookOpen size={13} style={{ color: 'var(--muted)' }} />
                 <span>Guide</span>
-              </button>
+              </Button>
             </div>
           </nav>
         </div>
@@ -80,6 +135,10 @@ function AppShell() {
   const [page, setPage] = useState<Page>('overview');
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
+  // Detect Google OAuth callback: /auth/callback/google?code=...
+  // This must be checked BEFORE any auth-gated routing logic
+  const isGoogleCallback = window.location.pathname === '/auth/callback/google';
+
   // When user logs in, bypass Overview and default directly to Chat
   useEffect(() => {
     if (user && page === 'overview') {
@@ -87,7 +146,30 @@ function AppShell() {
     }
   }, [user, page]);
 
-  if (isLoading) return <LoadingScreen />;
+  if (isLoading && !isGoogleCallback) return <LoadingScreen />;
+
+  // ── Google OAuth Callback Route ──
+  // Intercept the /auth/callback/google path to complete the token exchange.
+  // This renders for unauthenticated users arriving from Google's consent redirect.
+  if (isGoogleCallback && !user) {
+    return (
+      <GoogleCallbackPage
+        onSuccess={() => {
+          // Clean up the OAuth callback URL — replace history entry so the
+          // user cannot navigate back to a stale ?code= URL
+          window.history.replaceState({}, '', '/');
+          setPage('chat');
+        }}
+        onError={(errorMessage) => {
+          // Clear the callback URL and show auth page with error state
+          window.history.replaceState({}, '', '/');
+          // The page state will show AuthPage; error surfaces via console for now
+          console.error('Google OAuth callback error:', errorMessage);
+          setPage('chat'); // triggers auth redirect since user is null
+        }}
+      />
+    );
+  }
 
   // 1. Unauthenticated user flow: Overview/Landing page or Login page
   if (!user) {
@@ -97,7 +179,7 @@ function AppShell() {
       );
     }
     return (
-      <div style={{ minHeight: '100vh', background: '#07080a', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ minHeight: '100vh', background: '#000000', display: 'flex', flexDirection: 'column' }}>
         <PreAuthNav activePage={page} onNavigate={(p) => setPage(p)} />
         <AuthPage />
       </div>
@@ -108,43 +190,45 @@ function AppShell() {
   const activeAuthPage = page === 'overview' ? 'chat' : page;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#07080a', color: '#e8e6e0', position: 'relative' }}>
-      {/* Responsive Hover-Reveal & Mobile Drawer Sidebar */}
-      <Sidebar
-        activePage={activeAuthPage}
-        onNavigate={(p) => setPage(p as Page)}
-        mobileOpen={mobileSidebarOpen}
-        onCloseMobile={() => setMobileSidebarOpen(false)}
-      />
-
-      {/* Main Workspace Area */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh', overflow: 'hidden' }}>
-        <Navbar
+    <ChatProvider onNavigateToChat={() => setPage('chat')}>
+      <div style={{ display: 'flex', minHeight: '100vh', background: '#000000', color: '#FFFFFF', position: 'relative' }}>
+        {/* Responsive Hover-Reveal & Mobile Drawer Sidebar */}
+        <Sidebar
           activePage={activeAuthPage}
           onNavigate={(p) => setPage(p as Page)}
-          onToggleMobileSidebar={() => setMobileSidebarOpen((o) => !o)}
+          mobileOpen={mobileSidebarOpen}
+          onCloseMobile={() => setMobileSidebarOpen(false)}
         />
-        
-        <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
-          <div style={{ display: activeAuthPage === 'chat' ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0, height: '100%' }}>
-            <ChatPage />
-          </div>
-          <div style={{ display: activeAuthPage === 'upload' ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
-            <UploadPage />
-          </div>
-          {isAdmin && (
-            <div style={{ display: activeAuthPage === 'admin' ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
-              <AdminPage />
+
+        {/* Main Workspace Area */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100vh', overflow: 'hidden' }}>
+          <Navbar
+            activePage={activeAuthPage}
+            onNavigate={(p) => setPage(p as Page)}
+            onToggleMobileSidebar={() => setMobileSidebarOpen((o) => !o)}
+          />
+          
+          <main style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, overflow: 'hidden' }}>
+            <div style={{ display: activeAuthPage === 'chat' ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0, height: '100%' }}>
+              <ChatPage />
             </div>
-          )}
-          {isSuperAdmin && (
-            <div style={{ display: activeAuthPage === 'super-admin' ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
-              <SuperAdminPage />
+            <div style={{ display: activeAuthPage === 'upload' ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
+              <UploadPage />
             </div>
-          )}
-        </main>
+            {isAdmin && (
+              <div style={{ display: activeAuthPage === 'admin' ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
+                <AdminPage />
+              </div>
+            )}
+            {isSuperAdmin && (
+              <div style={{ display: activeAuthPage === 'super-admin' ? 'flex' : 'none', flex: 1, flexDirection: 'column', minHeight: 0, overflowY: 'auto' }}>
+                <SuperAdminPage />
+              </div>
+            )}
+          </main>
+        </div>
       </div>
-    </div>
+    </ChatProvider>
   );
 }
 

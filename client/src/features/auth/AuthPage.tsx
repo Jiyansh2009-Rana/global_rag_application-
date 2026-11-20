@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -20,216 +20,291 @@ import type {
   ResetPasswordPayload,
 } from '@/api/types';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Input';
+import { Input, PasswordInput, Select } from '@/components/ui/Input';
+import { Logo } from '@/components/common/Logo';
+import { authApi } from '@/api/auth';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   FEATURE DATA — alternating teal / purple
-─────────────────────────────────────────────────────────────────────────────── */
-const FEATURES = [
-  { icon: '⬡', title: 'Agent Knowledge & Session Indexes',  color: '#46b7ff',
-    desc: 'Permanent org index on Neon · session index on Redis with 1-hour TTL' },
-  { icon: '◈', title: 'LangChain Chunking',         color: '#46b7ff',
-    desc: 'Recursive, doc-aware, slide-aware strategies with OCR fallback for scanned PDFs' },
-  { icon: '⌖', title: 'Hybrid Retrieval',            color: '#46b7ff',
-    desc: 'Vector + BM25 keyword search with configurable weights per query' },
-  { icon: '◆', title: 'Page-Level Citations',        color: '#46b7ff',
-    desc: 'Every answer links directly to source pages with similarity scores' },
-  { icon: '⊞', title: 'RBAC · Tenant Isolation',    color: '#22c55e',
-    desc: 'Super Admin → Admin → User roles with full per-org data isolation' },
+/* ── Verified Platform Capabilities (No Fake Numbers) ── */
+const CAPABILITIES = [
+  {
+    tag: 'HYBRID RETRIEVAL',
+    title: 'Dense Vector & BM25 Keyword Search',
+    desc: 'Combines semantic deep embeddings with lexical matching for deterministic accuracy across contracts, reports, and technical manuals.',
+  },
+  {
+    tag: 'SECURITY & GOVERNANCE',
+    title: 'Strict Row-Level Tenant Isolation',
+    desc: 'Super Admin, Admin, and User role-based boundaries ensure organization data remains strictly quarantined and auditable.',
+  },
+  {
+    tag: 'STREAMING PIPELINE',
+    title: 'Real-Time SSE Generation',
+    desc: 'Token-by-token streaming responses with explicit page-level citations, similarity scoring, and source telemetry.',
+  },
+  {
+    tag: 'DYNAMIC DELTA INDEXING',
+    title: 'Intelligent Ingestion & Deduplication',
+    desc: 'Content hashing and delta tracking index only modified pages, avoiding redundant embedding computation.',
+  },
 ];
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   FLOATING ORB — animated teal/purple sphere with orbiting rings
-   Shown prominently on mobile hero, subtly as desktop background decoration
-─────────────────────────────────────────────────────────────────────────────── */
-function FloatingOrb({ size = 180 }: { size?: number }) {
-  const s = size;
+/* ── Alert Box Component (Unslopped: quiet hairline, semantic tint, line icons) ── */
+function AlertBox({ type, children }: { type: 'error' | 'success'; children: React.ReactNode }) {
+  const isErr = type === 'error';
   return (
-    <div style={{ position: 'relative', width: s, height: s, flexShrink: 0 }}>
-      {/* Outer slow-pulse glow */}
-      <motion.div
-        animate={{ scale: [1, 1.18, 1], opacity: [0.22, 0.38, 0.22] }}
-        transition={{ duration: 4.5, repeat: Infinity, ease: 'easeInOut' }}
-        style={{
-          position: 'absolute', inset: -s * 0.25,
-          borderRadius: '50%',
-          background: `radial-gradient(circle, rgba(70,183,255,0.22) 0%, rgba(168,85,247,0.10) 50%, transparent 75%)`,
-          pointerEvents: 'none',
-        }}
-      />
-      {/* Core orb — breathing */}
-      <motion.div
-        animate={{ scale: [1, 1.10, 1], opacity: [0.82, 1, 0.82] }}
-        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-        style={{
-          position: 'absolute', inset: '22%',
-          borderRadius: '50%',
-          background: 'radial-gradient(circle at 38% 35%, rgba(0,255,240,0.95) 0%, rgba(70,183,255,0.7) 30%, rgba(0,180,180,0.2) 65%, transparent 100%)',
-          boxShadow: `0 0 ${s * 0.22}px rgba(70,183,255,0.7), 0 0 ${s * 0.50}px rgba(70,183,255,0.35), 0 0 ${s * 0.80}px rgba(70,183,255,0.14)`,
-        }}
-      />
-      {/* Inner bright core */}
-      <div style={{
-        position: 'absolute', inset: '36%',
-        borderRadius: '50%',
-        background: 'radial-gradient(circle at 35% 30%, rgba(255,255,255,0.95) 0%, rgba(0,255,240,0.6) 40%, transparent 75%)',
-      }} />
-
-      {/* Ring 1 — teal, orbits clockwise */}
-      <motion.div
-        style={{
-          position: 'absolute', inset: '6%',
-          borderRadius: '50%',
-          border: '1px solid rgba(70,183,255,0.5)',
-          boxShadow: '0 0 8px rgba(70,183,255,0.2)',
-        }}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 7, repeat: Infinity, ease: 'linear' }}
-      >
-        {/* Travelling dot on ring 1 */}
-        <div style={{
-          position: 'absolute', top: -4, left: '50%', transform: 'translateX(-50%)',
-          width: 8, height: 8, borderRadius: '50%',
-          background: '#00d2c8', boxShadow: '0 0 10px #00d2c8, 0 0 20px rgba(70,183,255,0.5)',
-        }} />
-      </motion.div>
-
-      {/* Ring 2 — purple, orbits counter-clockwise */}
-      <motion.div
-        style={{
-          position: 'absolute', inset: '-4%',
-          borderRadius: '50%',
-          border: '1px solid rgba(168,85,247,0.38)',
-          boxShadow: '0 0 6px rgba(168,85,247,0.15)',
-        }}
-        animate={{ rotate: -360 }}
-        transition={{ duration: 11, repeat: Infinity, ease: 'linear' }}
-      >
-        <div style={{
-          position: 'absolute', bottom: -3, left: '50%', transform: 'translateX(-50%)',
-          width: 6, height: 6, borderRadius: '50%',
-          background: '#a855f7', boxShadow: '0 0 8px #a855f7, 0 0 16px rgba(168,85,247,0.5)',
-        }} />
-      </motion.div>
-
-      {/* Ring 3 — very faint, slow */}
-      <motion.div
-        style={{
-          position: 'absolute', inset: '-15%',
-          borderRadius: '50%',
-          border: '0.5px solid rgba(70,183,255,0.14)',
-        }}
-        animate={{ rotate: 360 }}
-        transition={{ duration: 18, repeat: Infinity, ease: 'linear' }}
-      />
-
-      {/* Float animation wrapper */}
-      <motion.div
-        style={{ position: 'absolute', inset: 0, borderRadius: '50%' }}
-        animate={{ y: [0, -10, 0] }}
-        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-      />
+    <div
+      style={{
+        padding: '10px 12px',
+        borderRadius: 8,
+        fontSize: '0.82rem',
+        lineHeight: 1.5,
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 9,
+        background: isErr ? 'rgba(245, 158, 11, 0.07)' : 'rgba(76, 195, 138, 0.07)',
+        border: `1px solid ${isErr ? 'rgba(245, 158, 11, 0.22)' : 'rgba(76, 195, 138, 0.22)'}`,
+        color: isErr ? '#f59e0b' : '#4cc38a',
+        fontFamily: '"Open Sans", sans-serif',
+      }}
+    >
+      {isErr ? (
+        <AlertCircle size={15} style={{ flexShrink: 0, marginTop: 2, color: '#f59e0b' }} />
+      ) : (
+        <CheckCircle2 size={15} style={{ flexShrink: 0, marginTop: 2, color: '#4cc38a' }} />
+      )}
+      <div style={{ flex: 1 }}>{children}</div>
     </div>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   MOBILE FEATURE STACK — vertical cards shown on mobile hero screen
-─────────────────────────────────────────────────────────────────────────────── */
-function MobileFeatureStack() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '100%', maxWidth: 360, padding: '0 0.25rem' }}>
-      {FEATURES.map((f, i) => (
-        <motion.div
-          key={f.title}
-          initial={{ opacity: 0, x: -18 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.3 + i * 0.09, duration: 0.32 }}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 12,
-            padding: '10px 14px', borderRadius: 12,
-            background: 'rgba(255,255,255,0.04)',
-            backdropFilter: 'blur(18px) saturate(160%)',
-            WebkitBackdropFilter: 'blur(18px) saturate(160%)',
-            border: `1px solid ${f.color}28`,
-            borderTopColor: `${f.color}48`,
-            boxShadow: `0 2px 12px rgba(0,0,0,0.38), 0 0 0 1px ${f.color}0a`,
-          }}
-        >
-          <span style={{
-            fontSize: '1.05rem', flexShrink: 0,
-            color: f.color,
-            filter: `drop-shadow(0 0 6px ${f.color}99)`,
-          }}>{f.icon}</span>
-          <div style={{ minWidth: 0 }}>
-            <div style={{
-              fontSize: '0.8rem', fontWeight: 600, color: 'var(--text)',
-              fontFamily: '"Bricolage Grotesque", "Inter", sans-serif',
-              letterSpacing: '-0.015em', marginBottom: 2,
-            }}>{f.title}</div>
-            <div style={{ fontSize: '0.68rem', color: 'var(--muted)', lineHeight: 1.45 }}>{f.desc}</div>
-          </div>
-        </motion.div>
-      ))}
-    </div>
-  );
+/* ── 6-Digit OTP Box Component ── */
+interface OtpInputProps {
+  value: string;
+  onChange: (code: string) => void;
+  disabled?: boolean;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   DRIFTING PARTICLES — subtle background dots for the mobile hero
-─────────────────────────────────────────────────────────────────────────────── */
-function DriftingParticles() {
-  const particles = [
-    { x: '15%', delay: 0,    dur: 6,  color: '#00d2c8', size: 3 },
-    { x: '35%', delay: 1.2,  dur: 8,  color: '#a855f7', size: 2 },
-    { x: '55%', delay: 0.5,  dur: 7,  color: '#00d2c8', size: 2 },
-    { x: '72%', delay: 2,    dur: 9,  color: '#a855f7', size: 3 },
-    { x: '85%', delay: 0.8,  dur: 6,  color: '#00d2c8', size: 2 },
-    { x: '25%', delay: 3,    dur: 10, color: '#a855f7', size: 1.5 },
-    { x: '65%', delay: 1.8,  dur: 7,  color: '#00d2c8', size: 1.5 },
-  ];
+function OtpInputBoxes({ value, onChange, disabled }: OtpInputProps) {
+  const inputsRef = useRef<(HTMLInputElement | null)[]>([]);
+  const digits = Array.from({ length: 6 }, (_, i) => value[i] || '');
+
+  const handleChange = (index: number, val: string) => {
+    const char = val.replace(/\D/g, '').slice(-1);
+    const newDigits = [...digits];
+    newDigits[index] = char;
+    const combined = newDigits.join('');
+    onChange(combined);
+
+    if (char && index < 5) {
+      inputsRef.current[index + 1]?.focus();
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace') {
+      if (!digits[index] && index > 0) {
+        inputsRef.current[index - 1]?.focus();
+      }
+    }
+  };
+
+  const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pasted) {
+      onChange(pasted);
+      const focusIndex = Math.min(pasted.length, 5);
+      inputsRef.current[focusIndex]?.focus();
+    }
+  };
+
   return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-      {particles.map((p, i) => (
-        <motion.div
+    <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', margin: '14px 0' }}>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <input
           key={i}
+          ref={(el) => (inputsRef.current[i] = el)}
+          type="text"
+          inputMode="numeric"
+          maxLength={1}
+          value={digits[i] || ''}
+          disabled={disabled}
+          onChange={(e) => handleChange(i, e.target.value)}
+          onKeyDown={(e) => handleKeyDown(i, e)}
+          onPaste={handlePaste}
           style={{
-            position: 'absolute',
-            left: p.x,
-            bottom: '-10px',
-            width: p.size,
-            height: p.size,
-            borderRadius: '50%',
-            background: p.color,
-            boxShadow: `0 0 ${p.size * 3}px ${p.color}`,
+            width: 46,
+            height: 54,
+            textAlign: 'center',
+            fontSize: '1.35rem',
+            fontWeight: 700,
+            fontFamily: '"Space Mono", monospace',
+            background: '#000000',
+            border: digits[i] ? '1px solid #00C2DE' : '1px solid rgba(255,255,255,0.15)',
+            borderRadius: 3,
+            color: '#FFFFFF',
+            caretColor: '#00C2DE',
+            outline: 'none',
+            boxShadow: digits[i] ? '0 0 10px rgba(0,194,222,0.25)' : 'none',
+            transition: 'border-color 150ms ease, box-shadow 150ms ease, transform 100ms ease',
           }}
-          animate={{ y: [0, -300, -600], opacity: [0, 0.8, 0] }}
-          transition={{ duration: p.dur, delay: p.delay, repeat: Infinity, ease: 'linear' }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = '#00C2DE';
+            e.currentTarget.style.boxShadow = '0 0 0 0.25rem rgba(0, 194, 222, 0.25)';
+            e.currentTarget.style.transform = 'translateY(-2px)';
+          }}
+          onBlur={(e) => {
+            if (!digits[i]) {
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.15)';
+              e.currentTarget.style.boxShadow = 'none';
+            }
+            e.currentTarget.style.transform = 'none';
+          }}
         />
       ))}
     </div>
   );
 }
 
-/* ── Alert box ── */
-function AlertBox({ type, children }: { type: 'error' | 'success'; children: React.ReactNode }) {
-  const s = {
-    error:   { bg: 'var(--danger-dim)',  border: 'rgba(248,113,113,0.22)', color: 'var(--danger)',  icon: '⚠' },
-    success: { bg: 'var(--success-dim)', border: 'rgba(52,211,153,0.22)',  color: 'var(--success)', icon: '✓' },
-  }[type];
+/* ── Google OAuth: Divider between email/password and Google sign-in ── */
+function GoogleOAuthDivider() {
   return (
-    <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-      style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 14px',
-        borderRadius: 10, background: s.bg, border: `1px solid ${s.border}`,
-        color: s.color, fontSize: '0.82rem', lineHeight: 1.55 }}>
-      <span style={{ flexShrink: 0, fontWeight: 700 }}>{s.icon}</span>
-      <span>{children}</span>
-    </motion.div>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        margin: '4px 0',
+      }}
+    >
+      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+      <span
+        style={{
+          fontSize: '0.72rem',
+          color: '#6C757D',
+          fontFamily: '"Open Sans", sans-serif',
+          letterSpacing: '0.04em',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        or continue with
+      </span>
+      <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.1)' }} />
+    </div>
   );
 }
 
-/* ── Login Form ── */
+/* ── Google OAuth: Step 1 & 2 — Initiates the authorization redirect ──
+ *
+ * When clicked:
+ *  1. Calls the backend GET /auth/google/authorize-url to get the Google
+ *     consent URL (with client_id, scopes, redirect_uri, CSRF state token).
+ *  2. Redirects the user's browser to that URL.
+ *  3. After user grants consent, Google redirects to /auth/callback/google?code=...
+ *     which is handled by GoogleCallbackPage (Steps 4–7).
+ */
+function GoogleSignInButton() {
+  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
+
+  // Build the redirect URI that Google will send the authorization code back to
+  const targetCallbackUri = `${window.location.origin}/auth/callback/google`;
+
+  const handleGoogleSignIn = useCallback(async () => {
+    setIsRedirecting(true);
+    setGoogleError(null);
+    try {
+      // Step 2: Ask backend to generate the full Google authorization URL
+      const googleAuthUrlResponse = await authApi.getGoogleAuthUrl(targetCallbackUri);
+      // Redirect the browser to Google's consent screen
+      window.location.href = googleAuthUrlResponse.authorization_url;
+    } catch (redirectError) {
+      setIsRedirecting(false);
+      setGoogleError('Failed to connect to Google. Please try again.');
+      console.error('Google auth URL fetch failed:', redirectError);
+    }
+  }, [targetCallbackUri]);
+
+  return (
+    <div>
+      {googleError && (
+        <div style={{ marginBottom: 8 }}>
+          <AlertBox type="error">{googleError}</AlertBox>
+        </div>
+      )}
+      <button
+        type="button"
+        onClick={handleGoogleSignIn}
+        disabled={isRedirecting}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 10,
+          width: '100%',
+          padding: '10px 16px',
+          background: isRedirecting ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)',
+          border: '1px solid rgba(255,255,255,0.14)',
+          borderRadius: 6,
+          color: isRedirecting ? '#6C757D' : '#FFFFFF',
+          fontSize: '0.88rem',
+          fontWeight: 500,
+          fontFamily: '"Open Sans", sans-serif',
+          cursor: isRedirecting ? 'not-allowed' : 'pointer',
+          transition: 'all 150ms cubic-bezier(0.16, 1, 0.3, 1)',
+        }}
+        onMouseEnter={(e) => {
+          if (!isRedirecting) {
+            e.currentTarget.style.background = 'rgba(255,255,255,0.1)';
+            e.currentTarget.style.borderColor = 'rgba(0, 194, 222, 0.35)';
+          }
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+          e.currentTarget.style.borderColor = 'rgba(255,255,255,0.14)';
+        }}
+      >
+        {/* Google "G" SVG icon */}
+        {isRedirecting ? (
+          <div
+            style={{
+              width: 18,
+              height: 18,
+              borderRadius: '50%',
+              border: '2px solid rgba(255,255,255,0.15)',
+              borderTopColor: '#00C2DE',
+              animation: 'spin 0.7s linear infinite',
+              flexShrink: 0,
+            }}
+          />
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 18 18" style={{ flexShrink: 0 }}>
+            <path
+              d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z"
+              fill="#4285F4"
+            />
+            <path
+              d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z"
+              fill="#34A853"
+            />
+            <path
+              d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z"
+              fill="#FBBC05"
+            />
+            <path
+              d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.96L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z"
+              fill="#EA4335"
+            />
+          </svg>
+        )}
+        <span>{isRedirecting ? 'Redirecting to Google…' : 'Continue with Google'}</span>
+      </button>
+    </div>
+  );
+}
+
+/* ── Login Form (With Eye Password Option) ── */
 function LoginForm({
   initialEmail = '',
   onForgotPassword,
@@ -247,19 +322,34 @@ function LoginForm({
 
   const onSubmit = async (data: LoginPayload) => {
     setApiError(null);
-    try { await signIn(data.email, data.password); }
-    catch (err) { setApiError(parseApiError(err)); }
+    try {
+      await signIn(data.email, data.password);
+    } catch (err) {
+      setApiError(parseApiError(err));
+    }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate
-      style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {apiError && <AlertBox type="error">{apiError}</AlertBox>}
-      <Input label="Work email" type="email" placeholder="you@company.com"
-        autoComplete="email" error={errors.email?.message} {...register('email')} />
+
+      <Input
+        label="Work Email"
+        type="email"
+        placeholder="you@company.com"
+        autoComplete="email"
+        error={errors.email?.message}
+        {...register('email')}
+      />
+
       <div>
-        <Input label="Password" type="password" placeholder="At least 8 characters"
-          autoComplete="current-password" error={errors.password?.message} {...register('password')} />
+        <PasswordInput
+          label="Password"
+          placeholder="Enter your password"
+          autoComplete="current-password"
+          error={errors.password?.message}
+          {...register('password')}
+        />
         <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 6 }}>
           <button
             type="button"
@@ -267,43 +357,75 @@ function LoginForm({
             style={{
               background: 'none',
               border: 'none',
-              color: 'var(--accent)',
-              fontSize: '0.74rem',
+              fontSize: '0.78rem',
+              color: '#00C2DE',
               cursor: 'pointer',
-              padding: 0,
-              fontFamily: '"Inter", sans-serif',
-              fontWeight: 500,
+              fontFamily: '"Open Sans", sans-serif',
+              textDecoration: 'underline',
+              textUnderlineOffset: 3,
+              transition: 'color 140ms ease',
             }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = '#FFFFFF')}
+            onMouseLeave={(e) => (e.currentTarget.style.color = '#00C2DE')}
           >
             Forgot password?
           </button>
         </div>
       </div>
-      <Button type="submit" fullWidth loading={isSubmitting} size="md" style={{ marginTop: 6 }}>
-        Sign in →
+
+      <Button type="submit" variant="primary" loading={isSubmitting} fullWidth>
+        Sign in to Workspace →
       </Button>
+
+      {/* ── Google OAuth Divider ── */}
+      <GoogleOAuthDivider />
+
+      {/* ── Google Sign-In Button (Step 1 → redirects to Google consent) ── */}
+      <GoogleSignInButton />
     </form>
   );
 }
 
-/* ── Signup Form ── */
+/* ── Password Strength Calculator ── */
+function getPasswordStrength(password: string): { score: number; label: string; color: string } {
+  if (!password) return { score: 0, label: '', color: 'transparent' };
+  let pts = 0;
+  if (password.length >= 8)  pts++;
+  if (password.length >= 12) pts++;
+  if (/[A-Z]/.test(password)) pts++;
+  if (/[0-9]/.test(password)) pts++;
+  if (/[^A-Za-z0-9]/.test(password)) pts++;
+  if (pts <= 1) return { score: 20,  label: 'Weak',        color: '#ef4444' };
+  if (pts === 2) return { score: 40,  label: 'Fair',        color: '#f59e0b' };
+  if (pts === 3) return { score: 60,  label: 'Good',        color: '#3b82f6' };
+  if (pts === 4) return { score: 80,  label: 'Strong',      color: '#10b981' };
+  return              { score: 100, label: 'Very Strong',  color: '#00C2DE' };
+}
+
+/* ── Signup Form (With Eye Password Option) ── */
 function SignupForm({
   onOtpRequested,
 }: {
   onOtpRequested: (email: string, payload: SignupPayload) => void;
 }) {
   const { signUp } = useAuth();
-  const [apiError,  setApiError]  = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
   const [roleError, setRoleError] = useState<string | null>(null);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } =
-    useForm<SignupPayload>({ resolver: zodResolver(SignupPayloadSchema), defaultValues: { Role: 'User' } });
+  const { register, handleSubmit, watch, formState: { errors, isSubmitting } } =
+    useForm<SignupPayload>({
+      resolver: zodResolver(SignupPayloadSchema),
+      defaultValues: { Role: 'User' },
+    });
+
+  const watchedPassword = watch('password', '');
 
   const onSubmit = async (data: SignupPayload) => {
-    setApiError(null); setRoleError(null);
+    setApiError(null);
+    setRoleError(null);
     const payload = {
       ...data,
-      org_id:    data.org_id.trim(),
+      org_id: data.org_id.trim(),
       tenant_id: data.tenant_id?.trim() || undefined,
     };
     try {
@@ -312,40 +434,97 @@ function SignupForm({
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err);
       const friendly = parseApiError(err);
-      if (isRoleConflictError(raw)) setRoleError(friendly); else setApiError(friendly);
+      if (isRoleConflictError(raw)) setRoleError(friendly);
+      else setApiError(friendly);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate
-      style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {apiError && <AlertBox type="error">{apiError}</AlertBox>}
-      <Input label="Username" type="text" placeholder="e.g. alex_doe"
-        autoComplete="username" error={errors.username?.message} {...register('username')} />
-      <Input label="Work email" type="email" placeholder="you@company.com"
-        autoComplete="email" error={errors.email?.message} {...register('email')} />
-      <Input label="Password" type="password" placeholder="At least 8 characters"
-        autoComplete="new-password" error={errors.password?.message} {...register('password')} />
-      <Input label="Organisation ID" type="text" placeholder="e.g. acme-corp"
-        error={errors.org_id?.message} {...register('org_id')} />
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <Select label="Role" error={roleError ?? errors.Role?.message} {...register('Role')}>
-          <option value="User">User</option>
-          <option value="Admin">Admin</option>
-          <option value="Super Admin">Super Admin</option>
+      {roleError && <AlertBox type="error">{roleError}</AlertBox>}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <Input
+          label="Username"
+          type="text"
+          placeholder="johndoe"
+          autoComplete="username"
+          error={errors.username?.message}
+          {...register('username')}
+        />
+        <Select
+          label="Role"
+          error={errors.Role?.message}
+          {...register('Role')}
+        >
+          <option value="User" style={{ background: '#1A1A1B' }}>User</option>
+          <option value="Admin" style={{ background: '#1A1A1B' }}>Admin</option>
+          <option value="Super Admin" style={{ background: '#1A1A1B' }}>Super Admin</option>
         </Select>
-        {roleError && (
-          <p style={{ fontSize: '0.72rem', color: 'var(--danger)', lineHeight: 1.5 }}>⚠ {roleError}</p>
-        )}
       </div>
-      <Button type="submit" fullWidth loading={isSubmitting} size="md" style={{ marginTop: 6 }}>
-        Create account →
+
+      <Input
+        label="Work Email"
+        type="email"
+        placeholder="you@company.com"
+        autoComplete="email"
+        error={errors.email?.message}
+        {...register('email')}
+      />
+
+      <PasswordInput
+        label="Password"
+        placeholder="Min. 8 characters"
+        autoComplete="new-password"
+        error={errors.password?.message}
+        {...register('password')}
+      />
+
+      {/* ── Password Strength Bar ── */}
+      {watchedPassword ? (() => {
+        const strength = getPasswordStrength(watchedPassword);
+        return (
+          <div style={{ marginTop: -8, marginBottom: 2 }}>
+            <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
+              <div style={{
+                height: '100%',
+                width: `${strength.score}%`,
+                background: strength.color,
+                borderRadius: 2,
+                transition: 'width 0.35s cubic-bezier(0.16,1,0.3,1), background-color 0.35s ease',
+              }} />
+            </div>
+            <div style={{ fontSize: '0.68rem', color: strength.color, marginTop: 3, textAlign: 'right', transition: 'color 0.35s ease' }}>
+              {strength.label}
+            </div>
+          </div>
+        );
+      })() : null}
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+        <Input
+          label="Organization ID"
+          placeholder="e.g. acme-corp"
+          error={errors.org_id?.message}
+          {...register('org_id')}
+        />
+        <Input
+          label="Tenant ID (Optional)"
+          placeholder="e.g. us-east"
+          error={errors.tenant_id?.message}
+          {...register('tenant_id')}
+        />
+      </div>
+
+      <Button type="submit" variant="primary" loading={isSubmitting} fullWidth>
+        Request Verification Code →
       </Button>
     </form>
   );
 }
 
-/* ── Verify Signup Form ── */
+/* ── OTP Verification Form ── */
 function VerifySignupForm({
   email,
   onVerified,
@@ -361,18 +540,23 @@ function VerifySignupForm({
   const [apiError, setApiError] = useState<string | null>(null);
   const [resendStatus, setResendStatus] = useState<string | null>(null);
   const [isResending, setIsResending] = useState(false);
+  const [otpValue, setOtpValue] = useState('');
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } =
+  const { handleSubmit, setValue, formState: { isSubmitting } } =
     useForm<VerifySignupPayload>({
       resolver: zodResolver(VerifySignupPayloadSchema),
       defaultValues: { email, otp: '' },
     });
 
-  const onSubmit = async (data: VerifySignupPayload) => {
+  const onSubmit = async () => {
     setApiError(null);
     setResendStatus(null);
+    if (otpValue.trim().length !== 6) {
+      setApiError('Please enter the complete 6-digit code.');
+      return;
+    }
     try {
-      await verifySignup(data.email, data.otp.trim());
+      await verifySignup(email, otpValue.trim());
       onVerified();
     } catch (err) {
       setApiError(parseApiError(err));
@@ -386,7 +570,7 @@ function VerifySignupForm({
     setResendStatus(null);
     try {
       await signUp(resendPayload);
-      setResendStatus('A fresh 6-digit code has been sent to your email.');
+      setResendStatus('A fresh 6-digit code has been dispatched to your email.');
     } catch (err) {
       setApiError(parseApiError(err));
     } finally {
@@ -395,60 +579,63 @@ function VerifySignupForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate
-      style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#FFFFFF', marginBottom: 4 }}>
+          Verify Your Email
+        </div>
+        <p style={{ fontSize: '0.82rem', color: '#9D9FA2', lineHeight: 1.5 }}>
+          We have sent a 6-digit verification code to <span style={{ color: '#00C2DE', fontWeight: 600 }}>{email}</span>
+        </p>
+      </div>
+
       {apiError && <AlertBox type="error">{apiError}</AlertBox>}
       {resendStatus && <AlertBox type="success">{resendStatus}</AlertBox>}
 
-      <div style={{
-        padding: '10px 14px',
-        borderRadius: 10,
-        background: 'rgba(70,183,255,0.06)',
-        border: '1px solid rgba(70,183,255,0.18)',
-        fontSize: '0.8rem',
-        color: 'var(--text)',
-      }}>
-        Code sent to: <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{email}</span>
-      </div>
-
-      <Input
-        label="6-Digit Verification Code"
-        type="text"
-        placeholder="123456"
-        maxLength={6}
-        autoComplete="one-time-code"
-        error={errors.otp?.message}
-        {...register('otp')}
+      <OtpInputBoxes
+        value={otpValue}
+        onChange={(val) => {
+          setOtpValue(val);
+          setValue('otp', val);
+        }}
+        disabled={isSubmitting}
       />
 
-      <Button type="submit" fullWidth loading={isSubmitting} size="md" style={{ marginTop: 4 }}>
-        Verify & Activate Account →
+      <Button type="submit" variant="primary" loading={isSubmitting} fullWidth>
+        Confirm & Activate Account
       </Button>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
         <button
           type="button"
           onClick={onBack}
           style={{
-            background: 'none', border: 'none', color: 'var(--muted)',
-            fontSize: '0.76rem', cursor: 'pointer', padding: 0, fontFamily: 'inherit',
+            background: 'none',
+            border: 'none',
+            fontSize: '0.78rem',
+            color: '#9D9FA2',
+            cursor: 'pointer',
           }}
         >
-          ← Back to signup
+          ← Change details
         </button>
 
         {resendPayload && (
           <button
             type="button"
-            disabled={isResending}
             onClick={handleResend}
+            disabled={isResending}
             style={{
-              background: 'none', border: 'none', color: 'var(--accent)',
-              fontSize: '0.76rem', cursor: isResending ? 'not-allowed' : 'pointer',
-              padding: 0, fontFamily: 'inherit', opacity: isResending ? 0.6 : 1,
+              background: 'none',
+              border: 'none',
+              fontSize: '0.78rem',
+              color: '#00C2DE',
+              cursor: isResending ? 'not-allowed' : 'pointer',
+              textDecoration: 'underline',
+              textUnderlineOffset: 3,
             }}
           >
-            {isResending ? 'Resending…' : 'Resend code'}
+            {isResending ? 'Sending…' : 'Resend code'}
           </button>
         )}
       </div>
@@ -478,20 +665,28 @@ function ForgotPasswordForm({
   const onSubmit = async (data: ForgotPasswordPayload) => {
     setApiError(null);
     try {
-      await forgotPassword(data.email.trim());
-      onCodeSent(data.email.trim());
+      await forgotPassword(data.email);
+      onCodeSent(data.email);
     } catch (err) {
       setApiError(parseApiError(err));
     }
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate
-      style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#FFFFFF', marginBottom: 4 }}>
+          Reset Password
+        </div>
+        <p style={{ fontSize: '0.82rem', color: '#9D9FA2', lineHeight: 1.5 }}>
+          Enter your registered email. We will send a 6-digit recovery code.
+        </p>
+      </div>
+
       {apiError && <AlertBox type="error">{apiError}</AlertBox>}
 
       <Input
-        label="Work email"
+        label="Work Email"
         type="email"
         placeholder="you@company.com"
         autoComplete="email"
@@ -499,17 +694,20 @@ function ForgotPasswordForm({
         {...register('email')}
       />
 
-      <Button type="submit" fullWidth loading={isSubmitting} size="md" style={{ marginTop: 6 }}>
-        Send Reset Code →
+      <Button type="submit" variant="primary" loading={isSubmitting} fullWidth>
+        Send Recovery Code →
       </Button>
 
       <button
         type="button"
         onClick={onBack}
         style={{
-          background: 'none', border: 'none', color: 'var(--muted)',
-          fontSize: '0.78rem', cursor: 'pointer', padding: '6px 0',
-          fontFamily: 'inherit', textAlign: 'center', marginTop: 4,
+          background: 'none',
+          border: 'none',
+          fontSize: '0.8rem',
+          color: '#9D9FA2',
+          cursor: 'pointer',
+          textAlign: 'center',
         }}
       >
         ← Back to sign in
@@ -518,7 +716,7 @@ function ForgotPasswordForm({
   );
 }
 
-/* ── Reset Password Form ── */
+/* ── Reset Password Form (With Eye Option on Both Password Inputs) ── */
 function ResetPasswordForm({
   email,
   onSuccess,
@@ -536,8 +734,9 @@ function ResetPasswordForm({
   const [isResending, setIsResending] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [confirmError, setConfirmError] = useState<string | null>(null);
+  const [otpValue, setOtpValue] = useState('');
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } =
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } =
     useForm<ResetPasswordPayload>({
       resolver: zodResolver(ResetPasswordPayloadSchema),
       defaultValues: { email, otp: '', new_password: '' },
@@ -548,13 +747,18 @@ function ResetPasswordForm({
     setConfirmError(null);
     setResendStatus(null);
 
+    if (otpValue.trim().length !== 6) {
+      setApiError('Please enter the 6-digit recovery code.');
+      return;
+    }
+
     if (data.new_password !== confirmPassword) {
       setConfirmError('Passwords do not match.');
       return;
     }
 
     try {
-      await resetPassword(data.email, data.otp.trim(), data.new_password);
+      await resetPassword(data.email, otpValue.trim(), data.new_password);
       onSuccess();
     } catch (err) {
       setApiError(parseApiError(err));
@@ -567,7 +771,7 @@ function ResetPasswordForm({
     setResendStatus(null);
     try {
       await onResend();
-      setResendStatus('A fresh reset code has been sent to your email.');
+      setResendStatus('A fresh recovery code has been sent.');
     } catch (err) {
       setApiError(parseApiError(err));
     } finally {
@@ -576,703 +780,436 @@ function ResetPasswordForm({
   };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} noValidate
-      style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <form onSubmit={handleSubmit(onSubmit)} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ textAlign: 'center' }}>
+        <div style={{ fontSize: '1.25rem', fontWeight: 700, color: '#FFFFFF', marginBottom: 4 }}>
+          Enter Recovery Code
+        </div>
+        <p style={{ fontSize: '0.82rem', color: '#9D9FA2', lineHeight: 1.5 }}>
+          Code sent to <span style={{ color: '#00C2DE', fontWeight: 600 }}>{email}</span>
+        </p>
+      </div>
+
       {apiError && <AlertBox type="error">{apiError}</AlertBox>}
       {resendStatus && <AlertBox type="success">{resendStatus}</AlertBox>}
 
-      <div style={{
-        padding: '10px 14px',
-        borderRadius: 10,
-        background: 'rgba(70,183,255,0.06)',
-        border: '1px solid rgba(70,183,255,0.18)',
-        fontSize: '0.8rem',
-        color: 'var(--text)',
-      }}>
-        Resetting password for: <span style={{ color: 'var(--accent)', fontWeight: 600 }}>{email}</span>
-      </div>
-
-      <Input
-        label="6-Digit Reset Code"
-        type="text"
-        placeholder="123456"
-        maxLength={6}
-        autoComplete="one-time-code"
-        error={errors.otp?.message}
-        {...register('otp')}
+      <OtpInputBoxes
+        value={otpValue}
+        onChange={(val) => {
+          setOtpValue(val);
+          setValue('otp', val);
+        }}
+        disabled={isSubmitting}
       />
 
-      <Input
+      {/* New Password with Eye Toggle */}
+      <PasswordInput
         label="New Password"
-        type="password"
         placeholder="At least 8 characters"
         autoComplete="new-password"
         error={errors.new_password?.message}
         {...register('new_password')}
       />
 
-      <Input
+      {/* Confirm Password with Eye Toggle */}
+      <PasswordInput
         label="Confirm New Password"
-        type="password"
         placeholder="Re-enter new password"
         autoComplete="new-password"
+        error={confirmError || undefined}
         value={confirmPassword}
-        onChange={e => setConfirmPassword(e.target.value)}
-        error={confirmError ?? undefined}
+        onChange={(e) => {
+          setConfirmPassword(e.target.value);
+          if (confirmError) setConfirmError(null);
+        }}
       />
 
-      <Button type="submit" fullWidth loading={isSubmitting} size="md" style={{ marginTop: 6 }}>
-        Reset Password →
+      <Button type="submit" variant="primary" loading={isSubmitting} fullWidth>
+        Update Password & Sign In
       </Button>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
         <button
           type="button"
           onClick={onBack}
-          style={{
-            background: 'none', border: 'none', color: 'var(--muted)',
-            fontSize: '0.76rem', cursor: 'pointer', padding: 0, fontFamily: 'inherit',
-          }}
+          style={{ background: 'none', border: 'none', fontSize: '0.78rem', color: '#9D9FA2', cursor: 'pointer' }}
         >
-          ← Back to sign in
+          ← Back
         </button>
-
         <button
           type="button"
-          disabled={isResending}
           onClick={handleResend}
+          disabled={isResending}
           style={{
-            background: 'none', border: 'none', color: 'var(--accent)',
-            fontSize: '0.76rem', cursor: isResending ? 'not-allowed' : 'pointer',
-            padding: 0, fontFamily: 'inherit', opacity: isResending ? 0.6 : 1,
+            background: 'none',
+            border: 'none',
+            fontSize: '0.78rem',
+            color: '#00C2DE',
+            cursor: isResending ? 'not-allowed' : 'pointer',
+            textDecoration: 'underline',
+            textUnderlineOffset: 3,
           }}
         >
-          {isResending ? 'Resending…' : 'Resend code'}
+          {isResending ? 'Sending…' : 'Resend code'}
         </button>
       </div>
     </form>
   );
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   ZIG-ZAG FEATURE SECTION (desktop)
-─────────────────────────────────────────────────────────────────────────────── */
-function ZigZagFeatures() {
-  const W       = 520;
-  const CARD_W  = 280;
-  const PITCH   = 145;
-  const N       = FEATURES.length;
-
-  const getCardHeight = (index: number) => {
-    if (index === 0) return 112; // Extra height for 2-line title + description without cutting off
-    if (index === 1) return 114;
-    return 108;
-  };
-
-  const maxCardH = 114;
-  const TOTAL_H = (N - 1) * PITCH + maxCardH + 24;
-
-  const nxL = 26;
-  const nxR = W - 26;
-  const cxL = nxL + 20;
-  const cxR = nxR - CARD_W - 20;
-
-  const nodes = FEATURES.map((_, i) => ({
-    x: i % 2 === 0 ? nxL : nxR,
-    y: i * PITCH + maxCardH / 2,
-  }));
-
-  let d = `M ${nodes[0].x} ${nodes[0].y}`;
-  for (let i = 1; i < nodes.length; i++) {
-    const p = nodes[i - 1];
-    const c = nodes[i];
-    d += ` C ${p.x} ${p.y + PITCH * 0.50}, ${c.x} ${c.y - PITCH * 0.50}, ${c.x} ${c.y}`;
-  }
-
-  const dashTotal = PITCH * N * 1.4;
-
-  return (
-    <div style={{ position: 'relative', width: W, maxWidth: '100%', height: TOTAL_H, margin: '0 auto', flexShrink: 0 }}>
-      <svg viewBox={`0 0 ${W} ${TOTAL_H}`} width={W} height={TOTAL_H}
-        style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none', overflow: 'visible' }}>
-        <defs>
-          <linearGradient id="zigGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-            <stop offset="0%"   stopColor="#00d2c8" stopOpacity="1"   />
-            <stop offset="40%"  stopColor="#7c3aed" stopOpacity="0.9" />
-            <stop offset="70%"  stopColor="#a855f7" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#00d2c8" stopOpacity="1"   />
-          </linearGradient>
-          <filter id="pathGlow" x="-20%" y="-5%" width="140%" height="110%">
-            <feGaussianBlur stdDeviation="5" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-          <filter id="nodeGlow" x="-100%" y="-100%" width="400%" height="400%">
-            <feGaussianBlur stdDeviation="6" result="blur"/>
-            <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
-          </filter>
-        </defs>
-
-        <path d={d} stroke="url(#zigGrad)" strokeWidth={10} fill="none"
-          strokeLinecap="round" strokeLinejoin="round"
-          opacity={0.16} filter="url(#pathGlow)" />
-        <path d={d} stroke="url(#zigGrad)" strokeWidth={0.8} fill="none"
-          strokeLinecap="round" strokeLinejoin="round" opacity={0.28} />
-        <motion.path d={d} stroke="url(#zigGrad)" strokeWidth={2} fill="none"
-          strokeLinecap="round" strokeLinejoin="round" strokeDasharray="10 7"
-          initial={{ strokeDashoffset: dashTotal }}
-          animate={{ strokeDashoffset: -dashTotal }}
-          transition={{ duration: 4, ease: 'linear', repeat: Infinity }} />
-
-        {nodes.map((n, i) => {
-          const col = i % 2 === 0 ? '#00d2c8' : '#a855f7';
-          return (
-            <g key={i} filter="url(#nodeGlow)">
-              <motion.circle cx={n.x} cy={n.y} fill="none" stroke={col} strokeWidth={0.8}
-                initial={{ r: 12, opacity: 0.7 }} animate={{ r: 24, opacity: 0 }}
-                transition={{ duration: 2.2, ease: 'easeOut', repeat: Infinity, delay: i * 0.4 }} />
-              <circle cx={n.x} cy={n.y} r={14} fill="none" stroke={col} strokeWidth={0.9} opacity={0.28} />
-              <circle cx={n.x} cy={n.y} r={9} fill="none" stroke={col} strokeWidth={1.1} opacity={0.50} />
-              <circle cx={n.x} cy={n.y} r={5.5} fill={col} />
-              <circle cx={n.x} cy={n.y} r={2.2} fill="#ffffff" />
-            </g>
-          );
-        })}
-      </svg>
-
-      {FEATURES.map((f, i) => {
-        const isLeft = i % 2 === 0;
-        const cardW  = 280;
-        const cardH  = getCardHeight(i);
-        const cardX  = isLeft ? cxL : cxR;
-        const cardY  = nodes[i].y - cardH / 2;
-
-        return (
-          <motion.div
-            key={f.title}
-            initial={{ opacity: 0, x: isLeft ? -22 : 22 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.08 + i * 0.11, duration: 0.36 }}
-            style={{
-              position: 'absolute', left: cardX, top: cardY, width: cardW, minHeight: cardH,
-              padding: '12px 14px', borderRadius: 14,
-              background: 'rgba(255,255,255,0.046)',
-              backdropFilter: 'blur(24px) saturate(165%)',
-              WebkitBackdropFilter: 'blur(24px) saturate(165%)',
-              border: `1px solid ${f.color}2e`,
-              borderTopColor: `${f.color}52`,
-              boxShadow: `0 4px 22px rgba(0,0,0,0.48), 0 0 0 1px ${f.color}0a, inset 0 1px 0 rgba(255,255,255,0.07)`,
-              cursor: 'default', transition: 'all 0.22s ease',
-              display: 'flex', flexDirection: 'column', justifyContent: 'center',
-            }}
-            onMouseEnter={e => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.background  = `${f.color}13`;
-              el.style.borderColor = `${f.color}58`;
-              el.style.boxShadow   = `0 8px 36px rgba(0,0,0,0.55), 0 0 26px ${f.color}22`;
-              el.style.transform   = isLeft ? 'translateX(6px)' : 'translateX(-6px)';
-            }}
-            onMouseLeave={e => {
-              const el = e.currentTarget as HTMLElement;
-              el.style.background  = 'rgba(255,255,255,0.046)';
-              el.style.borderColor = `${f.color}2e`;
-              el.style.boxShadow   = `0 4px 22px rgba(0,0,0,0.48), 0 0 0 1px ${f.color}0a, inset 0 1px 0 rgba(255,255,255,0.07)`;
-              el.style.transform   = 'translateX(0)';
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 4 }}>
-              <span style={{ fontSize: '0.95rem', flexShrink: 0, color: f.color, filter: `drop-shadow(0 0 7px ${f.color}95)` }}>
-                {f.icon}
-              </span>
-              <span style={{ fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', fontSize: '0.84rem', fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.015em', lineHeight: 1.25 }}>
-                {f.title}
-              </span>
-            </div>
-            <p style={{ fontSize: '0.67rem', color: 'var(--muted)', lineHeight: 1.45, paddingLeft: 22, margin: 0 }}>
-              {f.desc}
-            </p>
-          </motion.div>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   SHARED AUTH CARD CONTENT (tab switcher + forms)
-   Used by both desktop right-panel and mobile slide-up sheet
-─────────────────────────────────────────────────────────────────────────────── */
-type AuthMode = 'login' | 'signup' | 'verify-signup' | 'forgot-password' | 'reset-password';
-
-function AuthCardContent({
-  initialMode = 'login',
-}: {
-  initialMode?: 'login' | 'signup';
-}) {
-  const [mode, setMode] = useState<AuthMode>(initialMode);
-  const [email, setEmail] = useState<string>('');
+/* ── Main Auth Page with Authentic AMD Wave & Architectural Shapes ── */
+export function AuthPage() {
+  const [mode, setMode] = useState<'login' | 'signup' | 'verify-signup' | 'forgot-password' | 'reset-password'>('login');
+  const [email, setEmail] = useState('');
   const [savedSignup, setSavedSignup] = useState<SignupPayload | null>(null);
-  const [banner, setBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [banner, setBanner] = useState<{ type: 'error' | 'success'; text: string } | null>(null);
+  const isMobile = useIsMobile(1024);
   const { forgotPassword } = useAuth();
 
-  const handleTabChange = (t: 'login' | 'signup') => {
-    setMode(t);
-    setBanner(null);
-  };
-
-  const titles: Record<AuthMode, { title: string; subtitle: string }> = {
-    login: {
-      title: 'Welcome back',
-      subtitle: 'Use your organisation credentials to access the retrieval console.',
-    },
-    signup: {
-      title: 'Create an account',
-      subtitle: 'Sign up to gain access to enterprise document retrieval.',
-    },
-    'verify-signup': {
-      title: 'Verify your email',
-      subtitle: 'Please enter the 6-digit verification code sent to your inbox.',
-    },
-    'forgot-password': {
-      title: 'Reset your password',
-      subtitle: "Enter your work email address and we'll send you a 6-digit verification code.",
-    },
-    'reset-password': {
-      title: 'Set new password',
-      subtitle: 'Enter the verification code from your email and your new password.',
-    },
-  };
-
   return (
-    <div className="glass-deep" style={{ padding: '2.25rem 1.75rem 2rem', borderRadius: 22 }}>
-      {/* Tab switcher shown for login & signup modes */}
-      {(mode === 'login' || mode === 'signup') && (
-        <div style={{
-          display: 'flex', marginBottom: 28, padding: 4, borderRadius: 14,
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(70,183,255,0.10)',
-          boxShadow: '0 2px 10px rgba(0,0,0,0.35) inset',
-        }}>
-          {(['login', 'signup'] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => handleTabChange(t)}
-              style={{
-                flex: 1, padding: '10px 0', borderRadius: 11,
-                fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', border: 'none',
-                fontFamily: '"Bricolage Grotesque", "Inter", sans-serif',
-                transition: 'all 0.2s ease',
-                background: mode === t
-                  ? 'linear-gradient(135deg, rgba(70,183,255,0.16), rgba(168,85,247,0.12))'
-                  : 'transparent',
-                color: mode === t ? 'var(--text)' : 'var(--muted)',
-                outline: mode === t ? '1px solid rgba(70,183,255,0.24)' : 'none',
-                boxShadow: mode === t
-                  ? '0 2px 10px rgba(0,0,0,0.32), 0 1px 0 rgba(255,255,255,0.08) inset'
-                  : 'none',
-              }}
-            >
-              {t === 'login' ? 'Sign in' : 'Create account'}
-            </button>
-          ))}
-        </div>
-      )}
+    <div
+      style={{
+        flex: 1,
+        minHeight: 'calc(100vh - 64px)',
+        display: 'flex',
+        alignItems: 'stretch',
+        background: '#000000',
+        color: '#FFFFFF',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* ── AUTHENTIC AMD WAVE BACKGROUND (From amd.com) ── */}
+      <div className="amd-wave-backdrop amd-wave-animated" />
+      <div className="amd-wave-vignette" />
 
-      {/* Global banner (e.g. success messages after verify or reset) */}
-      {banner && (
-        <div style={{ marginBottom: 16 }}>
-          <AlertBox type={banner.type}>{banner.text}</AlertBox>
-        </div>
-      )}
-
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={mode}
-          initial={{ opacity: 0, x: mode === 'login' ? -14 : 14 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: mode === 'login' ? 14 : -14 }}
-          transition={{ duration: 0.17 }}
+      {/* ── LEFT HERO PANEL (Desktop) ── */}
+      {!isMobile && (
+        <div
+          style={{
+            flex: '1 1 55%',
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'space-between',
+            padding: '4rem 4rem 3rem 5rem',
+            position: 'relative',
+            zIndex: 10,
+          }}
         >
-          <h2 style={{
-            fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif',
-            fontSize: '1.25rem', fontWeight: 600,
-            letterSpacing: '-0.025em', marginBottom: 5, color: 'var(--text)',
-          }}>
-            {titles[mode].title}
-          </h2>
-          <p style={{
-            fontSize: '0.8rem', color: 'var(--muted)',
-            lineHeight: 1.6, marginBottom: '1.6rem',
-            fontFamily: '"Inter", sans-serif',
-          }}>
-            {titles[mode].subtitle}
-          </p>
+          <div>
+            <div style={{ marginBottom: '2.5rem' }}>
+              <Logo size="lg" showText={true} />
+            </div>
 
-          {mode === 'login' && (
-            <LoginForm
-              initialEmail={email}
-              onForgotPassword={() => {
-                setBanner(null);
-                setMode('forgot-password');
-              }}
-            />
-          )}
-
-          {mode === 'signup' && (
-            <SignupForm
-              onOtpRequested={(submittedEmail, payload) => {
-                setEmail(submittedEmail);
-                setSavedSignup(payload);
-                setBanner({
-                  type: 'success',
-                  text: 'Verification code sent to your email. Please verify within 5 minutes.',
-                });
-                setMode('verify-signup');
-              }}
-            />
-          )}
-
-          {mode === 'verify-signup' && (
-            <VerifySignupForm
-              email={email}
-              resendPayload={savedSignup}
-              onVerified={() => {
-                setBanner({
-                  type: 'success',
-                  text: 'Email verified successfully! You can now sign in.',
-                });
-                setMode('login');
-              }}
-              onBack={() => {
-                setBanner(null);
-                setMode('signup');
-              }}
-            />
-          )}
-
-          {mode === 'forgot-password' && (
-            <ForgotPasswordForm
-              initialEmail={email}
-              onCodeSent={(submittedEmail) => {
-                setEmail(submittedEmail);
-                setBanner({
-                  type: 'success',
-                  text: 'If an account exists, a 6-digit reset code has been sent.',
-                });
-                setMode('reset-password');
-              }}
-              onBack={() => {
-                setBanner(null);
-                setMode('login');
-              }}
-            />
-          )}
-
-          {mode === 'reset-password' && (
-            <ResetPasswordForm
-              email={email}
-              onSuccess={() => {
-                setBanner({
-                  type: 'success',
-                  text: 'Password successfully reset! You can now sign in with your new password.',
-                });
-                setMode('login');
-              }}
-              onBack={() => {
-                setBanner(null);
-                setMode('login');
-              }}
-              onResend={async () => {
-                await forgotPassword(email);
-              }}
-            />
-          )}
-        </motion.div>
-      </AnimatePresence>
-    </div>
-  );
-}
-
-/* ─────────────────────────────────────────────────────────────────────────────
-   AUTH PAGE
-─────────────────────────────────────────────────────────────────────────────── */
-export function AuthPage() {
-  const [mobileView, setMobileView] = useState<'hero' | 'auth'>('hero');
-  const isMobile = useIsMobile(768);
-
-  /* ══════════════════════════════════════════════════════════
-     MOBILE LAYOUT — hero screen + sliding auth form
-  ══════════════════════════════════════════════════════════ */
-  if (isMobile) {
-    return (
-      <div style={{
-        minHeight: 'calc(100vh - 60px)',
-        display: 'flex', flexDirection: 'column',
-        overflowX: 'hidden', position: 'relative',
-        background: '#07080a', color: '#e8e6e0',
-      }}>
-        {/* Drifting particle background */}
-        <DriftingParticles />
-
-        {/* ── HERO SCREEN ── */}
-        <div style={{
-          flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-          padding: '2.5rem 1.25rem 6rem',
-          gap: '1.5rem', overflowY: 'auto',
-          position: 'relative', zIndex: 1,
-        }}>
-          {/* Live badge */}
-          <motion.div
-            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 8 }}
-          >
-            <span style={{
-              width: 7, height: 7, borderRadius: '50%',
-              background: 'var(--accent)', boxShadow: '0 0 10px var(--accent)',
-              animation: 'pulseOpacity 2s infinite', display: 'inline-block', flexShrink: 0,
-            }} />
-            <span style={{
-              fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.12em',
-              textTransform: 'uppercase', color: 'var(--accent)',
-              fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif',
-            }}>
-              Rag-Agent Intelligence Platform
-            </span>
-          </motion.div>
-
-          {/* Floating orb animation — the main visual centrepiece on mobile */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.6, ease: 'easeOut' }}
-          >
             <motion.div
-              animate={{ y: [0, -12, 0] }}
-              transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
             >
-              <FloatingOrb size={180} />
-            </motion.div>
-          </motion.div>
-
-          {/* Headline */}
-          <motion.h1
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.12 }}
-            style={{
-              fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif',
-              fontSize: 'clamp(1.45rem, 5.5vw, 1.75rem)',
-              fontWeight: 600, letterSpacing: '-0.025em', lineHeight: 1.25,
-              color: 'var(--text)', textAlign: 'center', maxWidth: 320,
-            }}
-          >
-            Grounded answers from{' '}
-            <span style={{
-              color: 'transparent',
-              backgroundImage: 'linear-gradient(90deg, #00d2c8 0%, #a855f7 100%)',
-              WebkitBackgroundClip: 'text', backgroundClip: 'text', fontWeight: 700,
-            }}>
-              every document
-            </span>{' '}
-            your org trusts.
-          </motion.h1>
-
-          {/* Subtitle */}
-          <motion.p
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.2 }}
-            style={{ fontSize: '0.78rem', color: 'var(--muted)', lineHeight: 1.65, textAlign: 'center', maxWidth: 290 }}
-          >
-            Hybrid retrieval · RBAC · Session & org indexes
-          </motion.p>
-
-          {/* Feature cards (vertical stack) */}
-          <MobileFeatureStack />
-
-          {/* CTA button */}
-          <motion.div
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}
-            style={{ width: '100%', maxWidth: 340, paddingTop: '0.5rem' }}
-          >
-            <Button variant="primary" size="md" fullWidth onClick={() => setMobileView('auth')}>
-              Get Started →
-            </Button>
-            <p style={{ textAlign: 'center', fontSize: '0.64rem', color: 'var(--muted)', marginTop: 10, opacity: 0.55 }}>
-              Secured with JWT · RBAC · TLS in transit
-            </p>
-          </motion.div>
-        </div>
-
-        {/* ── SLIDING AUTH FORM (mobile) ── */}
-        <AnimatePresence>
-          {mobileView === 'auth' && (
-            <>
-              {/* Backdrop */}
-              <motion.div
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                onClick={() => setMobileView('hero')}
-                style={{ position: 'fixed', inset: 0, zIndex: 48, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
-              />
-              {/* Sheet */}
-              <motion.div
-                initial={{ y: '100%' }}
-                animate={{ y: 0 }}
-                exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+              {/* Pill Shape live tag */}
+              <div
                 style={{
-                  position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 49,
-                  background: 'linear-gradient(180deg, rgba(4,14,22,0.97) 0%, rgba(2,10,18,0.99) 100%)',
-                  backdropFilter: 'blur(28px) saturate(180%)',
-                  WebkitBackdropFilter: 'blur(28px) saturate(180%)',
-                  borderRadius: '24px 24px 0 0',
-                  border: '1px solid rgba(70,183,255,0.18)',
-                  borderBottom: 'none',
-                  boxShadow: '0 -8px 48px rgba(0,0,0,0.65)',
-                  maxHeight: '92vh',
-                  overflowY: 'auto',
-                  padding: '0 1.25rem',
-                  paddingBottom: 'calc(var(--bottom-tab-h, 0px) + 1.5rem)',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 8,
+                  padding: '5px 14px',
+                  borderRadius: 9999,
+                  background: 'rgba(0, 0, 0, 0.65)',
+                  border: '1px solid rgba(0, 194, 222, 0.4)',
+                  boxShadow: '0 0 12px rgba(0, 194, 222, 0.2)',
+                  color: '#00C2DE',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  letterSpacing: '0.06em',
+                  textTransform: 'uppercase',
+                  marginBottom: '1.5rem',
+                  backdropFilter: 'blur(8px)',
                 }}
               >
-                {/* Drag handle */}
-                <div style={{ display: 'flex', justifyContent: 'center', padding: '14px 0 4px' }}>
-                  <div style={{ width: 36, height: 4, borderRadius: 999, background: 'rgba(255,255,255,0.18)' }} />
-                </div>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00C2DE', boxShadow: '0 0 8px #00C2DE' }} />
+                <span>Advancing Document Intelligence</span>
+              </div>
 
-                {/* Back button */}
-                <button
-                  onClick={() => setMobileView('hero')}
+              <h1
+                style={{
+                  fontSize: '2.85rem',
+                  fontWeight: 700,
+                  lineHeight: 1.12,
+                  letterSpacing: '-0.025em',
+                  color: '#FFFFFF',
+                  fontFamily: '"Open Sans", sans-serif',
+                  marginBottom: '1.25rem',
+                }}
+              >
+                Your Trusted Partner for<br />
+                <span style={{ color: '#00C2DE' }}>Advancing AI</span> across documents.
+              </h1>
+
+              <p
+                style={{
+                  fontSize: '1.05rem',
+                  lineHeight: 1.6,
+                  color: '#9D9FA2',
+                  maxWidth: 520,
+                  marginBottom: '2.5rem',
+                }}
+              >
+                Confidently build and query enterprise knowledge with hybrid dense-vector search,
+                verifiable citations, and hardware-grade data boundaries.
+              </p>
+            </motion.div>
+
+            {/* Modern Elevated Capability Cards */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem', maxWidth: 640 }}>
+              {CAPABILITIES.map((cap, i) => (
+                <motion.div
+                  key={cap.tag}
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.45, delay: 0.2 + i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+                  whileHover={{ y: -3, borderColor: 'rgba(0,194,222,0.45)' }}
+                  className="card-feature-modern"
                   style={{
-                    display: 'flex', alignItems: 'center', gap: 6,
-                    background: 'none', border: 'none', color: 'var(--accent)',
-                    fontSize: '0.82rem', cursor: 'pointer', padding: '8px 0 16px',
-                    fontFamily: '"Inter", sans-serif', fontWeight: 500,
+                    padding: '1.25rem',
+                    background: 'rgba(22, 23, 25, 0.88)',
+                    borderRadius: '16px',
+                    border: '1px solid rgba(255, 255, 255, 0.09)',
+                    boxShadow: '0 4px 18px rgba(0,0,0,0.3)',
+                    backdropFilter: 'blur(12px)',
                   }}
                 >
-                  ← Back to overview
-                </button>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+                    <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#00C2DE', letterSpacing: '0.08em', fontFamily: '"Space Mono", monospace' }}>
+                      {cap.tag}
+                    </span>
+                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#00C2DE', boxShadow: '0 0 8px #00C2DE' }} />
+                  </div>
+                  <div style={{ fontSize: '0.88rem', fontWeight: 600, color: '#FFFFFF', marginBottom: 4 }}>
+                    {cap.title}
+                  </div>
+                  <div style={{ fontSize: '0.76rem', color: '#9D9FA2', lineHeight: 1.45 }}>
+                    {cap.desc}
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
 
-                {/* Auth card */}
-                <AuthCardContent />
+          {/* Footer note */}
+          <div style={{ fontSize: '0.75rem', color: '#6C757D', paddingTop: '2rem', fontFamily: '"Space Mono", monospace' }}>
+            AMD-Inspired Architecture · Neon pgvector HNSW · Groq LLM Inference · Sub-second Hybrid Rerank
+          </div>
+        </div>
+      )}
 
-                <p style={{ textAlign: 'center', fontSize: '0.62rem', color: 'var(--muted)', marginTop: '0.75rem', opacity: 0.45 }}>
-                  Secured with JWT · RBAC · TLS in transit
-                </p>
-              </motion.div>
-            </>
-          )}
-        </AnimatePresence>
-      </div>
-    );
-  }
-
-  /* ══════════════════════════════════════════════════════════
-     DESKTOP LAYOUT — side-by-side hero + auth card
-  ══════════════════════════════════════════════════════════ */
-  return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'stretch', minHeight: 'calc(100vh - 60px)', background: '#07080a', color: '#e8e6e0' }}>
-
-      {/* ── LEFT: Hero + Zig-Zag Features ── */}
+      {/* ── RIGHT AUTH PANEL ── */}
       <div
         style={{
-          flex: 1, display: 'flex', flexDirection: 'column',
-          padding: '3.5rem 2.5rem 3rem 3.5rem',
-          overflowY: 'auto', position: 'relative',
+          flex: isMobile ? '1 1 100%' : '1 1 45%',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: isMobile ? '2rem 1.25rem' : '3rem 3.5rem',
+          position: 'relative',
+          zIndex: 10,
         }}
       >
-        {/* Decorative orb — subtle background accent on desktop */}
-        <div style={{ position: 'absolute', top: '3%', right: '4%', opacity: 0.35, pointerEvents: 'none', zIndex: 0 }}>
-          <motion.div animate={{ y: [0, -10, 0] }} transition={{ duration: 5, repeat: Infinity, ease: 'easeInOut' }}>
-            <FloatingOrb size={110} />
-          </motion.div>
-        </div>
+        <div style={{ width: '100%', maxWidth: 440 }}>
+          {isMobile && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem' }}>
+              <Logo size="md" showText={true} />
+            </div>
+          )}
 
-        <div style={{ position: 'relative', zIndex: 1 }}>
-          {/* Live badge */}
+          {/* ── MODERN GLASS AUTH CHASSIS ── */}
           <motion.div
-            initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }}
-            style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 28 }}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            className="card-modern-glass"
+            style={{
+              padding: isMobile ? '1.75rem 1.25rem' : '2.25rem 2rem',
+              boxShadow: '0 24px 64px rgba(0,0,0,0.85), 0 0 0 1px rgba(255, 255, 255, 0.1)',
+              background: 'rgba(20, 21, 23, 0.94)',
+              borderRadius: '20px',
+              backdropFilter: 'blur(20px)',
+            }}
           >
-            <span style={{
-              width: 8, height: 8, borderRadius: '50%',
-              background: 'var(--accent)', boxShadow: '0 0 10px var(--accent)',
-              animation: 'pulseOpacity 2s infinite', display: 'inline-block',
-            }} />
-            <span style={{
-              fontSize: '0.68rem', fontWeight: 600,
-              letterSpacing: '0.12em', textTransform: 'uppercase',
-              color: 'var(--accent)',
-              fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif',
-            }}>
-              Rag-Agent Intelligence Platform
-            </span>
+            {/* Pill Tab Track Switcher with Fluid Spring Pill */}
+            {(mode === 'login' || mode === 'signup') && (
+              <div className="pill-tab-track" style={{ marginBottom: '1.75rem', position: 'relative' }}>
+                <button
+                  type="button"
+                  onClick={() => { setBanner(null); setMode('login'); }}
+                  style={{
+                    flex: 1,
+                    position: 'relative',
+                    padding: '8px 0',
+                    background: 'transparent',
+                    border: 'none',
+                    borderRadius: 9999,
+                    color: mode === 'login' ? '#FFFFFF' : '#9D9FA2',
+                    fontWeight: mode === 'login' ? 600 : 500,
+                    fontSize: '0.88rem',
+                    cursor: 'pointer',
+                    zIndex: 2,
+                    transition: 'color 150ms ease',
+                  }}
+                >
+                  {mode === 'login' && (
+                    <motion.div
+                      layoutId="activeAuthTab"
+                      transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'rgba(255,255,255,0.1)',
+                        border: '1px solid rgba(0, 194, 222, 0.45)',
+                        borderRadius: 9999,
+                        boxShadow: '0 2px 10px rgba(0,194,222,0.18)',
+                        zIndex: -1,
+                      }}
+                    />
+                  )}
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setBanner(null); setMode('signup'); }}
+                  style={{
+                    flex: 1,
+                    position: 'relative',
+                    padding: '8px 0',
+                    background: 'transparent',
+                    border: 'none',
+                    borderRadius: 9999,
+                    color: mode === 'signup' ? '#FFFFFF' : '#9D9FA2',
+                    fontWeight: mode === 'signup' ? 600 : 500,
+                    fontSize: '0.88rem',
+                    cursor: 'pointer',
+                    zIndex: 2,
+                    transition: 'color 150ms ease',
+                  }}
+                >
+                  {mode === 'signup' && (
+                    <motion.div
+                      layoutId="activeAuthTab"
+                      transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: 'rgba(255,255,255,0.1)',
+                        border: '1px solid rgba(0, 194, 222, 0.45)',
+                        borderRadius: 9999,
+                        boxShadow: '0 2px 10px rgba(0,194,222,0.18)',
+                        zIndex: -1,
+                      }}
+                    />
+                  )}
+                  Create Account
+                </button>
+              </div>
+            )}
+
+            {banner && (
+              <div style={{ marginBottom: 16 }}>
+                <AlertBox type={banner.type}>{banner.text}</AlertBox>
+              </div>
+            )}
+
+            {/* Active Mode Form with Smooth Crossfade Transition */}
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={mode}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -6 }}
+                transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+              >
+                {mode === 'login' && (
+                  <LoginForm
+                    initialEmail={email}
+                    onForgotPassword={() => {
+                      setBanner(null);
+                      setMode('forgot-password');
+                    }}
+                  />
+                )}
+
+                {mode === 'signup' && (
+                  <SignupForm
+                    onOtpRequested={(submittedEmail, payload) => {
+                      setEmail(submittedEmail);
+                      setSavedSignup(payload);
+                      setBanner({
+                        type: 'success',
+                        text: 'Account created. Enter the 6-digit verification code sent to your email.',
+                      });
+                      setMode('verify-signup');
+                    }}
+                  />
+                )}
+
+                {mode === 'verify-signup' && (
+                  <VerifySignupForm
+                    email={email}
+                    resendPayload={savedSignup}
+                    onVerified={() => {
+                      setBanner({
+                        type: 'success',
+                        text: 'Email verified. You can now sign in to your workspace.',
+                      });
+                      setMode('login');
+                    }}
+                    onBack={() => {
+                      setBanner(null);
+                      setMode('signup');
+                    }}
+                  />
+                )}
+
+                {mode === 'forgot-password' && (
+                  <ForgotPasswordForm
+                    initialEmail={email}
+                    onCodeSent={(submittedEmail) => {
+                      setEmail(submittedEmail);
+                      setBanner({
+                        type: 'success',
+                        text: 'If an account exists, a 6-digit recovery code has been sent.',
+                      });
+                      setMode('reset-password');
+                    }}
+                    onBack={() => {
+                      setBanner(null);
+                      setMode('login');
+                    }}
+                  />
+                )}
+
+                {mode === 'reset-password' && (
+                  <ResetPasswordForm
+                    email={email}
+                    onSuccess={() => {
+                      setBanner({
+                        type: 'success',
+                        text: 'Password updated. Please sign in with your new credentials.',
+                      });
+                      setMode('login');
+                    }}
+                    onBack={() => {
+                      setBanner(null);
+                      setMode('forgot-password');
+                    }}
+                    onResend={async () => {
+                      if (email) await forgotPassword(email);
+                    }}
+                  />
+                )}
+              </motion.div>
+            </AnimatePresence>
           </motion.div>
-
-          <motion.h1
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.06 }}
-            style={{
-              fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif',
-              fontSize: 'clamp(1.7rem, 2.8vw, 2.7rem)',
-              fontWeight: 600, letterSpacing: '-0.025em', lineHeight: 1.2,
-              color: 'var(--text)', maxWidth: 500, marginBottom: '0.9rem',
-            }}
-          >
-            Grounded answers from{' '}
-            <span style={{
-              color: 'transparent',
-              backgroundImage: 'linear-gradient(90deg, #00d2c8 0%, #a855f7 100%)',
-              WebkitBackgroundClip: 'text', backgroundClip: 'text', fontWeight: 700,
-            }}>
-              every document
-            </span>{' '}
-            your organisation trusts.
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.11 }}
-            style={{
-              fontSize: '0.86rem', color: 'var(--muted)',
-              lineHeight: 1.7, maxWidth: 420, marginBottom: '2.5rem',
-              fontFamily: '"Inter", sans-serif',
-            }}
-          >
-            Hybrid vector + keyword retrieval, delta-aware indexing, session-private
-            uploads and RBAC — over one enterprise API.
-          </motion.p>
-
-          <ZigZagFeatures />
         </div>
-
-        <div style={{
-          marginTop: 'auto', paddingTop: '2rem',
-          fontSize: '0.62rem', color: 'var(--muted)',
-          opacity: 0.38, letterSpacing: '0.04em',
-          fontFamily: '"Inter", sans-serif',
-        }}>
-          LangChain chunking · pgvector on Neon · Groq LLaMA 3.3 70B · Supabase registries
-        </div>
-      </div>
-
-      {/* ── RIGHT: Auth Glass Card ── */}
-      <div style={{
-        width: 480, minWidth: 360,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        padding: '2.5rem 2rem',
-        borderLeft: '1px solid rgba(70,183,255,0.10)',
-        background: 'linear-gradient(180deg, rgba(4,14,22,0.5) 0%, rgba(2,10,18,0.3) 100%)',
-        backdropFilter: 'blur(8px)',
-      }}>
-        <motion.div
-          initial={{ opacity: 0, y: 24, scale: 0.96 }}
-          animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ type: 'spring', damping: 22, stiffness: 250 }}
-          style={{ width: '100%', maxWidth: 420 }}
-        >
-          <AuthCardContent />
-          <p style={{
-            textAlign: 'center', fontSize: '0.65rem',
-            color: 'var(--muted)', marginTop: '1rem', opacity: 0.5,
-          }}>
-            Secured with JWT · RBAC · TLS in transit
-          </p>
-        </motion.div>
       </div>
     </div>
   );

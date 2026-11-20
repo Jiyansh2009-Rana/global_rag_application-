@@ -2,30 +2,37 @@
 <html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <link rel="icon" type="image/jpeg" href="/askmydocsai-logo.jpg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Rag-Agent — High-performance document intelligence with hybrid vector search, streaming RAG, and cinematic UI." />
-    <title>Rag-Agent — Document Intelligence Platform</title>
+    <meta name="description" content="Askmydocsai — Enterprise document intelligence with hybrid vector search, streaming RAG, and computing-grade security." />
+    <title>Askmydocsai — Document Intelligence Platform</title>
 
-    <!-- No-flash theme init: runs before React hydrates -->
+    <!-- No-flash theme init: always dark for AMD theme + token query param support -->
     <script>
       (function () {
-        var stored = localStorage.getItem('rag-theme');
-        var theme = stored || 'dark';
         document.documentElement.setAttribute('data-theme', 'dark');
+        try {
+          const params = new URLSearchParams(window.location.search);
+          const token = params.get('token');
+          if (token) {
+            localStorage.setItem('rag_access_token', token);
+            const url = new URL(window.location.href);
+            url.searchParams.delete('token');
+            window.history.replaceState({}, document.title, url.toString());
+          }
+        } catch (e) {}
       })();
     </script>
 
-    <!-- Fonts: Bricolage Grotesque (Display/Headings), Inter (Body), Space Mono (Code/Telemetry) -->
+    <!-- Google Fonts: Open Sans (AMD Body & Headings), Inter, Space Mono (Telemetry & Code) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,500;12..96,600;12..96,700;12..96,800&family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Inter:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
 
-
-    <!-- API preconnect (adjust if deploying to different origin) -->
+    <!-- Backend API preconnect -->
     <link rel="preconnect" href="http://localhost:7000" />
   </head>
-  <body>
+  <body class="bg-black text-white antialiased">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

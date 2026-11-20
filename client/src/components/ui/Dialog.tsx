@@ -53,8 +53,8 @@ export function Dialog({
             initial={{ opacity: 0, scale: 0.95, y: 12 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 12 }}
-            transition={{ type: 'spring', damping: 28, stiffness: 360 }}
-            className="relative flex flex-col overflow-hidden rounded-[20px] sm:rounded-[22px]"
+            transition={{ duration: 0.22, ease: [0.23, 1, 0.32, 1] }}
+            className="relative flex flex-col overflow-hidden rounded-[14px]"
             style={{
               maxWidth: `min(${maxWidth}, calc(100vw - 20px))`,
               width: '100%',
@@ -83,7 +83,7 @@ export function Dialog({
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#46b7ff', boxShadow: '0 0 8px #46b7ff' }} />
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#00C2DE', boxShadow: '0 0 8px #00C2DE' }} />
                   <h2 style={{ fontSize: '1rem', fontWeight: 700, color: '#e8e6e0', letterSpacing: '-0.02em', fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', margin: 0 }}>
                     {title}
                   </h2>

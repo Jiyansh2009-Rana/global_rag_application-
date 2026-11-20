@@ -19,6 +19,9 @@ interface AuthContextValue {
   resetPassword: (email: string, otp: string, newPassword: string) => Promise<{ detail: string }>;
   signOut: () => Promise<void>;
   refreshUser: () => Promise<void>;
+  // ── Google OAuth: called after the authorization code is exchanged ──
+  // Stores the returned platform JWT, then re-fetches the current user profile.
+  signInWithGoogle: (authorizationCode: string, redirectUri: string, orgId?: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue>({
@@ -35,6 +38,7 @@ export const AuthContext = createContext<AuthContextValue>({
   resetPassword: async () => ({ detail: '' }),
   signOut: async () => void 0,
   refreshUser: async () => void 0,
+  signInWithGoogle: async () => void 0,
 });
 
 export function AuthProvider({
@@ -144,6 +148,25 @@ export function AuthProvider({
     }
   }, []);
 
+  // ── Google OAuth: Step 4 callback handler ──
+  // Called from the OAuth callback page with the authorization code from Google.
+  // Exchanges the code for a platform JWT via the backend, persists the token,
+  // and loads the authenticated user profile.
+  const signInWithGoogle = useCallback(async (
+    authorizationCode: string,
+    redirectUri: string,
+    orgId?: string,
+  ) => {
+    // Exchange authorization code → platform access_token + refresh_token cookies
+    const tokenResponse = await authApi.exchangeGoogleCode(authorizationCode, redirectUri, orgId);
+    // Persist the platform JWT access token to localStorage for subsequent requests
+    tokenStore.set(tokenResponse.access_token);
+    setTokenState(tokenResponse.access_token);
+    setIsLoading(true);
+    // Re-fetch full user profile from /auth/me using the new token
+    await refreshUser();
+  }, [refreshUser]);
+
   const role = (user?.role as Role) ?? null;
   const isAdmin = role === 'Admin' || role === 'Super Admin';
   const isSuperAdmin = role === 'Super Admin';
@@ -164,6 +187,7 @@ export function AuthProvider({
         resetPassword,
         signOut,
         refreshUser,
+        signInWithGoogle,
       }}
     >
       {children}

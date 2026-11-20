@@ -2,13 +2,44 @@ import { apiGet, apiPost, tokenStore, BASE_URL, onUnauthorized, refreshAccessTok
 import type { QueryRequest, QueryResponse, ChatHistoryItem, QuerySSEEvent } from './types';
 
 /* ── Legacy blocking ask — kept for history replay ── */
+export interface ChatHistoryResponse {
+  history: ChatHistoryItem[];
+  page: number;
+  limit: number;
+  total_count: number;
+  total_pages: number;
+  has_more: boolean;
+}
+
 export const queryApi = {
   ask: (payload: QueryRequest) =>
     apiPost<QueryResponse>('/query', payload),
 
-  getHistory: async (limit = 50): Promise<ChatHistoryItem[]> => {
-    const res = await apiGet<{ history: ChatHistoryItem[] }>(`/chat/history?limit=${limit}`);
-    return res.history ?? [];
+  getHistory: async (page = 1): Promise<ChatHistoryResponse> => {
+    // Strictly page-based; server enforces fixed limit of 10 items (cannot be altered by user)
+    const res = await apiGet<{
+      history: ChatHistoryItem[];
+      page?: number;
+      limit?: number;
+      total_count?: number;
+      total_pages?: number;
+      has_more?: boolean;
+    }>(`/chat/history?page=${page}`);
+
+    const history = res.history ?? [];
+    const totalCount = res.total_count ?? history.length;
+    const limit = 10; // strictly hardcoded 10 items per page
+    const totalPages = res.total_pages ?? Math.max(1, Math.ceil(totalCount / limit));
+    const hasMore = res.has_more !== undefined ? res.has_more : page < totalPages;
+
+    return {
+      history,
+      page: res.page ?? page,
+      limit,
+      total_count: totalCount,
+      total_pages: totalPages,
+      has_more: hasMore,
+    };
   },
 };
 

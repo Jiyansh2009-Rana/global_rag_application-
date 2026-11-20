@@ -1,5 +1,27 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  ShieldCheck,
+  Building2,
+  Mail,
+  Fingerprint,
+  Database,
+  Search,
+  Layers,
+  Cpu,
+  Clock,
+  Key,
+  Users,
+  LayoutDashboard,
+  FileText,
+  AlertTriangle,
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
+  Check,
+  Globe,
+} from 'lucide-react';
+
 import { useAuth } from '@/hooks/useContextHooks';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -7,18 +29,15 @@ import { getOrgUsers, deleteOrgUser, getOrgDocuments, deleteOrgDocument, getGlob
 import { parseApiError, BASE_URL, tokenStore } from '@/api/client';
 import type { OrgUser, OrgDocument } from '@/api/types';
 
-/* ─── shared glass card style ─── */
+/* --- shared glass card style --- */
 const glassPanel = {
-  background: 'linear-gradient(145deg, rgba(255,255,255,0.07) 0%, rgba(0,180,200,0.04) 50%, rgba(255,255,255,0.025) 100%)',
-  backdropFilter: 'blur(32px) saturate(170%)',
-  WebkitBackdropFilter: 'blur(32px) saturate(170%)',
-  border: '1px solid rgba(70,183,255,0.14)',
-  borderTopColor: 'rgba(255,255,255,0.20)',
-  borderRadius: 20,
-  boxShadow: '0 8px 40px rgba(0,0,0,0.45), 0 1px 0 rgba(255,255,255,0.09) inset, 0 0 0 1px rgba(70,183,255,0.06)',
+  background: '#1A1A1B',
+  border: '1px solid rgba(255, 255, 255, 0.10)',
+  borderRadius: 4,
+  boxShadow: '0 8px 28px rgba(0,0,0,0.45)',
 } as const;
 
-/* ─── capability matrix ─── */
+/* --- capability matrix --- */
 const BASE_ROLE_MATRIX = [
   { capability: 'Query global index',         user: true,  admin: true,  superAdmin: true  },
   { capability: 'Query local session index',  user: true,  admin: true,  superAdmin: true  },
@@ -29,18 +48,15 @@ const BASE_ROLE_MATRIX = [
   { capability: 'Assign Super Admin role',    user: false, admin: false, superAdmin: true  },
 ];
 
-/* ── helpers ── */
+/* --- helpers --- */
 function Tick({ yes, note }: { yes: boolean; note?: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 2 }}>
-      <span style={{
-        fontSize: yes ? '1.05rem' : '0.85rem',
-        color: yes ? 'var(--success)' : 'var(--border)',
-        fontWeight: yes ? 700 : 400,
-        filter: yes ? 'drop-shadow(0 0 5px rgba(52,211,153,0.55))' : 'none',
-      }}>
-        {yes ? '✓' : '—'}
-      </span>
+      {yes ? (
+        <Check size={16} className="text-emerald-400" />
+      ) : (
+        <span style={{ fontSize: '0.85rem', color: 'var(--muted)', opacity: 0.4 }}>—</span>
+      )}
       {note && (
         <span style={{ fontSize: '0.62rem', color: yes ? 'var(--accent)' : 'var(--muted)', opacity: 0.8 }}>
           {note}
@@ -63,7 +79,7 @@ function SectionCard({ children, title, subtitle, delay = 0 }: {
       transition={{ delay, duration: 0.38 }}
       style={{ ...glassPanel, padding: '1.5rem 1.5rem' }}
     >
-      <div style={{ marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(70,183,255,0.10)' }}>
+      <div style={{ marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(0,194,222,0.10)' }}>
         <h2 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', marginBottom: subtitle ? 4 : 0 }}>
           {title}
         </h2>
@@ -74,7 +90,7 @@ function SectionCard({ children, title, subtitle, delay = 0 }: {
   );
 }
 
-/* ── Global Upload Permission Card ── */
+/* --- Global Upload Permission Card --- */
 function GlobalUploadSettingsCard({
   allowed,
   onSettingChange,
@@ -123,14 +139,14 @@ function GlobalUploadSettingsCard({
           padding: '1.1rem 1.25rem',
           borderRadius: 14,
           background: 'rgba(255,255,255,0.038)',
-          border: '1px solid rgba(70,183,255,0.12)',
+          border: '1px solid rgba(0,194,222,0.12)',
           borderTopColor: 'rgba(255,255,255,0.12)',
           gap: 16,
           flexWrap: 'wrap',
         }}>
           <div style={{ flex: 1, minWidth: 220 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: '1rem', color: 'var(--accent)' }}>🌐</span>
+              <Globe size={18} className="text-[#00C2DE]" />
               <span style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text)' }}>
                 Allow Standard Users Global Upload
               </span>
@@ -172,7 +188,7 @@ function GlobalUploadSettingsCard({
   );
 }
 
-/* ── Inline status for async operations ── */
+/* --- Inline status for async operations --- */
 function StatusMsg({ msg, type }: { msg: string; type: 'error' | 'success' }) {
   return (
     <motion.div
@@ -185,13 +201,13 @@ function StatusMsg({ msg, type }: { msg: string; type: 'error' | 'success' }) {
         display: 'flex', alignItems: 'center', gap: 8,
       }}
     >
-      <span>{type === 'error' ? '⚠' : '✓'}</span>
+      <span>{type === "error" ? <AlertTriangle size={15} /> : <Check size={15} />}</span>
       {msg}
     </motion.div>
   );
 }
 
-/* ── Confirm-delete dialog ── */
+/* --- Confirm-delete dialog --- */
 function ConfirmDialog({
   message,
   onConfirm,
@@ -225,7 +241,7 @@ function ConfirmDialog({
           borderColor: 'rgba(248,113,113,0.25)',
         }}
       >
-        <div style={{ fontSize: '1.5rem', marginBottom: 12 }}>⚠️</div>
+        <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}><AlertTriangle size={32} className="text-amber-400" /></div>
         <h3 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
           Confirm Delete
         </h3>
@@ -250,9 +266,9 @@ function ConfirmDialog({
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
+/* --- ----------------------------------------------------------------------
    TAB 1 — OVERVIEW
-════════════════════════════════════════════════════════════════════════ */
+------------------------------------------------------------------------ */
 function OverviewTab() {
   const { user, role } = useAuth();
   const [globalUploadAllowed, setGlobalUploadAllowed] = useState(false);
@@ -264,12 +280,12 @@ function OverviewTab() {
   }, []);
 
   const orgCards = [
-    { label: 'Organisation', value: user?.org_id ?? '—', icon: '⊞' },
-    { label: 'Your Role',    value: <Badge role={role ?? undefined}>{role ?? '—'}</Badge>, icon: '◈' },
-    { label: 'Email',        value: user?.email ?? '—', icon: '✉' },
+    { label: 'Organisation', value: user?.org_id ?? '—', icon: <Building2 size={13} className="text-[#00C2DE]" /> },
+    { label: 'Your Role',    value: <Badge role={role ?? undefined}>{role ?? '—'}</Badge>, icon: <ShieldCheck size={13} className="text-[#00C2DE]" /> },
+    { label: 'Email',        value: user?.email ?? '—', icon: <Mail size={13} className="text-[#00C2DE]" /> },
     { label: 'User ID',
       value: <span style={{ fontFamily: 'monospace', fontSize: '0.72rem', color: 'var(--muted)', wordBreak: 'break-all' }}>{user?.user_id ?? '—'}</span>,
-      icon: '⌖',
+      icon: <Fingerprint size={13} className="text-[#00C2DE]" />,
     },
   ];
 
@@ -285,13 +301,13 @@ function OverviewTab() {
   });
 
   const systemInfo = [
-    { label: 'Vector Store',     value: 'pgvector on Neon (global) · Redis (session)',              icon: '◆' },
-    { label: 'Retrieval Engine', value: 'Hybrid — vector + BM25 keyword',                           icon: '⬡' },
-    { label: 'Chunking',         value: 'LangChain — recursive / doc-aware / slide-aware',           icon: '◈' },
-    { label: 'LLM',              value: 'Groq LLaMA 3.3 70B — page-level citations',                icon: '⌖' },
-    { label: 'Session TTL',      value: '3600 seconds (1 hour)',                                     icon: '◷' },
-    { label: 'Auth',             value: 'JWT HS256 · 30-minute token expiry',                        icon: '⊠' },
-    { label: 'Access Control',   value: 'RBAC: Super Admin → Admin → User · Tenant isolation',       icon: '⊞' },
+    { label: 'Vector Store',     value: 'pgvector on Neon (global) • Redis (session)',              icon: <Database size={13} className="text-[#00C2DE]" /> },
+    { label: 'Retrieval Engine', value: 'Hybrid — vector + BM25 keyword',                           icon: <Search size={13} className="text-[#00C2DE]" /> },
+    { label: 'Chunking',         value: 'LangChain — recursive / doc-aware / slide-aware',           icon: <Layers size={13} className="text-[#00C2DE]" /> },
+    { label: 'LLM',              value: 'Groq Qwen 3.8 / GPT OSS — page-level citations',           icon: <Cpu size={13} className="text-[#00C2DE]" /> },
+    { label: 'Session TTL',      value: '3600 seconds (1 hour)',                                     icon: <Clock size={13} className="text-[#00C2DE]" /> },
+    { label: 'Auth',             value: 'JWT HS256 • 30-minute token expiry',                        icon: <Key size={13} className="text-[#00C2DE]" /> },
+    { label: 'Access Control',   value: 'RBAC: Super Admin → Admin → User • Tenant isolation',       icon: <Users size={13} className="text-[#00C2DE]" /> },
   ];
 
   return (
@@ -301,7 +317,7 @@ function OverviewTab() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.85rem' }}>
           {orgCards.map(({ label, value, icon }) => (
             <div key={label}
-              style={{ padding: '1rem 1.1rem', borderRadius: 14, background: 'rgba(255,255,255,0.038)', border: '1px solid rgba(70,183,255,0.12)', borderTopColor: 'rgba(255,255,255,0.12)', boxShadow: '0 2px 12px rgba(0,0,0,0.3)', transition: 'all 0.2s ease' }}
+              style={{ padding: '1rem 1.1rem', borderRadius: 14, background: 'rgba(255,255,255,0.038)', border: '1px solid rgba(0,194,222,0.12)', borderTopColor: 'rgba(255,255,255,0.12)', boxShadow: '0 2px 12px rgba(0,0,0,0.3)', transition: 'all 0.2s ease' }}
             >
               <div style={{ fontSize: '0.62rem', textTransform: 'uppercase', letterSpacing: '0.10em', color: 'var(--muted)', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ color: 'var(--accent)' }}>{icon}</span>{label}
@@ -323,7 +339,7 @@ function OverviewTab() {
         <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', paddingBottom: 4 }}>
           <table style={{ width: '100%', minWidth: 480, borderCollapse: 'collapse' }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(70,183,255,0.15)' }}>
+              <tr style={{ borderBottom: '1px solid rgba(0,194,222,0.15)' }}>
                 <th style={{ textAlign: 'left', padding: '0 0 12px 0', fontSize: '0.68rem', textTransform: 'uppercase', letterSpacing: '0.10em', color: 'var(--muted)', fontWeight: 500, width: '48%' }}>Capability</th>
                 {['User', 'Admin', 'Super Admin'].map(r => (
                   <th key={r} style={{ padding: '0 8px 12px', textAlign: 'center', minWidth: 85 }}>
@@ -368,9 +384,9 @@ function OverviewTab() {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
+/* --- ----------------------------------------------------------------------
    TAB 2 — USERS
-════════════════════════════════════════════════════════════════════════ */
+------------------------------------------------------------------------ */
 function UsersTab() {
   const { user: me } = useAuth();
   const [users, setUsers]       = useState<OrgUser[]>([]);
@@ -379,15 +395,24 @@ function UsersTab() {
   const [statusMsg, setStatusMsg] = useState<{ msg: string; type: 'error' | 'success' } | null>(null);
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [page, setPage]         = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (targetPage = page) => {
     setLoading(true); setError(null);
-    try { setUsers(await getOrgUsers()); }
+    try {
+      const res = await getOrgUsers(targetPage, 30);
+      setUsers(res.users ?? []);
+      setPage(res.page ?? targetPage);
+      setTotalPages(res.total_pages ?? 1);
+      setTotalCount(res.total ?? (res.users?.length ?? 0));
+    }
     catch (err) { setError(parseApiError(err)); }
     finally { setLoading(false); }
-  }, []);
+  }, [page]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(1); }, []);
 
   const handleDelete = async () => {
     if (!confirmId) return;
@@ -434,17 +459,17 @@ function UsersTab() {
         style={{ ...glassPanel, padding: '1.5rem 1.5rem' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(70,183,255,0.10)', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(0,194,222,0.10)', flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h2 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Organisation Users
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-              {loading ? 'Loading…' : `${users.length} member${users.length !== 1 ? 's' : ''} in your org`}
+              {loading ? 'Loading...' : `${totalCount || users.length} member${(totalCount || users.length) !== 1 ? 's' : ''} in your org${totalPages > 1 ? ` • Page ${page} of ${totalPages}` : ''}`}
             </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
-            {loading ? 'Refreshing…' : '↻ Refresh'}
+          <Button variant="ghost" size="sm" onClick={() => void load(page)} disabled={loading}>
+            {loading ? 'Refreshing...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><RefreshCw size={13} /> Refresh</span>}
           </Button>
         </div>
 
@@ -456,7 +481,7 @@ function UsersTab() {
         {/* Error */}
         {error && (
           <div style={{ padding: '12px 16px', borderRadius: 12, background: 'var(--danger-dim)', border: '1px solid rgba(248,113,113,0.22)', color: 'var(--danger)', fontSize: '0.82rem', marginBottom: 14 }}>
-            ⚠ {error}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><AlertTriangle size={14} className="text-red-400" /> {error}</span>
           </div>
         )}
 
@@ -504,14 +529,14 @@ function UsersTab() {
                       alignItems: 'center',
                       padding: '12px 14px',
                       borderRadius: 13,
-                      background: isSelf ? 'rgba(70,183,255,0.06)' : 'rgba(255,255,255,0.03)',
-                      border: `1px solid ${isSelf ? 'rgba(70,183,255,0.20)' : 'rgba(255,255,255,0.06)'}`,
+                      background: isSelf ? 'rgba(0,194,222,0.06)' : 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${isSelf ? 'rgba(0,194,222,0.20)' : 'rgba(255,255,255,0.06)'}`,
                       transition: 'background 0.18s',
                     }}
                   >
                     {/* User info (Name + Email) */}
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                      <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-fg)', background: 'linear-gradient(135deg, rgba(70,183,255,0.28), rgba(168,85,247,0.22))', border: '1px solid rgba(70,183,255,0.22)' }}>
+                      <div style={{ width: 30, height: 30, borderRadius: '50%', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-fg)', background: 'linear-gradient(135deg, rgba(0,194,222,0.28), rgba(168,85,247,0.22))', border: '1px solid rgba(0,194,222,0.22)' }}>
                         {displayName.charAt(0).toUpperCase()}
                       </div>
                       <div style={{ minWidth: 0 }}>
@@ -551,7 +576,7 @@ function UsersTab() {
                             fontFamily: 'inherit',
                           }}
                         >
-                          {u.allow_global_upload ? '✓ Allowed' : '✕ Disabled'}
+                          {u.allow_global_upload ? <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Check size={12} /> Allowed</span> : <span>✕ Disabled</span>}
                         </button>
                       ) : (
                         <span style={{ fontSize: '0.68rem', color: 'var(--accent)', fontWeight: 500 }}>Always Allowed</span>
@@ -585,6 +610,29 @@ function UsersTab() {
                 );
               })}
             </div>
+
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 14, paddingTop: 12, borderTop: '1px solid rgba(0,194,222,0.10)' }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={page <= 1 || loading}
+                  onClick={() => void load(page - 1)}
+                ><span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><ChevronLeft size={14} /> Previous</span></Button>
+                <span style={{ fontSize: '0.76rem', color: 'var(--muted)', fontFamily: 'inherit' }}>
+                  Page {page} of {totalPages} ({totalCount} total)
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  disabled={page >= totalPages || loading}
+                  onClick={() => void load(page + 1)}
+                >
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>Next <ChevronRight size={14} /></span>
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </motion.div>
@@ -592,9 +640,9 @@ function UsersTab() {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
+/* --- ----------------------------------------------------------------------
    TAB 3 — DOCUMENTS
-════════════════════════════════════════════════════════════════════════ */
+------------------------------------------------------------------------ */
 function DocumentsTab() {
   const [docs, setDocs]               = useState<OrgDocument[]>([]);
   const [loading, setLoading]         = useState(true);
@@ -704,17 +752,17 @@ function DocumentsTab() {
         style={{ ...glassPanel, padding: '1.5rem 1.5rem' }}>
 
         {/* Header */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(70,183,255,0.10)', flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid rgba(0,194,222,0.10)', flexWrap: 'wrap', gap: 10 }}>
           <div>
             <h2 style={{ fontFamily: '"Inter", "Inter", sans-serif', fontSize: '1rem', fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
               Organisation Documents
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--muted)' }}>
-              {loading ? 'Loading…' : `${docs.length} global document${docs.length !== 1 ? 's' : ''} indexed`}
+              {loading ? 'Loading...' : `${docs.length} global document${docs.length !== 1 ? 's' : ''} indexed`}
             </p>
           </div>
           <Button variant="ghost" size="sm" onClick={() => void load()} disabled={loading}>
-            {loading ? 'Refreshing…' : '↻ Refresh'}
+            {loading ? 'Refreshing...' : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><RefreshCw size={13} /> Refresh</span>}
           </Button>
         </div>
 
@@ -725,7 +773,7 @@ function DocumentsTab() {
 
         {error && (
           <div style={{ padding: '12px 16px', borderRadius: 12, background: 'var(--danger-dim)', border: '1px solid rgba(248,113,113,0.22)', color: 'var(--danger)', fontSize: '0.82rem', marginBottom: 14 }}>
-            ⚠ {error}
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><AlertTriangle size={14} className="text-red-400" /> {error}</span>
           </div>
         )}
 
@@ -827,8 +875,8 @@ function DocumentsTab() {
                         style={{
                           padding: '5px 9px',
                           borderRadius: 8,
-                          border: '1px solid rgba(70,183,255,0.22)',
-                          background: 'rgba(70,183,255,0.08)',
+                          border: '1px solid rgba(0,194,222,0.22)',
+                          background: 'rgba(0,194,222,0.08)',
                           color: 'var(--accent)',
                           fontSize: '0.70rem',
                           fontWeight: 600,
@@ -841,7 +889,7 @@ function DocumentsTab() {
                           opacity: isCurrentViewing ? 0.6 : 1,
                         }}
                       >
-                        {isCurrentViewing ? '⏳…' : isViewable ? 'View ↗' : 'Download ↓'}
+                        {isCurrentViewing ? 'Loading...' : isViewable ? 'View Document' : 'Download File'}
                       </button>
 
                       <button
@@ -874,13 +922,13 @@ function DocumentsTab() {
   );
 }
 
-/* ═══════════════════════════════════════════════════════════════════════
+/* --- ----------------------------------------------------------------------
    ADMIN PAGE — TABBED LAYOUT
-════════════════════════════════════════════════════════════════════════ */
+------------------------------------------------------------------------ */
 const TABS = [
-  { id: 'overview',   label: 'Overview',   icon: '⊞' },
-  { id: 'users',      label: 'Users',      icon: '◈' },
-  { id: 'documents',  label: 'Documents',  icon: '◆' },
+  { id: 'overview',   label: 'Overview',   icon: <LayoutDashboard size={14} /> },
+  { id: 'users',      label: 'Users',      icon: <Users size={14} /> },
+  { id: 'documents',  label: 'Documents',  icon: <FileText size={14} /> },
 ] as const;
 type TabId = typeof TABS[number]['id'];
 
@@ -900,21 +948,18 @@ export function AdminPage() {
     >
       <div style={{ width: '100%', maxWidth: 900, display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
-        {/* ── PAGE HEADER ── */}
+        {/* --- PAGE HEADER --- */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4, flexWrap: 'wrap' }}>
-            <div style={{ width: 40, height: 40, borderRadius: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', background: 'linear-gradient(135deg, rgba(70,183,255,0.18), rgba(168,85,247,0.14))', border: '1px solid rgba(70,183,255,0.22)', boxShadow: '0 4px 16px rgba(70,183,255,0.14)' }}>⊞</div>
-            <div>
-              <h1 style={{ fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif', fontSize: '1.5rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', lineHeight: 1.15 }}>Admin Panel</h1>
-              <p style={{ fontSize: '0.78rem', color: 'var(--muted)', marginTop: 3 }}>Manage users, documents, roles and system configuration.</p>
-            </div>
+          <div style={{ marginBottom: 4 }}>
+            <h1 style={{ fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif', fontSize: '1.45rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', lineHeight: 1.2 }}>Admin Panel</h1>
+            <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 4 }}>Manage users, documents, roles and system configuration.</p>
           </div>
         </motion.div>
 
-        {/* ── TABS ── */}
+        {/* --- TABS --- */}
         <motion.div
           initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
-          style={{ display: 'flex', gap: 6, padding: 5, borderRadius: 16, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(70,183,255,0.10)', boxShadow: '0 2px 10px rgba(0,0,0,0.35) inset', width: 'fit-content', flexWrap: 'wrap' }}
+          style={{ display: 'flex', gap: 6, padding: 5, borderRadius: 16, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(0,194,222,0.10)', boxShadow: '0 2px 10px rgba(0,0,0,0.35) inset', width: 'fit-content', flexWrap: 'wrap' }}
         >
           {TABS.map(tab => (
             <button
@@ -926,22 +971,22 @@ export function AdminPage() {
                 border: 'none', cursor: 'pointer', fontFamily: 'inherit',
                 fontSize: '0.80rem', fontWeight: 500, transition: 'all 0.2s ease',
                 background: activeTab === tab.id
-                  ? 'linear-gradient(135deg, rgba(70,183,255,0.16), rgba(168,85,247,0.12))'
+                  ? 'linear-gradient(135deg, rgba(0,194,222,0.16), rgba(168,85,247,0.12))'
                   : 'transparent',
                 color: activeTab === tab.id ? 'var(--text)' : 'var(--muted)',
-                outline: activeTab === tab.id ? '1px solid rgba(70,183,255,0.24)' : 'none',
+                outline: activeTab === tab.id ? '1px solid rgba(0,194,222,0.24)' : 'none',
                 boxShadow: activeTab === tab.id
                   ? '0 2px 10px rgba(0,0,0,0.32), 0 1px 0 rgba(255,255,255,0.08) inset'
                   : 'none',
               }}
             >
-              <span style={{ fontSize: '0.82rem', color: activeTab === tab.id ? 'var(--accent)' : 'var(--muted)' }}>{tab.icon}</span>
+              <span style={{ display: "inline-flex", alignItems: "center", color: activeTab === tab.id ? "var(--accent)" : "var(--muted)" }}>{tab.icon}</span>
               {tab.label}
             </button>
           ))}
         </motion.div>
 
-        {/* ── TAB CONTENT ── */}
+        {/* --- TAB CONTENT --- */}
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -961,7 +1006,7 @@ export function AdminPage() {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.3 }}
           style={{ textAlign: 'center', fontSize: '0.65rem', color: 'var(--muted)', opacity: 0.38, letterSpacing: '0.04em' }}
         >
-          Admin Panel · Rag-Agent Enterprise · Role-Based Access Control
+          Admin Panel • Askmydocsai Enterprise • Role-Based Access Control
         </motion.p>
       </div>
     </div>

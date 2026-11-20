@@ -5,6 +5,8 @@ import { useIsMobile } from "@/hooks/useContextHooks";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { GuideModal } from "@/components/guide/GuideModal";
+import { Logo } from "@/components/common/Logo";
+import { MessageSquare, UploadCloud, ShieldCheck, Zap, User as UserIcon, BookOpen, ChevronDown } from "lucide-react";
 
 /* ── Profile Popover Dropdown ── */
 function ProfileDropdown({ onClose }: { onClose: () => void }) {
@@ -27,8 +29,8 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
   const username = user?.username || user?.email?.split("@")[0] || "User";
 
   const rows = [
-    { label: "Username",     value: <span style={{ fontFamily: "Space Mono, monospace", fontSize: "0.75rem", color: "#46b7ff", fontWeight: 600 }}>@{username}</span> },
-    { label: "User ID",      value: <span style={{ fontFamily: "Space Mono, monospace", fontSize: "0.67rem", color: "var(--muted)", display: "block", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis" }}>{user?.user_id ?? "—"}</span> },
+    { label: "Username",     value: <span style={{ fontFamily: "Space Mono, monospace", fontSize: "0.78rem", color: "#00C2DE", fontWeight: 600 }}>@{username}</span> },
+    { label: "User ID",      value: <span style={{ fontFamily: "Space Mono, monospace", fontSize: "0.7rem", color: "#9D9FA2", display: "block", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis" }}>{user?.user_id ?? "—"}</span> },
     { label: "Organisation", value: user?.org_id ?? "—" },
     { label: "Member since", value: user?.created_at ? new Date(user.created_at).toLocaleDateString() : "—" },
   ];
@@ -36,23 +38,47 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
   return (
     <motion.div
       ref={ref}
-      initial={{ opacity: 0, y: -8, scale: 0.96 }}
+      initial={{ opacity: 0, y: -6, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -8, scale: 0.96 }}
-      transition={{ type: "spring", damping: 26, stiffness: 380 }}
-      style={{ position: "absolute", top: "calc(100% + 10px)", right: 0, width: 290, zIndex: 300 }}
+      exit={{ opacity: 0, y: -6, scale: 0.98 }}
+      transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
+      style={{ position: "absolute", top: "calc(100% + 12px)", right: 0, width: 300, zIndex: 300, transformOrigin: "top right" }}
     >
-      <div style={{ background: "#0f1014", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 18, overflow: "hidden", boxShadow: "0 24px 64px rgba(0,0,0,0.85), 0 0 24px rgba(70,183,255,0.15)" }}>
+      <div
+        style={{
+          background: "#1A1A1B",
+          border: "1px solid rgba(255,255,255,0.14)",
+          borderRadius: 12,
+          overflow: "hidden",
+          boxShadow: "0 8px 28px rgba(0,0,0,0.6)",
+        }}
+      >
         {/* Header */}
         <div style={{ display: "flex", alignItems: "center", gap: "0.875rem", padding: "1.25rem 1.25rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-          <div style={{ width: 44, height: 44, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.1rem", fontWeight: 700, color: "#04121f", background: "linear-gradient(135deg, #46b7ff, #8bf3e6)", boxShadow: "0 0 18px rgba(70,183,255,0.35)" }}>
+          <div
+            style={{
+              width: 42,
+              height: 42,
+              borderRadius: "50%",
+              flexShrink: 0,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "1.05rem",
+              fontWeight: 700,
+              color: "#FFFFFF",
+              background: "#000000",
+              border: "1px solid #00C2DE",
+              boxShadow: "0 0 12px rgba(0,194,222,0.25)",
+            }}
+          >
             {(user?.username || user?.email)?.charAt(0).toUpperCase() ?? "U"}
           </div>
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#e8e6e0", fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#FFFFFF", fontFamily: '"Open Sans", sans-serif', overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {username}
             </div>
-            <div style={{ fontSize: "0.72rem", color: "#9a9690", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div style={{ fontSize: "0.75rem", color: "#9D9FA2", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {user?.email}
             </div>
             <div style={{ marginTop: 4 }}>
@@ -65,8 +91,8 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
         <div style={{ padding: "0.5rem 1.25rem" }}>
           {rows.map(({ label, value }) => (
             <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              <span style={{ fontSize: "0.72rem", color: "var(--muted)" }}>{label}</span>
-              <span style={{ fontSize: "0.72rem", fontWeight: 500, color: "var(--text-secondary)" }}>{value}</span>
+              <span style={{ fontSize: "0.75rem", color: "#6C757D" }}>{label}</span>
+              <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "#FFFFFF" }}>{value}</span>
             </div>
           ))}
         </div>
@@ -92,52 +118,32 @@ function MobileProfileSheet({ open, onClose }: { open: boolean; onClose: () => v
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={onClose}
-            style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.6)", backdropFilter: "blur(6px)" }}
+            style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.75)" }}
           />
           <motion.div
             initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-            transition={{ type: "spring", damping: 30, stiffness: 320 }}
-            style={{
-              position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 201,
-              background: "#0f1014", borderRadius: "20px 20px 0 0",
-              border: "1px solid rgba(255,255,255,0.1)", borderBottom: "none",
-              boxShadow: "0 -8px 48px rgba(0,0,0,0.55)",
-              paddingBottom: "calc(var(--bottom-tab-h, 0px) + 0.75rem)",
-            }}
+            transition={{ type: "spring", duration: 0.4, bounce: 0.1 }}
+            style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 201, background: "#1A1A1B", borderTop: "1px solid rgba(255,255,255,0.12)", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: "1.5rem", paddingBottom: "calc(1.5rem + var(--safe-bottom))" }}
           >
-            <div style={{ display: "flex", justifyContent: "center", padding: "14px 0 4px" }}>
-              <div style={{ width: 36, height: 4, borderRadius: 999, background: "rgba(255,255,255,0.18)" }} />
-            </div>
-            <div style={{ padding: "0.5rem 1.5rem 1rem", display: "flex", alignItems: "center", gap: 14, borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-              <div style={{ width: 50, height: 50, borderRadius: "50%", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", fontWeight: 700, color: "#04121f", background: "linear-gradient(135deg, #46b7ff, #8bf3e6)", boxShadow: "0 0 20px rgba(70,183,255,0.35)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.25rem" }}>
+              <div style={{ width: 48, height: 48, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", fontWeight: 700, color: "#FFFFFF", background: "#000000", border: "1px solid #00C2DE" }}>
                 {(user?.username || user?.email)?.charAt(0).toUpperCase() ?? "U"}
               </div>
-              <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: "1rem", fontWeight: 700, color: "#e8e6e0", fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {username}
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#FFFFFF" }}>{username}</div>
+                <div style={{ fontSize: "0.78rem", color: "#9D9FA2" }}>{user?.email}</div>
+                <div style={{ marginTop: 4 }}>
+                  <Badge role={role ?? undefined}>{role ?? "User"}</Badge>
                 </div>
-                <div style={{ fontSize: "0.75rem", color: "#9a9690", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {user?.email}
-                </div>
-                <div style={{ marginTop: 4 }}><Badge role={role ?? undefined}>{role ?? "User"}</Badge></div>
               </div>
             </div>
-            <div style={{ padding: "0.5rem 1.5rem" }}>
-              {[
-                { label: "Username", value: `@${username}`, mono: true },
-                { label: "User ID", value: user?.user_id ?? "—", mono: true },
-                { label: "Organisation", value: user?.org_id ?? "—" },
-                { label: "Member since", value: user?.created_at ? new Date(user.created_at).toLocaleDateString() : "—" },
-              ].map(({ label, value, mono }) => (
-                <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.6rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-                  <span style={{ fontSize: "0.75rem", color: "var(--muted)" }}>{label}</span>
-                  <span style={{ fontSize: "0.72rem", color: mono ? "#46b7ff" : "var(--text-secondary)", fontFamily: mono ? "Space Mono, monospace" : "inherit", maxWidth: 160, overflow: "hidden", textOverflow: "ellipsis", textAlign: "right" }}>{value}</span>
-                </div>
-              ))}
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: "1.5rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#9D9FA2" }}>
+                <span>Org ID</span>
+                <span style={{ color: "#FFFFFF", fontFamily: "Space Mono, monospace" }}>{user?.org_id ?? "—"}</span>
+              </div>
             </div>
-            <div style={{ padding: "0.75rem 1.5rem 0" }}>
-              <Button variant="danger" size="sm" fullWidth onClick={async () => { onClose(); await signOut(); }}>Sign out</Button>
-            </div>
+            <Button variant="danger" fullWidth onClick={() => { onClose(); signOut(); }}>Sign out</Button>
           </motion.div>
         </>
       )}
@@ -146,158 +152,198 @@ function MobileProfileSheet({ open, onClose }: { open: boolean; onClose: () => v
 }
 
 /* ── Mobile Bottom Tab Bar ── */
-interface TabBarProps {
-  navLinks: { key: string; label: string; icon: string }[];
+function MobileBottomTabBar({
+  navLinks,
+  activePage,
+  onNavigate,
+  onProfileTap,
+}: {
+  navLinks: Array<{ key: string; label: string; icon: React.ReactNode }>;
   activePage: string;
   onNavigate: (page: string) => void;
   onProfileTap: () => void;
-}
-
-function MobileBottomTabBar({ navLinks, activePage, onNavigate, onProfileTap }: TabBarProps) {
-  const allTabs = [
-    ...navLinks,
-    { key: "__profile__", label: "Profile", icon: "◉" },
-  ];
-
+}) {
   return (
     <nav
       className="mobile-bottom-tab"
       style={{
-        position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 100,
-        background: "rgba(7, 8, 10, 0.94)",
-        backdropFilter: "blur(16px)",
-        borderTop: "1px solid rgba(255,255,255,0.08)",
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
-        alignItems: "stretch",
+        position: "fixed",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: "var(--bottom-tab-h)",
+        zIndex: 100,
+        background: "#000000",
+        borderTop: "1px solid rgba(255,255,255,0.12)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-around",
+        paddingBottom: "var(--safe-bottom)",
       }}
     >
-      {allTabs.map((tab) => {
-        const isActive = tab.key !== "__profile__" && activePage === tab.key;
-        const onTap = tab.key === "__profile__" ? onProfileTap : () => onNavigate(tab.key);
+      {navLinks.map((link) => {
+        const isActive = activePage === link.key;
         return (
           <button
-            key={tab.key}
-            onClick={onTap}
+            key={link.key}
+            onClick={() => onNavigate(link.key)}
             style={{
-              flex: 1, display: "flex", flexDirection: "column", alignItems: "center",
-              justifyContent: "center", gap: 3,
-              padding: "10px 4px 12px",
-              background: "none", border: "none", cursor: "pointer",
-              color: isActive ? "#46b7ff" : "var(--muted)",
-              transition: "color 0.18s ease",
-              position: "relative", minHeight: 56,
+              flex: 1,
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 3,
+              padding: "6px 0",
+              background: "transparent",
+              border: "none",
+              color: isActive ? "#00C2DE" : "#9D9FA2",
+              cursor: "pointer",
+              transition: "color 120ms cubic-bezier(0.23,1,0.32,1)",
             }}
           >
-            {isActive && (
-              <motion.div
-                layoutId="tab-active-bar"
-                style={{
-                  position: "absolute", top: 0, left: "18%", right: "18%",
-                  height: 2, borderRadius: "0 0 2px 2px",
-                  background: "linear-gradient(90deg, #46b7ff, #8bf3e6)",
-                  boxShadow: "0 0 8px rgba(70,183,255,0.6)",
-                }}
-                transition={{ type: "spring", damping: 30, stiffness: 400 }}
-              />
-            )}
-            <span style={{ fontSize: "1.05rem", lineHeight: 1, display: "block", filter: isActive ? "drop-shadow(0 0 6px rgba(70,183,255,0.7))" : "none", transition: "filter 0.2s", transform: isActive ? "scale(1.12)" : "scale(1)" }}>
-              {tab.icon}
-            </span>
-            <span style={{ fontSize: "0.6rem", fontWeight: isActive ? 600 : 400, fontFamily: "Inter, sans-serif", letterSpacing: isActive ? "0.02em" : 0 }}>
-              {tab.label}
-            </span>
+            <span style={{ display: "inline-flex", alignItems: "center" }}>{link.icon}</span>
+            <span style={{ fontSize: "0.68rem", fontWeight: isActive ? 600 : 400 }}>{link.label}</span>
           </button>
         );
       })}
+      <button
+        onClick={onProfileTap}
+        style={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 3,
+          padding: "6px 0",
+          background: "transparent",
+          border: "none",
+          color: "#9D9FA2",
+          cursor: "pointer",
+        }}
+      >
+        <span style={{ display: "inline-flex", alignItems: "center" }}><UserIcon size={18} /></span>
+        <span style={{ fontSize: "0.68rem" }}>Profile</span>
+      </button>
     </nav>
   );
 }
 
-/* ── Main Top Navbar ── */
+/* ── Main Navbar ── */
 interface NavbarProps {
-  activePage: string;
+  activePage?: string;
   onNavigate?: (page: string) => void;
   onToggleMobileSidebar?: () => void;
 }
 
-export function Navbar({ activePage, onNavigate, onToggleMobileSidebar }: NavbarProps) {
+export function Navbar({ activePage = "chat", onNavigate, onToggleMobileSidebar }: NavbarProps) {
   const { user, isAdmin, isSuperAdmin } = useAuth();
   const [profileOpen, setProfileOpen] = useState(false);
   const [mobileProfileOpen, setMobileProfileOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
   const isMobile = useIsMobile(768);
 
-  const navLinks = [
-    { key: "chat",   label: "Chat",   icon: "◆" },
-    { key: "upload", label: "Ingest", icon: "↑" },
-    ...(isAdmin ? [{ key: "admin", label: "Admin", icon: "⊞" }] : []),
-    ...(isSuperAdmin ? [{ key: "super-admin", label: "S.Admin", icon: "⚡" }] : []),
-  ];
-
-  const pageLabels: Record<string, string> = {
-    chat: "Chat Studio",
-    upload: "Ingest Pipeline",
-    admin: "Admin Console",
-    "super-admin": "Super Admin Console",
-  };
-
   const username = user?.username || user?.email?.split("@")[0] || "User";
+
+  const navLinks: Array<{ key: string; label: string; icon: React.ReactNode }> = [
+    { key: "chat",   label: "Chat Studio",     icon: <MessageSquare size={15} /> },
+    { key: "upload", label: "Ingest Pipeline", icon: <UploadCloud size={15} /> },
+    ...(isAdmin ? [{ key: "admin", label: "Admin Console", icon: <ShieldCheck size={15} /> }] : []),
+    ...(isSuperAdmin ? [{ key: "super-admin", label: "Super Admin", icon: <Zap size={15} /> }] : []),
+  ];
 
   return (
     <>
-      <header className="sticky top-0 z-30 w-full" style={{ position: "sticky", top: 0 }}>
-        <div style={{ borderBottom: "1px solid rgba(255,255,255,0.08)", background: "rgba(7, 8, 10, 0.65)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
-          <nav style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, padding: isMobile ? "0 0.875rem" : "0 1.5rem", height: 54 }}>
-
-            {/* Left: Breadcrumb / Mobile Menu Trigger & Logo */}
-            <div style={{ display: "flex", alignItems: "center", gap: "0.625rem", minWidth: 0 }}>
+      <header
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 40,
+          background: "#000000",
+          borderBottom: "1px solid rgba(255,255,255,0.08)",
+          boxShadow: "0 2px 6px rgba(0,0,0,0.24)",
+        }}
+      >
+        <div style={{ maxWidth: 1440, margin: "0 auto", padding: isMobile ? "0 1rem" : "0 2rem" }}>
+          <nav
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              height: 70,
+              gap: 16,
+            }}
+          >
+            {/* Left: Mobile hamburger or Brand */}
+            <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
               {isMobile && onToggleMobileSidebar && (
                 <button
                   type="button"
                   onClick={onToggleMobileSidebar}
                   style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    width: 32,
-                    height: 32,
+                    background: "transparent",
+                    border: "1px solid rgba(255,255,255,0.12)",
                     borderRadius: 8,
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.08)",
-                    color: "#e8e6e0",
+                    color: "#FFFFFF",
+                    padding: "6px 10px",
                     cursor: "pointer",
-                    fontSize: "0.95rem",
-                    padding: 0,
-                    flexShrink: 0,
                   }}
                   aria-label="Toggle navigation menu"
                 >
                   ☰
                 </button>
               )}
-              {isMobile && (
-                <div
-                  onClick={() => onNavigate?.("chat")}
-                  style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", flexShrink: 0 }}
-                >
-                  <span style={{ display: "inline-flex", width: 26, height: 26, alignItems: "center", justifyContent: "center", borderRadius: 7, background: "linear-gradient(135deg, #46b7ff, #8bf3e6)", fontSize: "0.55rem", fontWeight: 900, color: "#04121f", flexShrink: 0 }}>
-                    RA
-                  </span>
-                </div>
-              )}
-              <div style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
-                <span style={{ fontSize: "0.68rem", fontFamily: "Space Mono, monospace", textTransform: "uppercase", color: "#5a5852", display: isMobile ? "none" : "inline" }}>
-                  Workspace /
-                </span>
-                <span style={{ fontSize: isMobile ? "0.82rem" : "0.88rem", fontWeight: 700, fontFamily: '"Bricolage Grotesque", "Inter", sans-serif', color: "#e8e6e0", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {pageLabels[activePage] || "Chat Studio"}
-                </span>
+
+              <div
+                onClick={() => onNavigate?.("chat")}
+                style={{ cursor: "pointer", display: "flex", alignItems: "center" }}
+              >
+                <Logo size="md" showText={true} />
               </div>
             </div>
 
-            {/* Right: Guide Button + Clickable User Profile Popover */}
-            <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.5rem" : "0.875rem", flexShrink: 0 }}>
-              {/* 1. Guide Button in Top Navbar */}
+            {/* Middle: Desktop Nav Links with sharp indicators */}
+            {!isMobile && onNavigate && (
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                {navLinks.map((link) => {
+                  const isActive = activePage === link.key;
+                  return (
+                    <button
+                      key={link.key}
+                      onClick={() => onNavigate(link.key)}
+                      style={{
+                        padding: "8px 16px",
+                        background: "transparent",
+                        border: "none",
+                        borderBottom: isActive ? "2px solid #00C2DE" : "2px solid transparent",
+                        color: isActive ? "#FFFFFF" : "#9D9FA2",
+                        fontFamily: '"Open Sans", sans-serif',
+                        fontWeight: isActive ? 600 : 500,
+                        fontSize: "0.88rem",
+                        cursor: "pointer",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        transition: "color 120ms cubic-bezier(0.23,1,0.32,1), border-color 120ms cubic-bezier(0.23,1,0.32,1)",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isActive) e.currentTarget.style.color = "#FFFFFF";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isActive) e.currentTarget.style.color = "#9D9FA2";
+                      }}
+                    >
+                      <span style={{ color: isActive ? "#00C2DE" : "#6C757D" }}>{link.icon}</span>
+                      <span>{link.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Right: Guide Button & User Profile */}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.875rem", flexShrink: 0 }}>
               <button
                 type="button"
                 onClick={() => setGuideOpen(true)}
@@ -305,90 +351,81 @@ export function Navbar({ activePage, onNavigate, onToggleMobileSidebar }: Navbar
                   display: "inline-flex",
                   alignItems: "center",
                   gap: 6,
-                  padding: "5px 12px",
-                  borderRadius: 9999,
-                  background: "rgba(139,243,230,0.06)",
-                  border: "1px solid rgba(139,243,230,0.2)",
-                  color: "#8bf3e6",
-                  fontSize: "0.78rem",
+                  padding: "7px 14px",
+                  borderRadius: 20,
+                  background: "transparent",
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  color: "#9D9FA2",
+                  fontSize: "0.82rem",
                   fontWeight: 500,
                   cursor: "pointer",
-                  fontFamily: "Inter, sans-serif",
-                  transition: "all 0.18s ease",
+                  fontFamily: '"Open Sans", sans-serif',
+                  transition: "all 0.15s ease",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = "rgba(139,243,230,0.12)";
-                  e.currentTarget.style.borderColor = "rgba(139,243,230,0.35)";
+                  e.currentTarget.style.borderColor = "#00C2DE";
+                  e.currentTarget.style.color = "#FFFFFF";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.background = "rgba(139,243,230,0.06)";
-                  e.currentTarget.style.borderColor = "rgba(139,243,230,0.2)";
+                  e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)";
+                  e.currentTarget.style.color = "#9D9FA2";
                 }}
                 aria-label="Open platform guide"
               >
-                <span>📖</span>
+                <BookOpen size={14} />
                 <span>Guide</span>
               </button>
 
-              {/* 2. Clickable Profile Icon with Popover (Desktop & Mobile) */}
               <div style={{ position: "relative" }}>
-                <motion.button
-                  whileTap={{ scale: 0.92 }}
+                <button
                   onClick={() => {
-                    if (isMobile) {
-                      setMobileProfileOpen(true);
-                    } else {
-                      setProfileOpen((p) => !p);
-                    }
+                    if (isMobile) setMobileProfileOpen(true);
+                    else setProfileOpen((p) => !p);
                   }}
                   style={{
                     display: "flex",
                     alignItems: "center",
                     gap: 8,
-                    padding: "3px 8px 3px 4px",
-                    borderRadius: 9999,
-                    background: "rgba(255,255,255,0.04)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    padding: "4px 10px 4px 6px",
+                    borderRadius: 20,
+                    background: "#1A1A1B",
+                    border: "1px solid rgba(255,255,255,0.12)",
                     cursor: "pointer",
-                    transition: "all 0.18s ease",
+                    transition: "border-color 0.15s ease",
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(70,183,255,0.35)";
-                    e.currentTarget.style.background = "rgba(255,255,255,0.07)";
+                    e.currentTarget.style.borderColor = "#00C2DE";
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.1)";
-                    e.currentTarget.style.background = "rgba(255,255,255,0.04)";
+                    e.currentTarget.style.borderColor = "rgba(255,255,255,0.12)";
                   }}
-                  aria-label="Open user profile menu"
-                  aria-expanded={profileOpen}
+                  aria-label="User profile menu"
                 >
                   <div
                     style={{
-                      width: 28,
-                      height: 28,
+                      width: 26,
+                      height: 26,
                       borderRadius: "50%",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       fontSize: "0.75rem",
                       fontWeight: 700,
-                      color: "#04121f",
-                      background: "linear-gradient(135deg, #46b7ff, #8bf3e6)",
-                      boxShadow: "0 0 10px rgba(70,183,255,0.35)",
+                      color: "#FFFFFF",
+                      background: "#000000",
+                      border: "1px solid #00C2DE",
                     }}
                   >
                     {(user?.username || user?.email)?.charAt(0).toUpperCase() ?? "U"}
                   </div>
                   {!isMobile && (
-                    <span style={{ fontSize: "0.78rem", fontWeight: 600, color: "#e8e6e0", maxWidth: 100, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span style={{ fontSize: "0.82rem", fontWeight: 600, color: "#FFFFFF", maxWidth: 110, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                       {username}
                     </span>
                   )}
-                  <span style={{ fontSize: "0.65rem", color: "#5a5852" }}>▼</span>
-                </motion.button>
+                  <ChevronDown size={13} style={{ color: "#9D9FA2" }} />
+                </button>
 
-                {/* Popover on Desktop */}
                 <AnimatePresence>
                   {profileOpen && !isMobile && (
                     <ProfileDropdown onClose={() => setProfileOpen(false)} />
@@ -400,10 +437,8 @@ export function Navbar({ activePage, onNavigate, onToggleMobileSidebar }: Navbar
         </div>
       </header>
 
-      {/* Guide Modal */}
       <GuideModal open={guideOpen} onClose={() => setGuideOpen(false)} />
 
-      {/* Mobile bottom tab bar */}
       {onNavigate && (
         <MobileBottomTabBar
           navLinks={navLinks}
@@ -413,7 +448,6 @@ export function Navbar({ activePage, onNavigate, onToggleMobileSidebar }: Navbar
         />
       )}
 
-      {/* Mobile profile sheet */}
       <MobileProfileSheet open={mobileProfileOpen} onClose={() => setMobileProfileOpen(false)} />
     </>
   );
