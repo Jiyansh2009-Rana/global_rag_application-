@@ -21,7 +21,7 @@ import {
 import { useAuth } from '@/hooks/useContextHooks';
 import { getConsent, uploadDocumentSSE, parseUploadSSEStream } from '@/api/upload';
 import { getGlobalUploadSetting } from '@/api/admin';
-import { parseApiError, tokenStore } from '@/api/client';
+import { parseApiError, classifyApiError, tokenStore } from '@/api/client';
 import type { ConsentResponse, FileUploadState } from '@/api/types';
 import { Button } from '@/components/ui/Button';
 
@@ -307,12 +307,30 @@ function FileProgressCard({ state, index, mode }: { state: FileUploadState; inde
       )}
 
       {/* --- Error --- */}
-      {phase === 'error' && error && (
-        <div style={{ fontSize: '0.74rem', color: '#f59e0b', padding: '8px 10px', borderRadius: 8, background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.20)', marginTop: 4, lineHeight: 1.5, display: 'flex', gap: 7, alignItems: 'flex-start' }}>
-          <AlertCircle size={14} style={{ flexShrink: 0, marginTop: 2, color: '#f59e0b' }} />
-          <span>{parseApiError(error)}</span>
-        </div>
-      )}
+      {phase === 'error' && error && (() => {
+        const errDetails = classifyApiError(error, 'upload', file.name);
+        return (
+          <div style={{
+            fontSize: '0.74rem',
+            padding: '10px 12px',
+            borderRadius: 10,
+            background: 'rgba(245, 158, 11, 0.08)',
+            border: '1px solid rgba(245, 158, 11, 0.25)',
+            marginTop: 8,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, color: '#f59e0b' }}>
+              <AlertCircle size={14} style={{ flexShrink: 0 }} />
+              <span>{errDetails.title}</span>
+            </div>
+            <div style={{ color: '#d1d5db', lineHeight: 1.5, paddingLeft: 20 }}>
+              {errDetails.message}
+            </div>
+          </div>
+        );
+      })()}
     </motion.div>
   );
 }
@@ -695,13 +713,13 @@ export function UploadPage() {
             }
 
             case 'error':
-              patch({ phase: 'error', error: parseApiError(event.message || 'Processing failed'), progress: 0 });
+              patch({ phase: 'error', error: parseApiError(event.message || 'Processing failed', 'upload', file.name), progress: 0 });
               break;
           }
         }
       } catch (err) {
         console.error('Upload failed:', err);
-        const errMsg = parseApiError(err);
+        const errMsg = parseApiError(err, 'upload', file.name);
         patch({ phase: 'error', error: errMsg, progress: 0 });
       }
     };

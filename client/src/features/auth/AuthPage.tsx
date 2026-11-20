@@ -325,7 +325,7 @@ function LoginForm({
     try {
       await signIn(data.email, data.password);
     } catch (err) {
-      setApiError(parseApiError(err));
+      setApiError(parseApiError(err, 'auth'));
     }
   };
 
@@ -433,7 +433,7 @@ function SignupForm({
       onOtpRequested(payload.email, payload);
     } catch (err) {
       const raw = err instanceof Error ? err.message : String(err);
-      const friendly = parseApiError(err);
+      const friendly = parseApiError(err, 'auth');
       if (isRoleConflictError(raw)) setRoleError(friendly);
       else setApiError(friendly);
     }
@@ -559,7 +559,7 @@ function VerifySignupForm({
       await verifySignup(email, otpValue.trim());
       onVerified();
     } catch (err) {
-      setApiError(parseApiError(err));
+      setApiError(parseApiError(err, 'auth'));
     }
   };
 
@@ -572,7 +572,7 @@ function VerifySignupForm({
       await signUp(resendPayload);
       setResendStatus('A fresh 6-digit code has been dispatched to your email.');
     } catch (err) {
-      setApiError(parseApiError(err));
+      setApiError(parseApiError(err, 'auth'));
     } finally {
       setIsResending(false);
     }
@@ -668,7 +668,7 @@ function ForgotPasswordForm({
       await forgotPassword(data.email);
       onCodeSent(data.email);
     } catch (err) {
-      setApiError(parseApiError(err));
+      setApiError(parseApiError(err, 'auth'));
     }
   };
 
@@ -761,7 +761,7 @@ function ResetPasswordForm({
       await resetPassword(data.email, otpValue.trim(), data.new_password);
       onSuccess();
     } catch (err) {
-      setApiError(parseApiError(err));
+      setApiError(parseApiError(err, 'auth'));
     }
   };
 
@@ -773,7 +773,7 @@ function ResetPasswordForm({
       await onResend();
       setResendStatus('A fresh recovery code has been sent.');
     } catch (err) {
-      setApiError(parseApiError(err));
+      setApiError(parseApiError(err, 'auth'));
     } finally {
       setIsResending(false);
     }

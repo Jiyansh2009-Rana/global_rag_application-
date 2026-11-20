@@ -338,7 +338,7 @@ function OrganisationsTab({
       setActionOrg(null);
       onRefresh();
     } catch (err) {
-      setStatusMsg({ msg: parseApiError(err), type: 'error' });
+      setStatusMsg({ msg: parseApiError(err, 'admin'), type: 'error' });
     } finally {
       setUpdating(false);
       setTimeout(() => setStatusMsg(null), 5000);
@@ -1214,7 +1214,7 @@ export function SuperAdminPage() {
       setUsers(u.users ?? []);
       setDocuments(d.documents ?? []);
     } catch (err) {
-      setStatusMsg({ msg: parseApiError(err), type: 'error' });
+      setStatusMsg({ msg: parseApiError(err, 'admin'), type: 'error' });
     } finally {
       setLoading(false);
     }
@@ -1230,7 +1230,7 @@ export function SuperAdminPage() {
       setUsers(prev => prev.filter(u => u.id !== userId));
       setStatusMsg({ msg: 'User globally removed from platform.', type: 'success' });
     } catch (err) {
-      setStatusMsg({ msg: parseApiError(err), type: 'error' });
+      setStatusMsg({ msg: parseApiError(err, 'admin'), type: 'error' });
     } finally {
       setTimeout(() => setStatusMsg(null), 4000);
     }
@@ -1242,7 +1242,7 @@ export function SuperAdminPage() {
       setDocuments(prev => prev.filter(d => d.id !== docId));
       setStatusMsg({ msg: 'Document and all chunks deleted globally.', type: 'success' });
     } catch (err) {
-      setStatusMsg({ msg: parseApiError(err), type: 'error' });
+      setStatusMsg({ msg: parseApiError(err, 'admin'), type: 'error' });
     } finally {
       setTimeout(() => setStatusMsg(null), 4000);
     }

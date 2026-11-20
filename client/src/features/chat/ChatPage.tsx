@@ -20,11 +20,17 @@ import {
   AlertTriangle,
   Eye,
   History as HistoryIcon,
+  RotateCcw,
+  WifiOff,
+  Clock,
+  ShieldAlert,
+  Plus,
+  Layers,
 } from 'lucide-react';
 
 import { useAuth, useIsMobile } from '@/hooks/useContextHooks';
 import { downloadFile, streamQuery, parseQuerySSEStream } from '@/api/query';
-import { parseApiError, tokenStore } from '@/api/client';
+import { parseApiError, classifyApiError, tokenStore } from '@/api/client';
 import type { QueryResponse, Source, QueryRequest } from '@/api/types';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
@@ -907,6 +913,182 @@ function AnswerBubble({
 }
 
 
+/* ── Situation-Based Chat Error Card Component ── */
+function ChatErrorBubble({
+  rawError,
+  onRetry,
+  onNewChat,
+}: {
+  rawError: string;
+  onRetry?: () => void;
+  onNewChat?: () => void;
+}) {
+  const details = classifyApiError(rawError, 'chat');
+
+  const categoryStyles: Record<string, { icon: React.ReactNode; borderColor: string; bg: string; iconColor: string; badgeBg: string }> = {
+    network: {
+      icon: <WifiOff size={15} />,
+      borderColor: 'rgba(0, 194, 222, 0.25)',
+      bg: 'rgba(0, 194, 222, 0.04)',
+      iconColor: 'var(--accent, #00C2DE)',
+      badgeBg: 'rgba(0, 194, 222, 0.12)',
+    },
+    rate_limit: {
+      icon: <Clock size={15} />,
+      borderColor: 'rgba(245, 158, 11, 0.25)',
+      bg: 'rgba(245, 158, 11, 0.04)',
+      iconColor: '#f59e0b',
+      badgeBg: 'rgba(245, 158, 11, 0.12)',
+    },
+    context_length: {
+      icon: <Layers size={15} />,
+      borderColor: 'rgba(168, 85, 247, 0.25)',
+      bg: 'rgba(168, 85, 247, 0.04)',
+      iconColor: '#a855f7',
+      badgeBg: 'rgba(168, 85, 247, 0.12)',
+    },
+    auth: {
+      icon: <ShieldAlert size={15} />,
+      borderColor: 'rgba(239, 68, 68, 0.25)',
+      bg: 'rgba(239, 68, 68, 0.04)',
+      iconColor: '#ef4444',
+      badgeBg: 'rgba(239, 68, 68, 0.12)',
+    },
+    permission: {
+      icon: <ShieldAlert size={15} />,
+      borderColor: 'rgba(239, 68, 68, 0.25)',
+      bg: 'rgba(239, 68, 68, 0.04)',
+      iconColor: '#ef4444',
+      badgeBg: 'rgba(239, 68, 68, 0.12)',
+    },
+    server: {
+      icon: <AlertTriangle size={15} />,
+      borderColor: 'rgba(245, 158, 11, 0.25)',
+      bg: 'rgba(245, 158, 11, 0.04)',
+      iconColor: '#f59e0b',
+      badgeBg: 'rgba(245, 158, 11, 0.12)',
+    },
+    unknown: {
+      icon: <AlertTriangle size={15} />,
+      borderColor: 'rgba(255, 255, 255, 0.12)',
+      bg: 'rgba(255, 255, 255, 0.03)',
+      iconColor: 'var(--muted, #9da7b3)',
+      badgeBg: 'rgba(255, 255, 255, 0.08)',
+    },
+  };
+
+  const currentTheme = categoryStyles[details.category] || categoryStyles.unknown;
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 8,
+        padding: '13px 16px',
+        borderRadius: 14,
+        background: currentTheme.bg,
+        border: `1px solid ${currentTheme.borderColor}`,
+        boxShadow: '0 4px 20px rgba(0,0,0,0.3)',
+        maxWidth: '85%',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ color: currentTheme.iconColor, display: 'flex', alignItems: 'center' }}>
+            {currentTheme.icon}
+          </span>
+          <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#e8e6e0' }}>
+            {details.title}
+          </span>
+        </div>
+        <span
+          style={{
+            fontSize: '0.62rem',
+            fontFamily: 'var(--font-mono)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.06em',
+            padding: '2px 8px',
+            borderRadius: 999,
+            background: currentTheme.badgeBg,
+            color: currentTheme.iconColor,
+            fontWeight: 600,
+          }}
+        >
+          {details.category.replace('_', ' ')}
+        </span>
+      </div>
+
+      <div style={{ fontSize: '0.82rem', lineHeight: 1.55, color: '#c4c0b5' }}>
+        {details.message}
+      </div>
+
+      {/* Actionable buttons */}
+      <div style={{ display: 'flex', gap: 8, paddingTop: 4 }}>
+        {(details.actionType === 'retry' && onRetry) && (
+          <button
+            type="button"
+            onClick={onRetry}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 12px',
+              borderRadius: 8,
+              fontSize: '0.74rem',
+              fontWeight: 600,
+              background: 'rgba(0, 194, 222, 0.12)',
+              border: '1px solid rgba(0, 194, 222, 0.3)',
+              color: '#00C2DE',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(0, 194, 222, 0.22)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(0, 194, 222, 0.12)';
+            }}
+          >
+            <RotateCcw size={12} />
+            <span>{details.actionLabel || 'Retry Query'}</span>
+          </button>
+        )}
+
+        {(details.actionType === 'new_chat' && onNewChat) && (
+          <button
+            type="button"
+            onClick={onNewChat}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 6,
+              padding: '6px 12px',
+              borderRadius: 8,
+              fontSize: '0.74rem',
+              fontWeight: 600,
+              background: 'rgba(168, 85, 247, 0.12)',
+              border: '1px solid rgba(168, 85, 247, 0.3)',
+              color: '#a855f7',
+              cursor: 'pointer',
+              transition: 'all 0.15s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(168, 85, 247, 0.22)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(168, 85, 247, 0.12)';
+            }}
+          >
+            <Plus size={12} />
+            <span>Start New Chat</span>
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 const SETTINGS_STORAGE_KEY = 'askmydocs_retrieval_settings';
 
 const DEFAULT_SETTINGS: RetrievalSettings = {
@@ -1242,7 +1424,7 @@ export function ChatPage() {
               : msg
           ));
         } else if (event.event === 'error') {
-          throw new Error(parseApiError(event.data || 'LLM generation failed.'));
+          throw new Error(parseApiError(event.data || 'LLM generation failed.', 'chat'));
         } else if (event.event === 'done') {
           void refreshSessions();
           if (!activeSessionId && event.session_id) {
@@ -1275,7 +1457,7 @@ export function ChatPage() {
       }
     } catch (err) {
       console.error('Query failed:', err);
-      const errMsg = parseApiError(err);
+      const errMsg = parseApiError(err, 'chat');
       setMessages((m) =>
         m.map((msg) =>
           msg.id === assistantId
@@ -1659,23 +1841,16 @@ export function ChatPage() {
                       />
                     )}
                     {msg.type === 'error' && (
-                      <div
-                        style={{
-                          display: 'flex',
-                          alignItems: 'flex-start',
-                          gap: 10,
-                          padding: '12px 14px',
-                          borderRadius: 10,
-                          background: 'rgba(245, 158, 11, 0.06)',
-                          border: '1px solid rgba(245, 158, 11, 0.18)',
-                          color: '#f59e0b',
-                          fontSize: '0.84rem',
-                          lineHeight: 1.5,
+                      <ChatErrorBubble
+                        rawError={msg.content}
+                        onRetry={() => {
+                          const lastUser = [...messages].reverse().find(m => m.type === 'user');
+                          if (lastUser) {
+                            void handleSubmit(lastUser.content);
+                          }
                         }}
-                      >
-                        <AlertTriangle size={15} style={{ color: '#f59e0b', flexShrink: 0, marginTop: 2 }} />
-                        <span style={{ flex: 1 }}>{parseApiError(msg.content)}</span>
-                      </div>
+                        onNewChat={handleNewChat}
+                      />
                     )}
                   </motion.div>
                 ))}

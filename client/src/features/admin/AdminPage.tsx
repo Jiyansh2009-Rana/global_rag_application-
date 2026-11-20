@@ -115,7 +115,7 @@ function GlobalUploadSettingsCard({
         type: 'success',
       });
     } catch (err) {
-      setStatusMsg({ msg: parseApiError(err), type: 'error' });
+      setStatusMsg({ msg: parseApiError(err, 'admin'), type: 'error' });
     } finally {
       setSaving(false);
     }
@@ -408,7 +408,7 @@ function UsersTab() {
       setTotalPages(res.total_pages ?? 1);
       setTotalCount(res.total ?? (res.users?.length ?? 0));
     }
-    catch (err) { setError(parseApiError(err)); }
+    catch (err) { setError(parseApiError(err, 'admin')); }
     finally { setLoading(false); }
   }, [page]);
 
@@ -422,7 +422,7 @@ function UsersTab() {
       setUsers(u => u.filter(x => x.id !== confirmId));
       setStatusMsg({ msg: 'User removed successfully.', type: 'success' });
     } catch (err) {
-      setStatusMsg({ msg: parseApiError(err), type: 'error' });
+      setStatusMsg({ msg: parseApiError(err, 'admin'), type: 'error' });
     } finally {
       setDeleting(false); setConfirmId(null);
       setTimeout(() => setStatusMsg(null), 4000);
@@ -436,7 +436,7 @@ function UsersTab() {
       setUsers(prev => prev.map(u => u.id === userId ? { ...u, allow_global_upload: nextVal } : u));
       setStatusMsg({ msg: `Global upload permission ${nextVal ? 'granted' : 'revoked'} for user.`, type: 'success' });
     } catch (err) {
-      setStatusMsg({ msg: parseApiError(err), type: 'error' });
+      setStatusMsg({ msg: parseApiError(err, 'admin'), type: 'error' });
     }
   };
 
@@ -655,7 +655,7 @@ function DocumentsTab() {
   const load = useCallback(async () => {
     setLoading(true); setError(null);
     try { setDocs(await getOrgDocuments()); }
-    catch (err) { setError(parseApiError(err)); }
+    catch (err) { setError(parseApiError(err, 'admin')); }
     finally { setLoading(false); }
   }, []);
 
@@ -669,7 +669,7 @@ function DocumentsTab() {
       setDocs(d => d.filter(x => x.id !== confirmId));
       setStatusMsg({ msg: 'Document and all its chunks deleted successfully.', type: 'success' });
     } catch (err) {
-      setStatusMsg({ msg: parseApiError(err), type: 'error' });
+      setStatusMsg({ msg: parseApiError(err, 'admin'), type: 'error' });
     } finally {
       setDeleting(false); setConfirmId(null);
       setTimeout(() => setStatusMsg(null), 4000);

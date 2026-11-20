@@ -78,14 +78,47 @@ function extractDetail(data: unknown): string {
   return 'An unexpected error occurred.';
 }
 
-/* ── Friendly & Secure error mapper ── */
-export function parseApiError(raw: unknown): string {
-  if (!raw) return 'An unexpected error occurred. Please try again.';
+export type ErrorContext = 'chat' | 'upload' | 'auth' | 'admin' | 'general';
+
+export interface ParsedErrorDetails {
+  title: string;
+  message: string;
+  category: 'network' | 'rate_limit' | 'context_length' | 'auth' | 'permission' | 'document' | 'llm' | 'server' | 'validation' | 'unknown';
+  actionLabel?: string;
+  actionType?: 'retry' | 'new_chat' | 'login' | 'reupload';
+  retryable: boolean;
+}
+
+/* ── Context-Aware & Situation-Based Error Classifier ── */
+export function classifyApiError(
+  raw: unknown,
+  context: ErrorContext = 'general',
+  filename?: string
+): ParsedErrorDetails {
+  if (!raw) {
+    return {
+      title: 'Unexpected Error',
+      message: 'An unexpected issue occurred. Please try again.',
+      category: 'unknown',
+      actionLabel: 'Retry',
+      actionType: 'retry',
+      retryable: true,
+    };
+  }
 
   let msg = raw instanceof ApiError ? raw.detail : String(raw instanceof Error ? raw.message : raw);
-  if (!msg || typeof msg !== 'string') return 'An unexpected error occurred.';
+  if (!msg || typeof msg !== 'string') {
+    return {
+      title: 'Unexpected Error',
+      message: 'An unexpected issue occurred. Please try again.',
+      category: 'unknown',
+      actionLabel: 'Retry',
+      actionType: 'retry',
+      retryable: true,
+    };
+  }
 
-  // If the error message is raw JSON string, unwrap detail / message
+  // If the error message is a raw JSON string, unwrap detail / message
   if (msg.trim().startsWith('{') && msg.trim().endsWith('}')) {
     try {
       const parsed = JSON.parse(msg.trim());
@@ -99,68 +132,8 @@ export function parseApiError(raw: unknown): string {
 
   const lower = msg.toLowerCase();
 
-  // 1. Auth & Organization Governance
-  if (lower.includes('unique_admin_per_org') || lower.includes('admin role is already allocated'))
-    return 'This organisation already has an Admin — contact your admin or choose a different role.';
-  if (lower.includes('unique_super_admin_global') || lower.includes('super admin is already allocated'))
-    return 'A Super Admin already exists globally — this role cannot be assigned again.';
-  if (lower.includes('email already registered'))
-    return 'This email is already registered. Try signing in instead.';
-  if (lower.includes('invalid credentials') || lower.includes('incorrect password'))
-    return 'Invalid email or password. Please try again.';
-  if (lower.includes('incorrect otp'))
-    return 'Incorrect 6-digit code. Please check your email and try again.';
-  if (lower.includes('otp expired') || lower.includes('invalid or expired otp'))
-    return 'The verification code has expired. Please request a new one.';
-  if (lower.includes('no organisation assigned'))
-    return 'Your account has no organisation assigned. Contact your Super Admin.';
-  if (lower.includes('consent required') || lower.includes('not confirmed'))
-    return 'You must confirm the upload consent before proceeding.';
-  if (lower.includes('401') || lower.includes('unauthorized') || lower.includes('session expired') || lower.includes('jwt expired'))
-    return 'Your session has expired. Please sign in again.';
-  if (lower.includes('403') || lower.includes('forbidden') || lower.includes('permission denied') || lower.includes('not allowed'))
-    return 'You do not have permission to perform this action.';
-  if (lower.includes('account suspended') || lower.includes('organization inactive'))
-    return 'This organisation or account is currently inactive. Contact your administrator.';
-
-  // 2. Document Extraction & File Processing (Protects internal Python libraries & parser traces)
-  if (lower.includes('docx') || lower.includes('word document'))
-    return 'Document parsing error: Unable to extract content from this DOCX file. The file may contain unsupported formatting, custom macros, or corruption. Please re-save as standard DOCX or PDF and try again.';
-  if (lower.includes('pdf') || lower.includes('scanned') || lower.includes('ocr'))
-    return 'Document parsing error: Unable to extract readable text from this PDF. It may be password-protected, encrypted, or contain unreadable scans.';
-  if (lower.includes('xlsx') || lower.includes('spreadsheet') || lower.includes('excel') || lower.includes('sheet'))
-    return 'Spreadsheet parsing error: Unable to process this spreadsheet. Please ensure it is a valid, uncorrupted Excel (.xlsx) or CSV file.';
-  if (lower.includes('pptx') || lower.includes('presentation') || lower.includes('slide'))
-    return 'Presentation parsing error: Unable to read slides. Please verify that the presentation contains readable text.';
-  if (lower.includes('html'))
-    return 'HTML parsing error: Unable to extract content. Please ensure the file contains valid HTML markup.';
-  if (lower.includes('extraction failed') || lower.includes('extract_text'))
-    return 'Unable to extract text from this document. Please check the file for corruption or password-protection and try again.';
-  if (lower.includes('embedding failed') || lower.includes('jina') || lower.includes('dimension'))
-    return 'Document indexing error: The system was unable to generate vector embeddings for this file. Please verify file content and try again.';
-  if (lower.includes('duplicate') || lower.includes('alias'))
-    return 'Duplicate detected: A document with identical content is already indexed.';
-  if (lower.includes('max_files') || lower.includes('too many files'))
-    return 'Batch limit exceeded: You can upload a maximum of 5 files per batch.';
-
-  // 3. AI / LLM Model Generation (Hides internal LLM model IDs, Groq token limits, and HTTP 502 details)
-  if (
-    lower.includes('token limit') ||
-    lower.includes('rate limit') ||
-    lower.includes('ratelimit') ||
-    lower.includes('llm') ||
-    lower.includes('model_not_found') ||
-    lower.includes('models failed') ||
-    lower.includes('allam') ||
-    lower.includes('groq') ||
-    lower.includes('llama') ||
-    lower.includes('qwen')
-  ) {
-    return 'The AI assistant is temporarily unavailable or experiencing high demand. Please try asking your question again in a moment.';
-  }
-
-  // 4. Network & Connectivity
-  if (
+  // ── 1. Network & Connection Interruption ──
+  const isNetwork =
     lower.includes('failed to fetch') ||
     lower.includes('networkerror') ||
     lower.includes('network error') ||
@@ -168,12 +141,300 @@ export function parseApiError(raw: unknown): string {
     lower.includes('err_connection') ||
     lower.includes('connection refused') ||
     lower.includes('err_network') ||
-    lower.includes('err_internet_disconnected')
-  ) {
-    return 'The connection was interrupted. This can happen with large or complex files — please check your connection and try again.';
+    lower.includes('err_internet_disconnected') ||
+    lower.includes('prematurely closed') ||
+    lower.includes('connection was interrupted') ||
+    lower.includes('stream closed') ||
+    lower.includes('load failed');
+
+  if (isNetwork) {
+    if (context === 'chat') {
+      return {
+        title: 'Connection Interrupted',
+        message: 'The connection to the AI generation stream was interrupted. Please check your network and try sending your query again.',
+        category: 'network',
+        actionLabel: 'Retry Query',
+        actionType: 'retry',
+        retryable: true,
+      };
+    }
+    if (context === 'upload') {
+      return {
+        title: 'Upload Interrupted',
+        message: 'The file upload stream was interrupted. Please verify your connection and re-upload the document.',
+        category: 'network',
+        actionLabel: 'Retry Upload',
+        actionType: 'reupload',
+        retryable: true,
+      };
+    }
+    if (context === 'auth') {
+      return {
+        title: 'Network Error',
+        message: 'Unable to reach the authentication service. Please check your internet connection.',
+        category: 'network',
+        actionLabel: 'Try Again',
+        actionType: 'retry',
+        retryable: true,
+      };
+    }
+    if (context === 'admin') {
+      return {
+        title: 'Connection Error',
+        message: 'Unable to contact the server to complete this administrative request. Please check your network connection.',
+        category: 'network',
+        actionLabel: 'Retry',
+        actionType: 'retry',
+        retryable: true,
+      };
+    }
+    return {
+      title: 'Connection Lost',
+      message: 'Network connection was interrupted. Please verify your connection and try again.',
+      category: 'network',
+      actionLabel: 'Retry',
+      actionType: 'retry',
+      retryable: true,
+    };
   }
 
-  // 5. Backend Internal Leak Prevention: Intercept raw exceptions, stack traces, and database terms
+  // ── 2. AI Model Rate Limiting & High Traffic ──
+  if (
+    lower.includes('rate limit') ||
+    lower.includes('ratelimit') ||
+    lower.includes('429') ||
+    lower.includes('too many requests') ||
+    lower.includes('quota exceeded') ||
+    lower.includes('resource_exhausted')
+  ) {
+    return {
+      title: 'Model Capacity Reached',
+      message: 'The AI service is experiencing high query volume or rate limits. Please pause a moment before retrying.',
+      category: 'rate_limit',
+      actionLabel: 'Try Again',
+      actionType: 'retry',
+      retryable: true,
+    };
+  }
+
+  // ── 3. Token Context Length / Prompt Too Large ──
+  if (
+    lower.includes('context_length_exceeded') ||
+    lower.includes('maximum context length') ||
+    lower.includes('too many tokens') ||
+    lower.includes('prompt is too long') ||
+    lower.includes('prompt too long')
+  ) {
+    return {
+      title: 'Context Length Exceeded',
+      message: 'This query or conversation history exceeds the model capacity. Try shortening your question or starting a fresh chat session.',
+      category: 'context_length',
+      actionLabel: 'New Chat',
+      actionType: 'new_chat',
+      retryable: false,
+    };
+  }
+
+  // ── 4. AI Engine / Model Provider Failover ──
+  if (
+    lower.includes('model_not_found') ||
+    lower.includes('models failed') ||
+    lower.includes('allam') ||
+    lower.includes('groq') ||
+    lower.includes('llama') ||
+    lower.includes('qwen') ||
+    lower.includes('llm generation failed')
+  ) {
+    return {
+      title: 'AI Generation Error',
+      message: 'The AI model is temporarily unavailable. The system will attempt failover — please resubmit your query.',
+      category: 'llm',
+      actionLabel: 'Retry Query',
+      actionType: 'retry',
+      retryable: true,
+    };
+  }
+
+  // ── 5. Authentication & Session Expiry ──
+  if (
+    lower.includes('401') ||
+    lower.includes('unauthorized') ||
+    lower.includes('session expired') ||
+    lower.includes('jwt expired') ||
+    lower.includes('token invalid') ||
+    lower.includes('token expired')
+  ) {
+    return {
+      title: 'Session Expired',
+      message: 'Your active session has expired for security. Please sign in again to continue.',
+      category: 'auth',
+      actionLabel: 'Sign In',
+      actionType: 'login',
+      retryable: false,
+    };
+  }
+
+  // ── 6. Permissions & Governance (RBAC) ──
+  if (
+    lower.includes('403') ||
+    lower.includes('forbidden') ||
+    lower.includes('permission denied') ||
+    lower.includes('not allowed') ||
+    lower.includes('admin only') ||
+    lower.includes('global upload permission is disabled')
+  ) {
+    return {
+      title: 'Access Restricted',
+      message: lower.includes('global upload permission')
+        ? 'Global upload is disabled for your account. You can still upload files to your private 1-hour session sandbox, or contact your administrator.'
+        : 'You do not have permission to perform this action. Contact your organisation administrator.',
+      category: 'permission',
+      retryable: false,
+    };
+  }
+
+  if (lower.includes('unique_admin_per_org') || lower.includes('admin role is already allocated')) {
+    return {
+      title: 'Admin Role Conflict',
+      message: 'This organisation already has an allocated Admin. Only one Admin is permitted per organisation.',
+      category: 'permission',
+      retryable: false,
+    };
+  }
+  if (lower.includes('unique_super_admin_global') || lower.includes('super admin is already allocated')) {
+    return {
+      title: 'Super Admin Conflict',
+      message: 'A Super Admin already exists globally — this role cannot be assigned again.',
+      category: 'permission',
+      retryable: false,
+    };
+  }
+  if (lower.includes('account suspended') || lower.includes('organization inactive')) {
+    return {
+      title: 'Account Inactive',
+      message: 'This organisation or account is currently inactive. Please contact support.',
+      category: 'auth',
+      retryable: false,
+    };
+  }
+  if (lower.includes('email already registered')) {
+    return {
+      title: 'Email Already Registered',
+      message: 'An account with this email already exists. Try signing in instead.',
+      category: 'auth',
+      actionLabel: 'Sign In',
+      actionType: 'login',
+      retryable: false,
+    };
+  }
+  if (lower.includes('invalid credentials') || lower.includes('incorrect password')) {
+    return {
+      title: 'Invalid Credentials',
+      message: 'Incorrect email or password. Please verify and try again.',
+      category: 'auth',
+      retryable: true,
+    };
+  }
+  if (lower.includes('incorrect otp')) {
+    return {
+      title: 'Invalid Verification Code',
+      message: 'The 6-digit code is incorrect. Please check your email and try again.',
+      category: 'auth',
+      retryable: true,
+    };
+  }
+  if (lower.includes('otp expired') || lower.includes('invalid or expired otp')) {
+    return {
+      title: 'Code Expired',
+      message: 'The verification code has expired. Please request a new code.',
+      category: 'auth',
+      retryable: true,
+    };
+  }
+
+  // ── 7. Document Extraction & Formats (Strictly for 'upload' context) ──
+  if (context === 'upload') {
+    const ext = filename ? filename.split('.').pop()?.toLowerCase() : '';
+
+    // PPTX / Presentations (Check FIRST to prevent "or upload as PDF" in PPTX error from triggering PDF parser)
+    if (ext === 'pptx' || (!ext && (lower.includes('pptx') || lower.includes('presentation') || lower.includes('slide')))) {
+      return {
+        title: 'Presentation Parsing Error',
+        message: 'Unable to extract text from presentation slides (.pptx). Please ensure slides contain extractable text content or try uploading as PDF.',
+        category: 'document',
+        actionLabel: 'Choose Another File',
+        actionType: 'reupload',
+        retryable: true,
+      };
+    }
+
+    // XLSX / Spreadsheets
+    if (ext === 'xlsx' || ext === 'csv' || (!ext && (lower.includes('xlsx') || lower.includes('spreadsheet') || lower.includes('sheet') || (lower.includes('excel') && !lower.includes('exception'))))) {
+      return {
+        title: 'Spreadsheet Parsing Error',
+        message: 'Unable to parse spreadsheet. Please ensure it is a valid, uncorrupted Excel (.xlsx) or CSV file with legible rows.',
+        category: 'document',
+        actionLabel: 'Choose Another File',
+        actionType: 'reupload',
+        retryable: true,
+      };
+    }
+
+    // DOCX / Word
+    if (ext === 'docx' || (!ext && (lower.includes('docx') || lower.includes('word document')))) {
+      return {
+        title: 'Word Document Error',
+        message: 'Unable to extract readable text from this Word document (.docx). The file may contain unsupported formatting, custom macros, or password protection.',
+        category: 'document',
+        actionLabel: 'Choose Another File',
+        actionType: 'reupload',
+        retryable: true,
+      };
+    }
+
+    // PDF (Only check after PPTX, XLSX, DOCX have been evaluated)
+    if (ext === 'pdf' || (!ext && (lower.includes('pdf') || lower.includes('scanned') || lower.includes('ocr')))) {
+      return {
+        title: 'PDF Parsing Error',
+        message: 'Unable to extract readable text from this PDF. It may contain non-searchable image scans or password protection.',
+        category: 'document',
+        actionLabel: 'Choose Another File',
+        actionType: 'reupload',
+        retryable: true,
+      };
+    }
+
+    // HTML / Web
+    if (ext === 'html' || ext === 'htm' || lower.includes('html')) {
+      return {
+        title: 'HTML Parsing Error',
+        message: 'Unable to extract readable content from this HTML file. Please verify file encoding.',
+        category: 'document',
+        actionLabel: 'Choose Another File',
+        actionType: 'reupload',
+        retryable: true,
+      };
+    }
+
+    if (lower.includes('max_files') || lower.includes('too many files')) {
+      return {
+        title: 'Batch Limit Exceeded',
+        message: 'You can upload a maximum of 5 files per batch.',
+        category: 'validation',
+        retryable: false,
+      };
+    }
+    if (lower.includes('duplicate') || lower.includes('alias')) {
+      return {
+        title: 'Document Already Indexed',
+        message: 'A document with identical content is already indexed and up to date.',
+        category: 'document',
+        retryable: false,
+      };
+    }
+  }
+
+  // ── 8. Backend Internal Stack Trace & Database Leak Prevention ──
   const isBackendInternalLeak =
     lower.includes('traceback') ||
     lower.includes('nonetype') ||
@@ -201,15 +462,78 @@ export function parseApiError(raw: unknown): string {
     /0x[0-9a-fA-F]{4,}/.test(msg);
 
   if (isBackendInternalLeak) {
-    return 'An internal processing error occurred while handling this request. The system administrator has been logged. Please try again or use a supported file format.';
+    if (context === 'chat') {
+      return {
+        title: 'Generation Error',
+        message: 'An internal server issue occurred while processing your response. The error has been logged. Please try submitting again.',
+        category: 'server',
+        actionLabel: 'Retry Query',
+        actionType: 'retry',
+        retryable: true,
+      };
+    }
+    if (context === 'upload') {
+      return {
+        title: 'Indexing Error',
+        message: 'An internal error occurred while indexing this document. Please verify the file integrity or try another document.',
+        category: 'server',
+        actionLabel: 'Retry Upload',
+        actionType: 'reupload',
+        retryable: true,
+      };
+    }
+    if (context === 'admin') {
+      return {
+        title: 'Operation Failed',
+        message: 'An internal error occurred while executing this administrative command. The incident has been recorded.',
+        category: 'server',
+        actionLabel: 'Retry',
+        actionType: 'retry',
+        retryable: true,
+      };
+    }
+    return {
+      title: 'Server Error',
+      message: 'An internal processing error occurred while handling this request. Please try again in a moment.',
+      category: 'server',
+      actionLabel: 'Retry',
+      actionType: 'retry',
+      retryable: true,
+    };
   }
 
-  // 6. Safeguard against excessively long raw server dumps
+  // ── 9. Overly long server error dumps ──
   if (msg.length > 220) {
-    return 'The server encountered an unexpected error while processing your request. Please try again.';
+    return {
+      title: 'Processing Error',
+      message: context === 'chat'
+        ? 'The assistant encountered an unexpected error while answering. Please try submitting again.'
+        : 'The server encountered an unexpected error while processing your request. Please try again.',
+      category: 'unknown',
+      actionLabel: 'Retry',
+      actionType: 'retry',
+      retryable: true,
+    };
   }
 
-  return msg;
+  // ── 10. Clean user-facing fallback ──
+  return {
+    title: 'Notice',
+    message: msg,
+    category: 'unknown',
+    actionLabel: 'Retry',
+    actionType: 'retry',
+    retryable: true,
+  };
+}
+
+/* ── Friendly & Secure error mapper (Backward compatible) ── */
+export function parseApiError(
+  raw: unknown,
+  context: ErrorContext = 'general',
+  filename?: string
+): string {
+  return classifyApiError(raw, context, filename).message;
 }
 
 /* ── Is role-conflict error (for inline display on role field) ── */

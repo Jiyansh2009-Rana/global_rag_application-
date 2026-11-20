@@ -29,8 +29,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://localhost:3000",
-        "http://13.201.77.82",
-        "http://13.201.77.82:80",
+        "https://askmydocsai.dpdns.org",  # Your custom domain (HTTPS)
+        "http://askmydocsai.dpdns.org", 
     ],
     allow_credentials=True,
     allow_methods=["*"],

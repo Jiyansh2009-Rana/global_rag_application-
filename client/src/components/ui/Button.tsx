@@ -70,7 +70,7 @@ const variantStyles: Record<Variant, string> = {
 };
 
 const sizeStyles: Record<Size, string> = {
-  sm: 'h-[36px] px-3.5 text-[0.82rem]',
+  sm: 'h-[36px] px-4 text-[0.82rem]',
   md: 'h-[44px] px-5 text-[0.88rem]',
   lg: 'h-[50px] px-7 text-[0.95rem]',
 };
@@ -99,7 +99,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         aria-busy={loading}
         className={`
           relative inline-flex items-center justify-center gap-2
-          cursor-pointer select-none
+          cursor-pointer select-none whitespace-nowrap shrink-0
           transition-all duration-200 ease-out
           ${variantStyles[variant]}
           ${sizeStyles[size]}
@@ -115,7 +115,9 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
             style={{ minWidth: '16px' }}
           />
         )}
-        <span className={loading ? 'opacity-80' : ''}>{children}</span>
+        <span className={`inline-flex items-center justify-center gap-2 whitespace-nowrap ${loading ? 'opacity-80' : ''}`}>
+          {children}
+        </span>
       </button>
     );
   },

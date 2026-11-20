@@ -93,11 +93,12 @@ function PreAuthNav({ activePage, onNavigate }: { activePage: Page; onNavigate: 
             </div>
 
             {/* Right actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
               <Button
                 variant={activePage === 'overview' ? 'primary' : 'pill'}
                 size="sm"
                 onClick={() => onNavigate(activePage === 'overview' ? 'chat' : 'overview')}
+                style={{ padding: '0 16px', flexShrink: 0 }}
               >
                 {activePage === 'overview' ? (
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
@@ -116,9 +117,12 @@ function PreAuthNav({ activePage, onNavigate }: { activePage: Page; onNavigate: 
                 size="sm"
                 onClick={() => setGuideOpen(true)}
                 aria-label="Open guide"
+                style={{ padding: '0 16px', flexShrink: 0 }}
               >
-                <BookOpen size={13} style={{ color: 'var(--muted)' }} />
-                <span>Guide</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <BookOpen size={13} style={{ color: 'var(--muted)' }} />
+                  <span>Guide</span>
+                </span>
               </Button>
             </div>
           </nav>
