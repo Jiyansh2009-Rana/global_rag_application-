@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 
 interface DialogProps {
   open: boolean;
@@ -115,7 +116,7 @@ export function Dialog({
                   }}
                   aria-label="Close dialog"
                 >
-                  ✕
+                  <X size={15} />
                 </button>
               </div>
             )}

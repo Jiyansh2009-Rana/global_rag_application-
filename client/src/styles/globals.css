@@ -98,9 +98,9 @@ body {
 }
 .card-tech-angled:hover,
 .card-feature-modern:hover {
-  transform: translateY(-4px);
-  border-color: rgba(0, 194, 222, 0.45);
-  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7), 0 0 28px rgba(0, 194, 222, 0.16);
+  transform: translateY(-2px);
+  border-color: rgba(0, 194, 222, 0.4);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.65);
 }
 
 /* 3. Segmented Pill Tab Track */

@@ -4,8 +4,19 @@
 User-agent: *
 Allow: /
 Allow: /llms.txt
-Allow: /api/docs
-Allow: /api/openapi.json
+Allow: /sitemap.xml
+
+# XML Sitemap for Google, Bing, and Search Crawlers
+Sitemap: https://askmydocsai.dpdns.org/sitemap.xml
+
+# Search Engine Specific Directives
+User-agent: Googlebot
+Allow: /
+Allow: /sitemap.xml
+
+User-agent: Bingbot
+Allow: /
+Allow: /sitemap.xml
 
 # AI Agent Specific Directives
 User-agent: GPTBot
@@ -25,6 +36,5 @@ Allow: /
 Allow: /llms.txt
 
 # LLM Specification File
-# Machine-readable guide for AI assistants and autonomous agents
 # https://llmstxt.org
 # llms.txt: https://askmydocsai.dpdns.org/llms.txt

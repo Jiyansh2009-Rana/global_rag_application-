@@ -19,6 +19,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Check,
+  X,
   Globe,
 } from 'lucide-react';
 
@@ -576,7 +577,11 @@ function UsersTab() {
                             fontFamily: 'inherit',
                           }}
                         >
-                          {u.allow_global_upload ? <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Check size={12} /> Allowed</span> : <span>✕ Disabled</span>}
+                          {u.allow_global_upload ? (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><Check size={12} /> Allowed</span>
+                          ) : (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}><X size={12} /> Disabled</span>
+                          )}
                         </button>
                       ) : (
                         <span style={{ fontSize: '0.68rem', color: 'var(--accent)', fontWeight: 500 }}>Always Allowed</span>

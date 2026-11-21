@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BookOpen, X, Lightbulb } from 'lucide-react';
 import { getPlatformGuide } from '@/api/guide';
 import type { PlatformGuide } from '@/api/types';
 
@@ -9,47 +10,47 @@ interface GuideModalProps {
 }
 
 const fallbackGuide: PlatformGuide = {
-  title: 'Welcome to the Enterprise RAG Platform',
+  title: 'Welcome to Askmydocsai Platform',
   introduction:
-    'This platform acts as your intelligent document assistant. You can securely upload your documents (PDFs, Word docs, Spreadsheets, Presentations, etc.) and ask AI questions to instantly find answers based strictly on your files.',
+    'Askmydocsai acts as your enterprise document intelligence assistant. Securely upload documents (PDFs, Word documents, Spreadsheets, Presentations, Images) and query them with deterministic precision and verifiable page citations.',
   how_to_use_steps: [
     {
       step: 1,
-      title: '🔐 Create an Account & Log In',
-      description: "Start by signing up with your email. Once logged in, you'll be securely assigned to your organization's workspace.",
+      title: 'Account Creation & Authentication',
+      description: "Sign in with your organization email or Google OAuth. Once authenticated, you are scoped to your organization workspace.",
     },
     {
       step: 2,
-      title: '📂 Upload Documents (Local vs. Global)',
-      description: 'You have two ways to upload documents, depending on your needs:',
+      title: 'Document Ingestion (Sandbox vs Global)',
+      description: 'Choose your ingestion target based on security and collaboration requirements:',
       details: {
-        'Local Mode (Private & Temporary)': 'Perfect for sensitive, one-off analysis. Documents are visible ONLY to you and are permanently deleted after 1 hour.',
-        'Global Mode (Org-Wide)': "Available for Admins. Documents uploaded globally act as a shared knowledge base for everyone in your organization.",
+        'Local / Sandbox Mode': 'Ephemeral, private document analysis. Files are isolated to your session and cached in Redis with a 1-hour TTL.',
+        'Global Knowledge Base': "Shared enterprise repository indexed in Neon PostgreSQL with pgvector HNSW embeddings for organization-wide retrieval.",
       },
     },
     {
       step: 3,
-      title: '💬 Ask Questions (Querying)',
-      description: 'Head over to the chat interface to ask questions. You can filter where the AI searches for answers:',
+      title: 'Querying & Retrieval',
+      description: 'Ask questions using real-time streaming inference. Target your search mode according to context:',
       details: {
-        'Local': 'Searches only your temporarily uploaded files.',
-        'Global': "Searches your organization's permanent knowledge base.",
-        'Both': "Searches across both your private session files and the organization's files.",
+        'Global Mode': "Queries your organization's permanent knowledge base.",
+        'Sandbox Mode': 'Queries only your private session documents.',
+        'Hybrid Mode': "Blends global organizational knowledge with active session files.",
       },
     },
     {
       step: 4,
-      title: '📜 View Chat History',
-      description: "Whenever you ask questions in 'Global' or 'Both' modes, your chat history is safely stored. You can revisit your past questions and answers at any time in the History tab.",
+      title: 'Chat History & Session Continuity',
+      description: "Past questions, streaming responses, and citations are safely indexed for quick reference across sessions.",
     },
   ],
   tips_for_best_results: [
-    'Be specific with your questions.',
-    "If the AI doesn't know the answer, it will tell you. It will never make up information.",
-    'You can ask the AI to answer in different languages!',
+    'Be specific with terms, codes, or sections you want to reference.',
+    'Responses cite exact source document names and page numbers for auditability.',
+    'Multimodal image charts and diagrams are retrieved via cross-modal vector similarity.',
   ],
-  support: "If you need elevated access (like Global Upload permissions), please contact your Organization's Admin.",
-  contact: 'if you see any issue or you have any suggestion then contact this email rag1agentsuperadmin@gmail.com',
+  support: "If you need elevated permissions (such as Global Ingestion), please reach out to your Organization Admin.",
+  contact: 'For support or assistance, reach out to rag1agentsuperadmin@gmail.com',
 };
 
 export function GuideModal({ open, onClose }: GuideModalProps) {
@@ -124,8 +125,8 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                 alignItems: 'center',
                 justifyContent: 'space-between',
                 padding: '1.4rem 1.75rem',
-                borderBottom: '1px solid var(--border)',
-                background: 'linear-gradient(180deg, rgba(0,210,200,0.06) 0%, transparent 100%)',
+                borderBottom: '1px solid rgba(255,255,255,0.08)',
+                background: 'rgba(255,255,255,0.02)',
               }}
             >
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -137,18 +138,16 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: '1.15rem',
-                    background: 'linear-gradient(135deg, rgba(0,210,200,0.22), rgba(168,85,247,0.18))',
-                    border: '1px solid rgba(0,210,200,0.3)',
-                    boxShadow: '0 0 16px rgba(0,210,200,0.2)',
+                    background: 'rgba(0,194,222,0.12)',
+                    border: '1px solid rgba(0,194,222,0.3)',
                   }}
                 >
-                  📖
+                  <BookOpen size={18} className="text-[#00C2DE]" />
                 </div>
                 <div>
                   <h2
                     style={{
-                      fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif',
+                      fontFamily: '"Open Sans", sans-serif',
                       fontSize: '1.15rem',
                       fontWeight: 600,
                       color: 'var(--text)',
@@ -186,7 +185,7 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                   width: 32,
                   height: 32,
                   borderRadius: 10,
-                  border: '1px solid var(--border)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   background: 'rgba(255,255,255,0.04)',
                   color: 'var(--muted)',
                   fontSize: '1rem',
@@ -194,7 +193,7 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                   alignItems: 'center',
                   justifyContent: 'center',
                   cursor: 'pointer',
-                  transition: 'all 0.18s ease',
+                  transition: 'background-color 0.18s ease, color 0.18s ease',
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = 'var(--text)';
@@ -205,7 +204,7 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                   e.currentTarget.style.background = 'rgba(255,255,255,0.04)';
                 }}
               >
-                ✕
+                <X size={16} />
               </button>
             </div>
 
@@ -225,8 +224,8 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                 style={{
                   padding: '1.1rem 1.35rem',
                   borderRadius: 14,
-                  background: 'linear-gradient(135deg, rgba(0,210,200,0.08) 0%, rgba(168,85,247,0.05) 100%)',
-                  border: '1px solid rgba(0,210,200,0.18)',
+                  background: 'rgba(22, 23, 25, 0.9)',
+                  border: '1px solid rgba(255, 255, 255, 0.08)',
                   fontSize: '0.86rem',
                   color: 'var(--text)',
                   lineHeight: 1.65,
@@ -241,14 +240,14 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                   style={{
                     fontSize: '0.72rem',
                     textTransform: 'uppercase',
-                    letterSpacing: '0.12em',
+                    letterSpacing: '0.08em',
                     color: 'var(--muted)',
                     fontWeight: 600,
                     marginBottom: 12,
                     display: 'flex',
                     alignItems: 'center',
                     gap: 8,
-                    fontFamily: '"Bricolage Grotesque", "Inter", sans-serif',
+                    fontFamily: '"Space Mono", monospace',
                   }}
                 >
                   <span style={{ color: 'var(--accent)' }}>◈</span> Step-by-Step Guide
@@ -263,11 +262,11 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                         borderRadius: 14,
                         background: 'rgba(255,255,255,0.03)',
                         border: '1px solid rgba(255,255,255,0.07)',
-                        transition: 'all 0.2s ease',
+                        transition: 'background-color 0.2s ease, border-color 0.2s ease',
                       }}
                       onMouseEnter={(e) => {
                         e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                        e.currentTarget.style.borderColor = 'rgba(0,210,200,0.2)';
+                        e.currentTarget.style.borderColor = 'rgba(0,194,222,0.25)';
                       }}
                       onMouseLeave={(e) => {
                         e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
@@ -276,7 +275,7 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                     >
                       <div
                         style={{
-                          fontFamily: '"Bricolage Grotesque", "Inter", "Inter", sans-serif',
+                          fontFamily: '"Open Sans", sans-serif',
                           fontSize: '0.92rem',
                           fontWeight: 600,
                           color: 'var(--text)',
@@ -321,16 +320,17 @@ export function GuideModal({ open, onClose }: GuideModalProps) {
                     style={{
                       fontSize: '0.72rem',
                       textTransform: 'uppercase',
-                      letterSpacing: '0.12em',
+                      letterSpacing: '0.08em',
                       color: 'var(--muted)',
                       fontWeight: 600,
                       marginBottom: 10,
                       display: 'flex',
                       alignItems: 'center',
                       gap: 8,
+                      fontFamily: '"Space Mono", monospace',
                     }}
                   >
-                    <span style={{ color: '#fbbf24' }}>💡</span> Tips for Best Results
+                    <Lightbulb size={13} className="text-amber-400" /> Tips for Best Results
                   </div>
                   <div
                     style={{

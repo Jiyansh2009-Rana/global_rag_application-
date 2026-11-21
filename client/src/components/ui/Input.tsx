@@ -1,4 +1,5 @@
 import { forwardRef, useState } from 'react';
+import { AlertCircle } from 'lucide-react';
 
 interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string;
@@ -24,8 +25,8 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             className={className}
             style={{
               width: '100%',
-              padding: rightElement ? '11px 44px 11px 14px' : '11px 14px',
-              borderRadius: '2px',
+              padding: rightElement ? '10px 44px 10px 14px' : '10px 14px',
+              borderRadius: 10,
               background: '#1A1A1B',
               border: `1px solid ${error ? '#dc3545' : 'rgba(255, 255, 255, 0.12)'}`,
               color: '#FFFFFF',
@@ -69,8 +70,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           )}
         </div>
         {error && (
-          <p style={{ fontSize: '0.75rem', color: '#dc3545', display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-            <span>⚠</span> {error}
+          <p style={{ fontSize: '0.75rem', color: '#dc3545', display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
+            <AlertCircle size={13} className="shrink-0 text-[#dc3545]" />
+            <span>{error}</span>
           </p>
         )}
         {hint && !error && (
@@ -174,8 +176,8 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           className={className}
           style={{
             width: '100%',
-            padding: '11px 14px',
-            borderRadius: '2px',
+            padding: '10px 14px',
+            borderRadius: 10,
             resize: 'vertical',
             background: '#1A1A1B',
             border: `1px solid ${error ? '#dc3545' : 'rgba(255, 255, 255, 0.12)'}`,
@@ -203,8 +205,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           {...props}
         />
         {error && (
-          <p style={{ fontSize: '0.75rem', color: '#dc3545', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span>⚠</span> {error}
+          <p style={{ fontSize: '0.75rem', color: '#dc3545', display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
+            <AlertCircle size={13} className="shrink-0 text-[#dc3545]" />
+            <span>{error}</span>
           </p>
         )}
       </div>
@@ -234,8 +237,8 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           className={className}
           style={{
             width: '100%',
-            padding: '11px 14px',
-            borderRadius: '2px',
+            padding: '10px 14px',
+            borderRadius: 10,
             cursor: 'pointer',
             background: '#1A1A1B',
             border: `1px solid ${error ? '#dc3545' : 'rgba(255, 255, 255, 0.12)'}`,
@@ -259,8 +262,9 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           {children}
         </select>
         {error && (
-          <p style={{ fontSize: '0.75rem', color: '#dc3545', display: 'flex', alignItems: 'center', gap: 4 }}>
-            <span>⚠</span> {error}
+          <p style={{ fontSize: '0.75rem', color: '#dc3545', display: 'flex', alignItems: 'center', gap: 5, marginTop: 3 }}>
+            <AlertCircle size={13} className="shrink-0 text-[#dc3545]" />
+            <span>{error}</span>
           </p>
         )}
       </div>

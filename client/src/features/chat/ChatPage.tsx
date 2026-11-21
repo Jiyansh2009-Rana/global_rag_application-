@@ -1864,7 +1864,7 @@ export function ChatPage() {
         {/* Floating Slash Command Helper */}
         {query.startsWith('/') && (
           <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, right: 0, padding: 8, borderRadius: 14, background: '#1A1A1B', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 36px rgba(0,0,0,0.8)', zIndex: 120, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div style={{ fontSize: '0.62rem', fontFamily: 'var(--font-mono)', color: '#6e7681', padding: '2px 8px' }}>ASKMYDOCSAI SHORTCUT COMMANDS</div>
+            <div style={{ fontSize: '0.66rem', fontFamily: 'var(--font-mono)', color: '#9D9FA2', fontWeight: 600, padding: '3px 8px' }}>Shortcut commands</div>
             {[
               { cmd: '/search', label: 'Multi-hop semantic vector search' },
               { cmd: '/deep', label: 'Chain-of-thought deep reasoning' },
@@ -2071,7 +2071,7 @@ export function ChatPage() {
               borderRadius: 0,
               borderLeft: 'none', borderRight: 'none', borderBottom: 'none',
               borderTop: '1px solid rgba(255, 255, 255, 0.08)',
-              padding: isMobile ? '0.5rem 0.625rem 0.625rem' : '0.75rem 1rem 1rem',
+              padding: isMobile ? '0.5rem 0.625rem calc(0.625rem + var(--safe-bottom, 0px))' : '0.75rem 1rem 1rem',
               background: '#000000',
             }}
           >

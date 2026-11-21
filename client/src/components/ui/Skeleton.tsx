@@ -5,7 +5,7 @@ interface SkeletonProps {
   rounded?: string;
 }
 
-export function Skeleton({ className = '', height, width, rounded = 'rounded-[2px]' }: SkeletonProps) {
+export function Skeleton({ className = '', height, width, rounded = 'rounded-md' }: SkeletonProps) {
   return (
     <div
       className={`skeleton ${rounded} ${className}`}
@@ -34,7 +34,7 @@ export function SkeletonText({ lines = 3, className = '' }: { lines?: number; cl
 export function SkeletonCard({ className = '' }: { className?: string }) {
   return (
     <div
-      className={`glass p-5 flex flex-col gap-3 rounded-[4px] border border-[rgba(255,255,255,0.08)] bg-[#1A1A1B] ${className}`}
+      className={`glass p-5 flex flex-col gap-3 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1A1A1B] ${className}`}
       aria-hidden="true"
     >
       <div className="flex gap-3 items-center">
@@ -52,7 +52,7 @@ export function SkeletonCard({ className = '' }: { className?: string }) {
 /* ── Source card skeleton ── */
 export function SourceCardSkeleton() {
   return (
-    <div className="glass p-4 flex flex-col gap-2.5 rounded-[4px] border border-[rgba(255,255,255,0.08)] bg-[#1A1A1B]" aria-hidden="true">
+    <div className="glass p-4 flex flex-col gap-2.5 rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#1A1A1B]" aria-hidden="true">
       <div className="flex justify-between items-start gap-2">
         <Skeleton height={12} width="55%" />
         <Skeleton height={10} width={40} />
@@ -62,8 +62,8 @@ export function SourceCardSkeleton() {
         <Skeleton height={10} width={50} />
       </div>
       {/* Score bar skeleton */}
-      <div className="h-1.5 rounded-[2px] bg-[#2C2C2D] overflow-hidden">
-        <Skeleton height="100%" width="70%" rounded="rounded-[2px]" />
+      <div className="h-1.5 rounded-full bg-[#2C2C2D] overflow-hidden">
+        <Skeleton height="100%" width="70%" rounded="rounded-full" />
       </div>
       <SkeletonText lines={2} />
     </div>

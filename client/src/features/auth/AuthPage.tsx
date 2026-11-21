@@ -23,7 +23,7 @@ import { Button } from '@/components/ui/Button';
 import { Input, PasswordInput, Select } from '@/components/ui/Input';
 import { Logo } from '@/components/common/Logo';
 import { authApi } from '@/api/auth';
-import { AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Check } from 'lucide-react';
 
 /* ── Verified Platform Capabilities (No Fake Numbers) ── */
 const CAPABILITIES = [
@@ -246,7 +246,7 @@ function GoogleSignInButton() {
           padding: '10px 16px',
           background: isRedirecting ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.06)',
           border: '1px solid rgba(255,255,255,0.14)',
-          borderRadius: 6,
+          borderRadius: 12,
           color: isRedirecting ? '#6C757D' : '#FFFFFF',
           fontSize: '0.88rem',
           fontWeight: 500,
@@ -565,7 +565,11 @@ function PasswordStrengthMeter({ password }: { password: string }) {
               fontFamily: '"Space Mono", monospace',
             }}
           >
-            <span style={{ fontSize: '0.7rem' }}>{rule.met ? '✓' : '•'}</span>
+            {rule.met ? (
+              <Check size={11} className="shrink-0 text-[#00C2DE]" />
+            ) : (
+              <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>•</span>
+            )}
             <span>{rule.label}</span>
           </motion.div>
         ))}

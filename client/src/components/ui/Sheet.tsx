@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { X } from 'lucide-react';
 
 interface SheetProps {
   open: boolean;
@@ -72,11 +73,11 @@ export function Sheet({ open, onClose, title, children, side = 'right', width = 
                     w-7 h-7 rounded-md flex items-center justify-center
                     text-[var(--muted)] hover:text-[var(--text)]
                     bg-transparent hover:bg-[var(--surface-2)]
-                    transition-all duration-150 text-sm
+                    transition-colors duration-150 text-sm
                   "
                   aria-label="Close panel"
                 >
-                  ✕
+                  <X size={15} />
                 </button>
               </div>
             )}

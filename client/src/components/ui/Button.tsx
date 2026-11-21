@@ -19,21 +19,21 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 */
 const variantStyles: Record<Variant, string> = {
   primary: `
-    bg-gradient-to-r from-[#00C2DE] to-[#008ba3] text-[#000000] font-semibold rounded-xl
-    border border-[#38e1f7]/40
-    shadow-[0_4px_16px_rgba(0,194,222,0.3)]
-    hover:shadow-[0_6px_24px_rgba(0,194,222,0.5)] hover:scale-[1.02] hover:brightness-105
+    bg-[#00C2DE] text-[#000000] font-semibold rounded-xl
+    border border-[#38e1f7]/50
+    shadow-[0_2px_8px_rgba(0,0,0,0.35)]
+    hover:bg-[#15d4ef] hover:shadow-[0_4px_16px_rgba(0,0,0,0.5)] hover:scale-[1.01]
     active:scale-[0.98] active:brightness-95
-    focus:outline-none focus:ring-2 focus:ring-[#00C2DE]/50
+    focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00C2DE]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black
     disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:hover:shadow-none
   `,
   'solid-accent': `
     bg-[#00C2DE] text-[#000000] font-bold rounded-xl
     border border-[#00C2DE]
-    shadow-[0_4px_16px_rgba(0,194,222,0.35)]
-    hover:bg-[#15d4ef] hover:shadow-[0_6px_24px_rgba(0,194,222,0.55)] hover:scale-[1.02]
+    shadow-[0_2px_8px_rgba(0,0,0,0.35)]
+    hover:bg-[#15d4ef] hover:shadow-[0_4px_16px_rgba(0,0,0,0.5)] hover:scale-[1.01]
     active:scale-[0.98]
-    focus:outline-none focus:ring-2 focus:ring-[#00C2DE]/50
+    focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00C2DE]/60 focus-visible:ring-offset-2 focus-visible:ring-offset-black
     disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
   `,
   secondary: `
@@ -42,15 +42,15 @@ const variantStyles: Record<Variant, string> = {
     shadow-[0_2px_8px_rgba(0,0,0,0.35)]
     hover:bg-[#222426] hover:border-white/25 hover:text-white hover:scale-[1.01]
     active:scale-[0.98] active:bg-[#141516]
-    focus:outline-none focus:ring-2 focus:ring-[#00C2DE]/30
+    focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00C2DE]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black
     disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
   `,
   pill: `
     bg-white/[0.04] backdrop-blur-md text-[#FFFFFF] font-medium rounded-full
     border border-white/15
-    hover:border-[#00C2DE]/60 hover:text-[#00C2DE] hover:bg-[#00C2DE]/10 hover:scale-[1.02]
+    hover:border-[#00C2DE]/60 hover:text-[#00C2DE] hover:bg-[#00C2DE]/10 hover:scale-[1.01]
     active:scale-[0.98]
-    focus:outline-none focus:ring-2 focus:ring-[#00C2DE]/40
+    focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00C2DE]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-black
     disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
   `,
   ghost: `
@@ -58,6 +58,7 @@ const variantStyles: Record<Variant, string> = {
     border border-transparent
     hover:text-white hover:bg-white/[0.07]
     active:scale-[0.98] active:bg-white/10
+    focus:outline-none focus-visible:ring-2 focus-visible:ring-[#00C2DE]/30
     disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
   `,
   danger: `
@@ -65,6 +66,7 @@ const variantStyles: Record<Variant, string> = {
     border border-[rgba(220,53,69,0.35)]
     hover:bg-[rgba(220,53,69,0.22)] hover:border-[#dc3545] hover:scale-[1.01]
     active:scale-[0.98]
+    focus:outline-none focus-visible:ring-2 focus-visible:ring-[#dc3545]/40
     disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
   `,
 };
@@ -72,7 +74,7 @@ const variantStyles: Record<Variant, string> = {
 const sizeStyles: Record<Size, string> = {
   sm: 'h-[36px] px-4 text-[0.82rem]',
   md: 'h-[44px] px-5 text-[0.88rem]',
-  lg: 'h-[50px] px-7 text-[0.95rem]',
+  lg: 'h-[48px] px-6 text-[0.94rem]',
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
@@ -100,7 +102,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
         className={`
           relative inline-flex items-center justify-center gap-2
           cursor-pointer select-none whitespace-nowrap shrink-0
-          transition-all duration-200 ease-out
+          transition-[background-color,border-color,color,box-shadow,transform] duration-180 ease-out
           ${variantStyles[variant]}
           ${sizeStyles[size]}
           ${fullWidth ? 'w-full' : ''}

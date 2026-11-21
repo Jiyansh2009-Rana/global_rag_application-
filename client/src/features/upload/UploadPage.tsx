@@ -773,7 +773,7 @@ export function UploadPage() {
         {/* PAGE HEADER */}
         <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }}>
           <div style={{ marginBottom: 12 }}>
-            <h1 style={{ fontFamily: 'var(--font-heading), "Bricolage Grotesque", sans-serif', fontSize: '1.45rem', fontWeight: 600, letterSpacing: '-0.025em', color: 'var(--text)', lineHeight: 1.2 }}>
+            <h1 style={{ fontFamily: 'var(--font-heading), "Open Sans", sans-serif', fontSize: '1.45rem', fontWeight: 600, letterSpacing: '-0.02em', color: 'var(--text)', lineHeight: 1.2 }}>
               Document Ingestion Pipeline
             </h1>
             <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: 4 }}>

@@ -189,7 +189,7 @@ export function SpecShowcasePage({ onOpenApp }: Props) {
         <div style={{ display: "flex", gap: 56, whiteSpace: "nowrap", width: "max-content", animation: "marquee 32s linear infinite" }}>
           {STACK.map((item, i) => (
             <span key={i} style={{ fontFamily: '"Space Mono", monospace', fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.08em", color: "#6C757D" }}>
-              {item}<span style={{ marginLeft: 56, color: "rgba(0,194,222,0.35)" }}>✦</span>
+              {item}<span style={{ marginLeft: 56, color: "rgba(0,194,222,0.4)" }}>•</span>
             </span>
           ))}
         </div>
@@ -245,7 +245,7 @@ export function SpecShowcasePage({ onOpenApp }: Props) {
           </h2>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 280px), 1fr))", gap: 20 }}>
           {MODULES.map((m, i) => (
             <motion.div
               key={i}

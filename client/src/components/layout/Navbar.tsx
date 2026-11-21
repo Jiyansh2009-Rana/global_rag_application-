@@ -18,6 +18,7 @@ import {
   Check,
   LogOut,
   X,
+  Menu,
 } from "lucide-react";
 
 /* ── Inline Copy Button Helper ── */
@@ -582,16 +583,23 @@ export function Navbar({ activePage = "chat", onNavigate, onToggleMobileSidebar 
                   type="button"
                   onClick={onToggleMobileSidebar}
                   style={{
-                    background: "transparent",
+                    background: "rgba(255,255,255,0.04)",
                     border: "1px solid rgba(255,255,255,0.12)",
-                    borderRadius: 8,
+                    borderRadius: 10,
                     color: "#FFFFFF",
-                    padding: "6px 10px",
+                    width: 38,
+                    height: 38,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
                     cursor: "pointer",
+                    padding: 0,
+                    flexShrink: 0,
+                    transition: "background-color 0.15s ease, border-color 0.15s ease",
                   }}
                   aria-label="Toggle navigation menu"
                 >
-                  ☰
+                  <Menu size={18} />
                 </button>
               )}
 

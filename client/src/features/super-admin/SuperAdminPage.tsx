@@ -30,7 +30,7 @@ import type { SuperAdminUser, SuperAdminDocument, SuperAdminOrg } from '@/api/ty
 const glassPanel = {
   background: '#1A1A1B',
   border: '1px solid rgba(255, 255, 255, 0.10)',
-  borderRadius: 4,
+  borderRadius: 14,
   boxShadow: '0 8px 28px rgba(0,0,0,0.45)',
 } as const;
 
