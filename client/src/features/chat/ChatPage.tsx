@@ -55,6 +55,20 @@ function safeUUID(): string {
   });
 }
 
+/* ── Suggested Questions Library for Dynamic Input Completion ── */
+const SUGGESTED_QUERIES = [
+  'Summarise uploaded documents and extract key conclusions',
+  'Extract key compliance, security, and governance requirements',
+  'Compare product specifications and architecture blueprints',
+  'Show data governance guidelines and tenant isolation policies',
+  'What are the risk factors and mitigation strategies in this document?',
+  'Explain the system workflow and data pipeline step by step',
+  'List all action items, pending deliverables, and owners',
+  'Highlight contract obligations, termination clauses, and liabilities',
+  'Show exact citations and page numbers for key performance metrics',
+  'Identify discrepancies or conflicting statements across pages',
+];
+
 /* ── Image Lightbox Modal ── */
 function ImageLightboxModal({
   source,
@@ -1343,6 +1357,22 @@ export function ChatPage() {
   const { messages, setMessages, activeSessionId, setActiveSessionId, refreshSessions } = useChatSession();
   const [query, setQuery] = useState('');
   const [mode, setMode] = useState<UploadMode>('global');
+
+  /* Dynamic Matching Suggestions based on user's first typed words */
+  const matchingSuggestions = useMemo(() => {
+    const trimmed = query.trim().toLowerCase();
+    if (!trimmed || trimmed.startsWith('/') || trimmed.length < 1) return [];
+
+    const queryWords = trimmed.split(/\s+/).filter(Boolean);
+    return SUGGESTED_QUERIES.filter((sug) => {
+      const lower = sug.toLowerCase();
+      // Match if query is prefix, contained, or words match prefixes
+      if (lower.startsWith(trimmed)) return true;
+      if (lower.includes(trimmed)) return true;
+      const sugWords = lower.split(/\s+/);
+      return queryWords.every((qw) => sugWords.some((sw) => sw.startsWith(qw)));
+    }).slice(0, 4);
+  }, [query]);
   const [isLoading, setIsLoading] = useState(false);
   const [stage, setStage] = useState<Stage>('embedding');
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -1504,100 +1534,225 @@ export function ChatPage() {
         gap: isMobile ? 8 : 12,
       }}
     >
-      {/* Action Bar: Prominent + (New Session) button & 5 Feature Pills */}
-      <div
-        className="mode-pills-scrollable"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: isMobile ? 6 : 8,
-          width: '100%',
-          flexWrap: isMobile ? 'nowrap' : 'wrap',
-          justifyContent: isMobile ? 'flex-start' : (isCentered ? 'center' : 'flex-start'),
-          overflowX: isMobile ? 'auto' : 'visible',
-          paddingBottom: isMobile ? 2 : 0,
-        }}
-      >
-        {/* 1. Knowledge Base */}
-        <button
-          type="button"
-          onClick={() => setMode('global')}
+      {/* Action Bar: Responsive Query Mode Selector & Settings */}
+      {isMobile ? (
+        <div
           style={{
-            padding: isMobile ? '5px 11px' : '6px 14px', borderRadius: 999, fontSize: isMobile ? '0.70rem' : '0.74rem', fontWeight: 600,
-            cursor: 'pointer', transition: 'all 0.18s',
-            fontFamily: '"Inter", sans-serif', flexShrink: 0, whiteSpace: 'nowrap',
-            background: mode === 'global' ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
-            color: mode === 'global' ? '#04121f' : 'var(--muted)',
-            border: mode === 'global' ? '1px solid var(--primary-glow)' : '1px solid var(--border)',
-            boxShadow: mode === 'global' ? '0 0 16px rgba(0,194,222,0.45)' : 'none',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            width: '100%',
           }}
         >
-          <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Globe size={14} /> Knowledge Base</span>
-        </button>
+          {/* Segmented Mode Control (Mobile) */}
+          <div
+            style={{
+              display: 'flex',
+              flex: 1,
+              alignItems: 'center',
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 999,
+              padding: 2,
+              gap: 2,
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => setMode('global')}
+              style={{
+                flex: 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                padding: '6px 4px',
+                borderRadius: 999,
+                fontSize: '0.68rem',
+                fontWeight: mode === 'global' ? 700 : 500,
+                background: mode === 'global' ? '#00C2DE' : 'transparent',
+                color: mode === 'global' ? '#04121F' : '#9D9FA2',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                boxShadow: mode === 'global' ? '0 0 10px rgba(0,194,222,0.45)' : 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Globe size={12} />
+              <span>Global</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('local')}
+              style={{
+                flex: 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                padding: '6px 4px',
+                borderRadius: 999,
+                fontSize: '0.68rem',
+                fontWeight: mode === 'local' ? 700 : 500,
+                background: mode === 'local' ? '#00C2DE' : 'transparent',
+                color: mode === 'local' ? '#04121F' : '#9D9FA2',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                boxShadow: mode === 'local' ? '0 0 10px rgba(0,194,222,0.45)' : 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Shield size={12} />
+              <span>Sandbox</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('both')}
+              style={{
+                flex: 1,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: 4,
+                padding: '6px 4px',
+                borderRadius: 999,
+                fontSize: '0.68rem',
+                fontWeight: mode === 'both' ? 700 : 500,
+                background: mode === 'both' ? '#00C2DE' : 'transparent',
+                color: mode === 'both' ? '#04121F' : '#9D9FA2',
+                border: 'none',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                boxShadow: mode === 'both' ? '0 0 10px rgba(0,194,222,0.45)' : 'none',
+                whiteSpace: 'nowrap',
+              }}
+            >
+              <Cpu size={12} />
+              <span>Hybrid</span>
+            </button>
+          </div>
 
-        {/* 2. Sandbox */}
-        <button
-          type="button"
-          onClick={() => setMode('local')}
+          {/* Dedicated Settings Button (Mobile) */}
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '6px 10px',
+              borderRadius: 999,
+              fontSize: '0.70rem',
+              fontWeight: 500,
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              color: '#ADB5BD',
+              cursor: 'pointer',
+              flexShrink: 0,
+              whiteSpace: 'nowrap',
+            }}
+          >
+            <Settings size={13} />
+            <span>Settings</span>
+          </button>
+        </div>
+      ) : (
+        /* Desktop Action Bar */
+        <div
+          className="mode-pills-scrollable"
           style={{
-            padding: isMobile ? '5px 11px' : '6px 14px', borderRadius: 999, fontSize: isMobile ? '0.70rem' : '0.74rem', fontWeight: 600,
-            cursor: 'pointer', transition: 'all 0.18s',
-            fontFamily: '"Inter", sans-serif', flexShrink: 0, whiteSpace: 'nowrap',
-            background: mode === 'local' ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
-            color: mode === 'local' ? '#04121f' : 'var(--muted)',
-            border: mode === 'local' ? '1px solid var(--primary-glow)' : '1px solid var(--border)',
-            boxShadow: mode === 'local' ? '0 0 16px rgba(0,194,222,0.45)' : 'none',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            width: '100%',
+            flexWrap: 'wrap',
+            justifyContent: isCentered ? 'center' : 'flex-start',
           }}
         >
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Shield size={14} /> Sandbox</span>
-        </button>
+          {/* 1. Knowledge Base */}
+          <button
+            type="button"
+            onClick={() => setMode('global')}
+            style={{
+              padding: '6px 14px', borderRadius: 999, fontSize: '0.74rem', fontWeight: 600,
+              cursor: 'pointer', transition: 'all 0.18s',
+              fontFamily: '"Inter", sans-serif', flexShrink: 0, whiteSpace: 'nowrap',
+              background: mode === 'global' ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
+              color: mode === 'global' ? '#04121f' : 'var(--muted)',
+              border: mode === 'global' ? '1px solid var(--primary-glow)' : '1px solid var(--border)',
+              boxShadow: mode === 'global' ? '0 0 16px rgba(0,194,222,0.45)' : 'none',
+            }}
+          >
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}><Globe size={14} /> Knowledge Base</span>
+          </button>
 
-        {/* 3. Hybrid Fusions */}
-        <button
-          type="button"
-          onClick={() => setMode('both')}
-          style={{
-            padding: isMobile ? '5px 11px' : '6px 14px', borderRadius: 999, fontSize: isMobile ? '0.70rem' : '0.74rem', fontWeight: 600,
-            cursor: 'pointer', transition: 'all 0.18s',
-            fontFamily: '"Inter", sans-serif', flexShrink: 0, whiteSpace: 'nowrap',
-            background: mode === 'both' ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
-            color: mode === 'both' ? '#04121f' : 'var(--muted)',
-            border: mode === 'both' ? '1px solid var(--primary-glow)' : '1px solid var(--border)',
-            boxShadow: mode === 'both' ? '0 0 16px rgba(0,194,222,0.45)' : 'none',
-          }}
-        >
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Cpu size={14} /> Hybrid Fusions</span>
-        </button>
+          {/* 2. Sandbox */}
+          <button
+            type="button"
+            onClick={() => setMode('local')}
+            style={{
+              padding: '6px 14px', borderRadius: 999, fontSize: '0.74rem', fontWeight: 600,
+              cursor: 'pointer', transition: 'all 0.18s',
+              fontFamily: '"Inter", sans-serif', flexShrink: 0, whiteSpace: 'nowrap',
+              background: mode === 'local' ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
+              color: mode === 'local' ? '#04121f' : 'var(--muted)',
+              border: mode === 'local' ? '1px solid var(--primary-glow)' : '1px solid var(--border)',
+              boxShadow: mode === 'local' ? '0 0 16px rgba(0,194,222,0.45)' : 'none',
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Shield size={14} /> Sandbox</span>
+          </button>
 
-        {!isCentered && !isMobile && <div style={{ flex: 1, minWidth: 8 }} />}
+          {/* 3. Hybrid Fusions */}
+          <button
+            type="button"
+            onClick={() => setMode('both')}
+            style={{
+              padding: '6px 14px', borderRadius: 999, fontSize: '0.74rem', fontWeight: 600,
+              cursor: 'pointer', transition: 'all 0.18s',
+              fontFamily: '"Inter", sans-serif', flexShrink: 0, whiteSpace: 'nowrap',
+              background: mode === 'both' ? 'var(--primary)' : 'rgba(255,255,255,0.03)',
+              color: mode === 'both' ? '#04121f' : 'var(--muted)',
+              border: mode === 'both' ? '1px solid var(--primary-glow)' : '1px solid var(--border)',
+              boxShadow: mode === 'both' ? '0 0 16px rgba(0,194,222,0.45)' : 'none',
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Cpu size={14} /> Hybrid Fusions</span>
+          </button>
 
-        {/* 5. Settings Button */}
-        <button
-          type="button"
-          onClick={() => setSettingsOpen(true)}
-          style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            padding: isMobile ? '5px 10px' : '6px 13px', borderRadius: 999,
-            fontSize: isMobile ? '0.70rem' : '0.74rem', color: 'var(--muted)',
-            background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
-            cursor: 'pointer', transition: 'all 0.18s',
-            fontFamily: '"Inter", sans-serif', flexShrink: 0,
-            fontWeight: 500, whiteSpace: 'nowrap',
-          }}
-          onMouseEnter={e => {
-            (e.currentTarget as HTMLElement).style.color = 'var(--text)';
-            (e.currentTarget as HTMLElement).style.background = 'rgba(0,194,222,0.08)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,194,222,0.3)';
-          }}
-          onMouseLeave={e => {
-            (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
-            (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)';
-            (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
-          }}
-        >
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Settings size={14} /> <span>Settings</span></span>
-        </button>
-      </div>
+          {!isCentered && <div style={{ flex: 1, minWidth: 8 }} />}
+
+          {/* Settings Button */}
+          <button
+            type="button"
+            onClick={() => setSettingsOpen(true)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 5,
+              padding: '6px 13px', borderRadius: 999,
+              fontSize: '0.74rem', color: 'var(--muted)',
+              background: 'rgba(255,255,255,0.03)', border: '1px solid var(--border)',
+              cursor: 'pointer', transition: 'all 0.18s',
+              fontFamily: '"Inter", sans-serif', flexShrink: 0,
+              fontWeight: 500, whiteSpace: 'nowrap',
+            }}
+            onMouseEnter={e => {
+              (e.currentTarget as HTMLElement).style.color = 'var(--text)';
+              (e.currentTarget as HTMLElement).style.background = 'rgba(0,194,222,0.08)';
+              (e.currentTarget as HTMLElement).style.borderColor = 'rgba(0,194,222,0.3)';
+            }}
+            onMouseLeave={e => {
+              (e.currentTarget as HTMLElement).style.color = 'var(--muted)';
+              (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.03)';
+              (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)';
+            }}
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Settings size={14} /> <span>Settings</span></span>
+          </button>
+        </div>
+      )}
 
       {/* Main Query Input Box */}
       <div
@@ -1614,6 +1769,98 @@ export function ChatPage() {
           transition: 'all 0.25s ease',
         }}
       >
+        {/* Dynamic Autocomplete / Suggested Queries Floating Dropdown */}
+        <AnimatePresence>
+          {matchingSuggestions.length > 0 && !query.startsWith('/') && (
+            <motion.div
+              initial={{ opacity: 0, y: 8, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 4, scale: 0.98 }}
+              transition={{ duration: 0.16, ease: [0.16, 1, 0.3, 1] }}
+              style={{
+                position: 'absolute',
+                bottom: 'calc(100% + 8px)',
+                left: 0,
+                right: 0,
+                padding: '8px',
+                borderRadius: 14,
+                background: 'rgba(26, 26, 27, 0.98)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(0, 194, 222, 0.35)',
+                boxShadow: '0 16px 40px rgba(0,0,0,0.85), 0 0 16px rgba(0,194,222,0.15)',
+                zIndex: 130,
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 4,
+              }}
+            >
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  padding: '2px 8px 6px',
+                  borderBottom: '1px solid rgba(255,255,255,0.06)',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Brain size={12} className="text-[#00C2DE]" />
+                  <span
+                    style={{
+                      fontSize: '0.66rem',
+                      fontFamily: '"Space Mono", monospace',
+                      color: '#00C2DE',
+                      fontWeight: 700,
+                      letterSpacing: '0.06em',
+                      textTransform: 'uppercase',
+                    }}
+                  >
+                    Matching Suggestions
+                  </span>
+                </div>
+                <span style={{ fontSize: '0.62rem', color: '#6C757D' }}>
+                  Click to fill query
+                </span>
+              </div>
+              {matchingSuggestions.map((sug) => (
+                <button
+                  key={sug}
+                  type="button"
+                  onClick={() => setQuery(sug)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: 8,
+                    padding: isMobile ? '7px 8px' : '8px 10px',
+                    borderRadius: 8,
+                    background: 'rgba(255,255,255,0.03)',
+                    border: '1px solid transparent',
+                    color: '#FFFFFF',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    fontSize: isMobile ? '0.74rem' : '0.80rem',
+                    transition: 'all 0.12s ease',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'rgba(0,194,222,0.12)';
+                    e.currentTarget.style.borderColor = 'rgba(0,194,222,0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
+                    e.currentTarget.style.borderColor = 'transparent';
+                  }}
+                >
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>
+                    {sug}
+                  </span>
+                  <CornerDownLeft size={12} style={{ color: '#00C2DE', flexShrink: 0, opacity: 0.85 }} />
+                </button>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* Floating Slash Command Helper */}
         {query.startsWith('/') && (
           <div style={{ position: 'absolute', bottom: 'calc(100% + 8px)', left: 0, right: 0, padding: 8, borderRadius: 14, background: '#1A1A1B', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 16px 36px rgba(0,0,0,0.8)', zIndex: 120, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -1736,50 +1983,8 @@ export function ChatPage() {
             </p>
 
             {/* Centered Main Query Input Box */}
-            <div style={{ width: '100%', marginBottom: isMobile ? '1.25rem' : '1.75rem' }}>
+            <div style={{ width: '100%' }}>
               {renderComposer(true)}
-            </div>
-
-            {/* Quick Suggestions Chips */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: isMobile ? 6 : 8 }}>
-              {[
-                'Summarise uploaded documents',
-                'Extract key compliance requirements',
-                'Compare product specifications',
-                'Show data governance guidelines',
-              ].map((sug) => (
-                <button
-                  key={sug}
-                  type="button"
-                  onClick={() => {
-                    setQuery(sug);
-                    void handleSubmit(sug);
-                  }}
-                  style={{
-                    fontSize: isMobile ? '0.70rem' : '0.76rem',
-                    padding: isMobile ? '6px 12px' : '7px 16px',
-                    borderRadius: 999,
-                    background: 'rgba(255,255,255,0.03)',
-                    border: '1px solid rgba(255,255,255,0.08)',
-                    color: '#9a9690',
-                    cursor: 'pointer',
-                    fontFamily: '"Inter", sans-serif',
-                    transition: 'all 0.18s ease',
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.color = '#00C2DE';
-                    e.currentTarget.style.borderColor = 'rgba(0,194,222,0.3)';
-                    e.currentTarget.style.background = 'rgba(0,194,222,0.08)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.color = '#9a9690';
-                    e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)';
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-                  }}
-                >
-                  {sug}
-                </button>
-              ))}
             </div>
           </motion.div>
         </div>

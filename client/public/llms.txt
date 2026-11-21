@@ -1,0 +1,24 @@
+# Askmydocsai
+
+> Askmydocsai is a high-performance Enterprise Retrieval-Augmented Generation (RAG) platform powered by FastAPI, React 18, PostgreSQL with pgvector (1024-dim), Redis ephemeral caching, Groq inference acceleration (Qwen 3.6 / Llama 3.3), and Jina AI CLIP embeddings.
+
+## System Capabilities
+- **Multi-Tenant Document RAG**: Partitioned knowledge bases isolated by organization ID (`org_id`).
+- **Hybrid Search Engine**: Dense vector similarity search combined with full-text BM25 and exact keyword matching.
+- **Dynamic Query Modes**:
+  - `Global Mode`: Queries enterprise-wide indexed documents with citation tracking.
+  - `Sandbox / Local Mode`: Ephemeral isolated document sessions cached in Redis with a 1-hour TTL.
+  - `Hybrid Mode`: Combined reasoning across global enterprise knowledge and session-specific uploads.
+- **Streaming Real-Time Responses**: Server-Sent Events (SSE) streaming with sub-second time-to-first-token.
+- **Enterprise Authentication**: Email/Password with strong password criteria, JWT tokens, and Google OAuth 2.0.
+
+## API Endpoints for Agents
+- **API Documentation**: [FastAPI Swagger UI](https://api.askmydocsai.dpdns.org/docs)
+- **OpenAPI Schema**: [OpenAPI JSON](https://api.askmydocsai.dpdns.org/openapi.json)
+- **Health Check**: `GET https://api.askmydocsai.dpdns.org/health`
+- **Chat Query Endpoint**: `POST https://api.askmydocsai.dpdns.org/api/query` (SSE text/event-stream)
+- **Document Ingestion**: `POST https://api.askmydocsai.dpdns.org/api/ingest`
+
+## Architecture & Design
+- **Frontend Architecture**: React 18 + Vite + Tailwind CSS v4 featuring AMD-inspired dark minimalism, flowing light particle aesthetics, and accessible responsive interfaces.
+- **Security & Privacy**: Zero data leakage, strict tenant scoping, and SHA-256 deduplication hashing.

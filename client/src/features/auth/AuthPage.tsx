@@ -386,20 +386,192 @@ function LoginForm({
   );
 }
 
-/* ── Password Strength Calculator ── */
-function getPasswordStrength(password: string): { score: number; label: string; color: string } {
-  if (!password) return { score: 0, label: '', color: 'transparent' };
-  let pts = 0;
-  if (password.length >= 8)  pts++;
-  if (password.length >= 12) pts++;
-  if (/[A-Z]/.test(password)) pts++;
-  if (/[0-9]/.test(password)) pts++;
-  if (/[^A-Za-z0-9]/.test(password)) pts++;
-  if (pts <= 1) return { score: 20,  label: 'Weak',        color: '#ef4444' };
-  if (pts === 2) return { score: 40,  label: 'Fair',        color: '#f59e0b' };
-  if (pts === 3) return { score: 60,  label: 'Good',        color: '#3b82f6' };
-  if (pts === 4) return { score: 80,  label: 'Strong',      color: '#10b981' };
-  return              { score: 100, label: 'Very Strong',  color: '#00C2DE' };
+/* ── Password Strength Calculator & Animated Meter (/improve-animations) ── */
+interface PasswordRule {
+  key: string;
+  label: string;
+  met: boolean;
+}
+
+interface PasswordStrengthDetails {
+  score: number;
+  percentage: number;
+  label: string;
+  color: string;
+  description: string;
+  rules: PasswordRule[];
+}
+
+function evaluatePasswordStrength(password: string): PasswordStrengthDetails {
+  const hasMinLength = password.length >= 8;
+  const hasUpper = /[A-Z]/.test(password);
+  const hasLower = /[a-z]/.test(password);
+  const hasNumber = /[0-9]/.test(password);
+  const hasSpecial = /[^A-Za-z0-9]/.test(password);
+
+  const rules: PasswordRule[] = [
+    { key: 'length', label: '8+ chars', met: hasMinLength },
+    { key: 'mixed', label: 'A-Z & a-z', met: hasUpper && hasLower },
+    { key: 'number', label: '0-9 number', met: hasNumber },
+    { key: 'special', label: 'Special symbol', met: hasSpecial },
+  ];
+
+  let rawPoints = 0;
+  if (hasMinLength) rawPoints++;
+  if (hasUpper && hasLower) rawPoints++;
+  if (hasNumber) rawPoints++;
+  if (hasSpecial) rawPoints++;
+
+  if (!password) {
+    return {
+      score: 0,
+      percentage: 0,
+      label: 'Enter password',
+      color: '#6C757D',
+      description: 'At least 8 characters with letters, numbers and symbols',
+      rules,
+    };
+  }
+
+  if (rawPoints <= 1) {
+    return {
+      score: 1,
+      percentage: 33,
+      label: 'Weak',
+      color: '#ef4444',
+      description: 'Weak password. Add numbers, symbols, or mixed case.',
+      rules,
+    };
+  }
+
+  if (rawPoints === 2 || rawPoints === 3) {
+    return {
+      score: 2,
+      percentage: 66,
+      label: 'Good',
+      color: '#f59e0b',
+      description: 'Good password. Add symbols or mix cases to make it strong.',
+      rules,
+    };
+  }
+
+  return {
+    score: 3,
+    percentage: 100,
+    label: 'Strong',
+    color: '#10B981',
+    description: 'Strong password. Meets all security criteria.',
+    rules,
+  };
+}
+
+function PasswordStrengthMeter({ password }: { password: string }) {
+  if (!password) return null;
+  const strength = evaluatePasswordStrength(password);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, height: 0, marginTop: 0 }}
+      animate={{ opacity: 1, height: 'auto', marginTop: -6 }}
+      exit={{ opacity: 0, height: 0, marginTop: 0 }}
+      transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
+      style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 4 }}
+    >
+      {/* 3-Segment Animated Gauge */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+        {[1, 2, 3].map((segmentIndex) => {
+          const isFilled = strength.score >= segmentIndex;
+          return (
+            <div
+              key={segmentIndex}
+              style={{
+                height: 4,
+                borderRadius: 999,
+                background: 'rgba(255, 255, 255, 0.08)',
+                overflow: 'hidden',
+                position: 'relative',
+              }}
+            >
+              <motion.div
+                initial={false}
+                animate={{
+                  width: isFilled ? '100%' : '0%',
+                  backgroundColor: strength.color,
+                }}
+                transition={{
+                  type: 'spring',
+                  stiffness: 280,
+                  damping: 24,
+                }}
+                style={{
+                  height: '100%',
+                  borderRadius: 999,
+                  boxShadow: isFilled ? `0 0 8px ${strength.color}80` : 'none',
+                }}
+              />
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Strength Label & Actionable Guidance Text */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span
+          style={{
+            fontSize: '0.72rem',
+            fontWeight: 700,
+            color: strength.color,
+            fontFamily: '"Space Mono", monospace',
+            textTransform: 'uppercase',
+            letterSpacing: '0.04em',
+            transition: 'color 0.25s ease',
+          }}
+        >
+          {strength.label}
+        </span>
+        <span
+          style={{
+            fontSize: '0.68rem',
+            color: '#9D9FA2',
+            textAlign: 'right',
+            lineHeight: 1.3,
+            transition: 'color 0.25s ease',
+          }}
+        >
+          {strength.description}
+        </span>
+      </div>
+
+      {/* 4 Animated Requirement Checkmark Pills */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 2 }}>
+        {strength.rules.map((rule) => (
+          <motion.div
+            key={rule.key}
+            animate={{
+              color: rule.met ? '#00C2DE' : '#6C757D',
+              borderColor: rule.met ? 'rgba(0,194,222,0.4)' : 'rgba(255,255,255,0.08)',
+              background: rule.met ? 'rgba(0,194,222,0.1)' : 'rgba(255,255,255,0.02)',
+            }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '3px 8px',
+              borderRadius: 6,
+              border: '1px solid rgba(255,255,255,0.08)',
+              fontSize: '0.66rem',
+              fontWeight: rule.met ? 600 : 400,
+              fontFamily: '"Space Mono", monospace',
+            }}
+          >
+            <span style={{ fontSize: '0.7rem' }}>{rule.met ? '✓' : '•'}</span>
+            <span>{rule.label}</span>
+          </motion.div>
+        ))}
+      </div>
+    </motion.div>
+  );
 }
 
 /* ── Signup Form (With Eye Password Option) ── */
@@ -481,26 +653,8 @@ function SignupForm({
         {...register('password')}
       />
 
-      {/* ── Password Strength Bar ── */}
-      {watchedPassword ? (() => {
-        const strength = getPasswordStrength(watchedPassword);
-        return (
-          <div style={{ marginTop: -8, marginBottom: 2 }}>
-            <div style={{ height: 3, borderRadius: 2, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
-              <div style={{
-                height: '100%',
-                width: `${strength.score}%`,
-                background: strength.color,
-                borderRadius: 2,
-                transition: 'width 0.35s cubic-bezier(0.16,1,0.3,1), background-color 0.35s ease',
-              }} />
-            </div>
-            <div style={{ fontSize: '0.68rem', color: strength.color, marginTop: 3, textAlign: 'right', transition: 'color 0.35s ease' }}>
-              {strength.label}
-            </div>
-          </div>
-        );
-      })() : null}
+      {/* ── Animated Password Strength Meter & Real-time Policy Feedback ── */}
+      <PasswordStrengthMeter password={watchedPassword} />
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
         <Input

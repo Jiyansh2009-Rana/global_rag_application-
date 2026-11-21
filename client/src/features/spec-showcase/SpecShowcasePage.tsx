@@ -86,7 +86,7 @@ export function SpecShowcasePage({ onOpenApp }: Props) {
         <div className="amd-wave-backdrop amd-wave-animated" />
         <div className="amd-wave-vignette" />
 
-        <div style={{ position: "relative", zIndex: 10, maxWidth: 960, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "clamp(4.5rem, 9vw, 8.5rem) 1.5rem 5rem" }}>
+        <div style={{ position: "relative", zIndex: 10, maxWidth: 960, margin: "0 auto", display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", padding: "clamp(2.75rem, 5.5vw, 5rem) 1.25rem 4rem" }}>
 
           {/* Logo badge with soft entrance */}
           <motion.div

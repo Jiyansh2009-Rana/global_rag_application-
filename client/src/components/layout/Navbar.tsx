@@ -6,9 +6,59 @@ import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { GuideModal } from "@/components/guide/GuideModal";
 import { Logo } from "@/components/common/Logo";
-import { MessageSquare, UploadCloud, ShieldCheck, Zap, User as UserIcon, BookOpen, ChevronDown } from "lucide-react";
+import {
+  MessageSquare,
+  UploadCloud,
+  ShieldCheck,
+  Zap,
+  User as UserIcon,
+  BookOpen,
+  ChevronDown,
+  Copy,
+  Check,
+  LogOut,
+  X,
+} from "lucide-react";
 
-/* ── Profile Popover Dropdown ── */
+/* ── Inline Copy Button Helper ── */
+function CopyPill({ text, label }: { text: string; label?: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!text || text === "—") return;
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1600);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleCopy}
+      title={`Copy ${label || "value"}`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        background: copied ? "rgba(0,194,222,0.18)" : "rgba(255,255,255,0.06)",
+        border: `1px solid ${copied ? "#00C2DE" : "rgba(255,255,255,0.12)"}`,
+        borderRadius: 4,
+        padding: "2px 6px",
+        color: copied ? "#00C2DE" : "#ADB5BD",
+        cursor: "pointer",
+        fontSize: "0.68rem",
+        fontFamily: '"Space Mono", monospace',
+        transition: "all 0.15s ease",
+      }}
+    >
+      {copied ? <Check size={11} /> : <Copy size={11} />}
+      <span>{copied ? "Copied" : "Copy"}</span>
+    </button>
+  );
+}
+
+/* ── Profile Popover Dropdown (Desktop) ── */
 function ProfileDropdown({ onClose }: { onClose: () => void }) {
   const { user, role, signOut } = useAuth();
   const ref = useRef<HTMLDivElement>(null);
@@ -27,13 +77,7 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
   };
 
   const username = user?.username || user?.email?.split("@")[0] || "User";
-
-  const rows = [
-    { label: "Username",     value: <span style={{ fontFamily: "Space Mono, monospace", fontSize: "0.78rem", color: "#00C2DE", fontWeight: 600 }}>@{username}</span> },
-    { label: "User ID",      value: <span style={{ fontFamily: "Space Mono, monospace", fontSize: "0.7rem", color: "#9D9FA2", display: "block", maxWidth: 150, overflow: "hidden", textOverflow: "ellipsis" }}>{user?.user_id ?? "—"}</span> },
-    { label: "Organisation", value: user?.org_id ?? "—" },
-    { label: "Member since", value: user?.created_at ? new Date(user.created_at).toLocaleDateString() : "—" },
-  ];
+  const userInitials = (user?.username || user?.email)?.slice(0, 2).toUpperCase() || "US";
 
   return (
     <motion.div
@@ -41,109 +85,365 @@ function ProfileDropdown({ onClose }: { onClose: () => void }) {
       initial={{ opacity: 0, y: -6, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -6, scale: 0.98 }}
-      transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-      style={{ position: "absolute", top: "calc(100% + 12px)", right: 0, width: 300, zIndex: 300, transformOrigin: "top right" }}
+      transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+      style={{
+        position: "absolute",
+        top: "calc(100% + 12px)",
+        right: 0,
+        width: 340,
+        zIndex: 300,
+        transformOrigin: "top right",
+      }}
     >
       <div
         style={{
-          background: "#1A1A1B",
-          border: "1px solid rgba(255,255,255,0.14)",
-          borderRadius: 12,
+          background: "rgba(26, 26, 27, 0.98)",
+          backdropFilter: "blur(20px)",
+          border: "1px solid rgba(0, 194, 222, 0.25)",
+          borderRadius: 14,
           overflow: "hidden",
-          boxShadow: "0 8px 28px rgba(0,0,0,0.6)",
+          boxShadow: "0 24px 64px rgba(0,0,0,0.85), 0 0 16px rgba(0,194,222,0.12)",
         }}
       >
-        {/* Header */}
-        <div style={{ display: "flex", alignItems: "center", gap: "0.875rem", padding: "1.25rem 1.25rem 1rem", borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
-          <div
-            style={{
-              width: 42,
-              height: 42,
-              borderRadius: "50%",
-              flexShrink: 0,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "1.05rem",
-              fontWeight: 700,
-              color: "#FFFFFF",
-              background: "#000000",
-              border: "1px solid #00C2DE",
-              boxShadow: "0 0 12px rgba(0,194,222,0.25)",
-            }}
-          >
-            {(user?.username || user?.email)?.charAt(0).toUpperCase() ?? "U"}
+        {/* Header Hero Card */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "0.875rem",
+            padding: "1.25rem",
+            background: "linear-gradient(180deg, rgba(0,194,222,0.08) 0%, rgba(0,0,0,0) 100%)",
+            borderBottom: "1px solid rgba(255,255,255,0.08)",
+          }}
+        >
+          {/* Avatar with Status Beacon */}
+          <div style={{ position: "relative", flexShrink: 0 }}>
+            <div
+              style={{
+                width: 46,
+                height: 46,
+                borderRadius: "50%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "1.05rem",
+                fontWeight: 700,
+                color: "#FFFFFF",
+                background: "#080809",
+                border: "2px solid #00C2DE",
+                boxShadow: "0 0 14px rgba(0,194,222,0.35)",
+              }}
+            >
+              {userInitials}
+            </div>
+            {/* Active Emerald Dot */}
+            <span
+              style={{
+                position: "absolute",
+                bottom: 0,
+                right: 0,
+                width: 12,
+                height: 12,
+                borderRadius: "50%",
+                background: "#10B981",
+                border: "2px solid #1A1A1B",
+                boxShadow: "0 0 6px #10B981",
+              }}
+            />
           </div>
+
           <div style={{ minWidth: 0, flex: 1 }}>
-            <div style={{ fontSize: "0.95rem", fontWeight: 700, color: "#FFFFFF", fontFamily: '"Open Sans", sans-serif', overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div
+              style={{
+                fontSize: "0.98rem",
+                fontWeight: 700,
+                color: "#FFFFFF",
+                fontFamily: '"Open Sans", sans-serif',
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               {username}
             </div>
-            <div style={{ fontSize: "0.75rem", color: "#9D9FA2", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+            <div
+              style={{
+                fontSize: "0.76rem",
+                color: "#9D9FA2",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                marginTop: 1,
+              }}
+            >
               {user?.email}
             </div>
-            <div style={{ marginTop: 4 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 5 }}>
               <Badge role={role ?? undefined}>{role ?? "User"}</Badge>
+              <span style={{ fontSize: "0.68rem", color: "#10B981", fontWeight: 600 }}>● Active</span>
             </div>
           </div>
         </div>
 
-        {/* Details list */}
-        <div style={{ padding: "0.5rem 1.25rem" }}>
-          {rows.map(({ label, value }) => (
-            <div key={label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0", borderBottom: "1px solid rgba(255,255,255,0.06)" }}>
-              <span style={{ fontSize: "0.75rem", color: "#6C757D" }}>{label}</span>
-              <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "#FFFFFF" }}>{value}</span>
+        {/* Detailed Account Attributes */}
+        <div style={{ padding: "0.75rem 1.25rem", display: "flex", flexDirection: "column", gap: 8 }}>
+          {/* User ID Row */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0" }}>
+            <span style={{ fontSize: "0.75rem", color: "#6C757D" }}>User ID</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontFamily: '"Space Mono", monospace', fontSize: "0.72rem", color: "#ADB5BD", maxWidth: 120, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                {user?.user_id || "—"}
+              </span>
+              {user?.user_id && <CopyPill text={user.user_id} label="User ID" />}
             </div>
-          ))}
+          </div>
+
+          {/* Org ID Row */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+            <span style={{ fontSize: "0.75rem", color: "#6C757D" }}>Organisation</span>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontFamily: '"Space Mono", monospace', fontSize: "0.75rem", color: "#00C2DE", fontWeight: 600 }}>
+                {user?.org_id || "—"}
+              </span>
+              {user?.org_id && <CopyPill text={user.org_id} label="Org ID" />}
+            </div>
+          </div>
+
+          {/* Global Upload Access */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+            <span style={{ fontSize: "0.75rem", color: "#6C757D" }}>Ingest Scope</span>
+            <span style={{ fontSize: "0.72rem", color: user?.allow_global_upload ? "#00C2DE" : "#ADB5BD", fontWeight: 500 }}>
+              {user?.allow_global_upload ? "Global & Sandbox" : "Sandbox Only"}
+            </span>
+          </div>
+
+          {/* Member Since Row */}
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "4px 0", borderTop: "1px solid rgba(255,255,255,0.05)" }}>
+            <span style={{ fontSize: "0.75rem", color: "#6C757D" }}>Member Since</span>
+            <span style={{ fontSize: "0.74rem", color: "#ADB5BD" }}>
+              {user?.created_at ? new Date(user.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "Active"}
+            </span>
+          </div>
         </div>
 
-        {/* Sign out */}
-        <div style={{ padding: "0.75rem 1.25rem 1.25rem" }}>
-          <Button variant="danger" size="sm" fullWidth onClick={handleSignOut}>Sign out</Button>
+        {/* Footer Actions */}
+        <div style={{ padding: "0.75rem 1.25rem 1.25rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+          <Button variant="danger" size="sm" fullWidth onClick={handleSignOut}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+              <LogOut size={13} />
+              <span>Sign out</span>
+            </span>
+          </Button>
         </div>
       </div>
     </motion.div>
   );
 }
 
-/* ── Mobile Profile Sheet ── */
+/* ── Mobile Profile Sheet (Comprehensive Full-Screen/Drawer on Mobile) ── */
 function MobileProfileSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
   const { user, role, signOut } = useAuth();
   const username = user?.username || user?.email?.split("@")[0] || "User";
+  const userInitials = (user?.username || user?.email)?.slice(0, 2).toUpperCase() || "US";
 
   return (
     <AnimatePresence>
       {open && (
         <>
           <motion.div
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             onClick={onClose}
-            style={{ position: "fixed", inset: 0, zIndex: 200, background: "rgba(0,0,0,0.75)" }}
+            style={{
+              position: "fixed",
+              inset: 0,
+              zIndex: 300,
+              background: "rgba(0,0,0,0.8)",
+              backdropFilter: "blur(8px)",
+            }}
           />
           <motion.div
-            initial={{ y: "100%" }} animate={{ y: 0 }} exit={{ y: "100%" }}
-            transition={{ type: "spring", duration: 0.4, bounce: 0.1 }}
-            style={{ position: "fixed", bottom: 0, left: 0, right: 0, zIndex: 201, background: "#1A1A1B", borderTop: "1px solid rgba(255,255,255,0.12)", borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: "1.5rem", paddingBottom: "calc(1.5rem + var(--safe-bottom))" }}
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 28, stiffness: 280 }}
+            style={{
+              position: "fixed",
+              bottom: 0,
+              left: 0,
+              right: 0,
+              zIndex: 301,
+              background: "#1A1A1B",
+              borderTop: "1px solid rgba(0, 194, 222, 0.35)",
+              borderTopLeftRadius: 22,
+              borderTopRightRadius: 22,
+              padding: "1.25rem 1.25rem calc(1.5rem + var(--safe-bottom, 16px))",
+              boxShadow: "0 -16px 48px rgba(0,0,0,0.9)",
+              maxHeight: "85vh",
+              overflowY: "auto",
+            }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.25rem" }}>
-              <div style={{ width: 48, height: 48, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", fontWeight: 700, color: "#FFFFFF", background: "#000000", border: "1px solid #00C2DE" }}>
-                {(user?.username || user?.email)?.charAt(0).toUpperCase() ?? "U"}
+            {/* Grab Drag Bar Handle */}
+            <div style={{ display: "flex", justifyContent: "center", marginBottom: 14 }}>
+              <div style={{ width: 40, height: 4, borderRadius: 2, background: "rgba(255,255,255,0.25)" }} />
+            </div>
+
+            {/* Top Close Button & Title */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <UserIcon size={16} className="text-[#00C2DE]" />
+                <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#FFFFFF", textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: '"Space Mono", monospace' }}>
+                  Account Profile
+                </span>
               </div>
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  background: "rgba(255,255,255,0.06)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "50%",
+                  width: 28,
+                  height: 28,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#9D9FA2",
+                  cursor: "pointer",
+                }}
+              >
+                <X size={15} />
+              </button>
+            </div>
+
+            {/* Hero Card */}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "1rem",
+                padding: "1rem",
+                borderRadius: 14,
+                background: "linear-gradient(135deg, rgba(0, 194, 222, 0.12) 0%, rgba(26, 26, 27, 0.6) 100%)",
+                border: "1px solid rgba(0, 194, 222, 0.25)",
+                marginBottom: "1.25rem",
+              }}
+            >
+              <div style={{ position: "relative", flexShrink: 0 }}>
+                <div
+                  style={{
+                    width: 52,
+                    height: 52,
+                    borderRadius: "50%",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "1.2rem",
+                    fontWeight: 700,
+                    color: "#FFFFFF",
+                    background: "#080809",
+                    border: "2px solid #00C2DE",
+                    boxShadow: "0 0 16px rgba(0,194,222,0.4)",
+                  }}
+                >
+                  {userInitials}
+                </div>
+                <span
+                  style={{
+                    position: "absolute",
+                    bottom: 0,
+                    right: 0,
+                    width: 14,
+                    height: 14,
+                    borderRadius: "50%",
+                    background: "#10B981",
+                    border: "2px solid #1A1A1B",
+                  }}
+                />
+              </div>
+
               <div style={{ minWidth: 0, flex: 1 }}>
-                <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#FFFFFF" }}>{username}</div>
-                <div style={{ fontSize: "0.78rem", color: "#9D9FA2" }}>{user?.email}</div>
-                <div style={{ marginTop: 4 }}>
+                <div style={{ fontSize: "1.05rem", fontWeight: 700, color: "#FFFFFF", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {username}
+                </div>
+                <div style={{ fontSize: "0.78rem", color: "#9D9FA2", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", marginTop: 2 }}>
+                  {user?.email}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 6 }}>
                   <Badge role={role ?? undefined}>{role ?? "User"}</Badge>
+                  <span style={{ fontSize: "0.72rem", color: "#10B981", fontWeight: 600 }}>● Active Session</span>
                 </div>
               </div>
             </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: "1.5rem" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#9D9FA2" }}>
-                <span>Org ID</span>
-                <span style={{ color: "#FFFFFF", fontFamily: "Space Mono, monospace" }}>{user?.org_id ?? "—"}</span>
+
+            {/* Profile Attributes List */}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 10,
+                padding: "1rem",
+                borderRadius: 12,
+                background: "rgba(0,0,0,0.45)",
+                border: "1px solid rgba(255,255,255,0.08)",
+                marginBottom: "1.5rem",
+              }}
+            >
+              {/* Organization ID */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ fontSize: "0.78rem", color: "#6C757D" }}>Organisation ID</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontFamily: '"Space Mono", monospace', fontSize: "0.82rem", color: "#00C2DE", fontWeight: 600 }}>
+                    {user?.org_id ?? "—"}
+                  </span>
+                  {user?.org_id && <CopyPill text={user.org_id} label="Org ID" />}
+                </div>
+              </div>
+
+              {/* User ID */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <span style={{ fontSize: "0.78rem", color: "#6C757D" }}>User ID</span>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <span style={{ fontFamily: '"Space Mono", monospace', fontSize: "0.74rem", color: "#ADB5BD", maxWidth: 130, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {user?.user_id ?? "—"}
+                  </span>
+                  {user?.user_id && <CopyPill text={user.user_id} label="User ID" />}
+                </div>
+              </div>
+
+              {/* Ingest Permissions */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <span style={{ fontSize: "0.78rem", color: "#6C757D" }}>Upload Permissions</span>
+                <span style={{ fontSize: "0.75rem", color: user?.allow_global_upload ? "#00C2DE" : "#ADB5BD", fontWeight: 600 }}>
+                  {user?.allow_global_upload ? "Global & Sandbox" : "Sandbox Only"}
+                </span>
+              </div>
+
+              {/* Member Since */}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: 8, borderTop: "1px solid rgba(255,255,255,0.06)" }}>
+                <span style={{ fontSize: "0.78rem", color: "#6C757D" }}>Member Since</span>
+                <span style={{ fontSize: "0.78rem", color: "#FFFFFF" }}>
+                  {user?.created_at ? new Date(user.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "Active"}
+                </span>
               </div>
             </div>
-            <Button variant="danger" fullWidth onClick={() => { onClose(); signOut(); }}>Sign out</Button>
+
+            {/* Sign Out Button */}
+            <Button
+              variant="danger"
+              size="md"
+              fullWidth
+              onClick={() => {
+                onClose();
+                void signOut();
+              }}
+            >
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                <LogOut size={15} />
+                <span>Sign Out of Askmydocsai</span>
+              </span>
+            </Button>
           </motion.div>
         </>
       )}

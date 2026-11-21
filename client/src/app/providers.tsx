@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from './theme-provider';
 import { AuthProvider } from './auth-provider';
 import { ChatProvider } from '@/features/chat/ChatContext';
-import { useAuth } from '@/hooks/useContextHooks';
+import { useAuth, useIsMobile } from '@/hooks/useContextHooks';
 import { Navbar } from '@/components/layout/Navbar';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { AuthPage } from '@/features/auth/AuthPage';
@@ -61,10 +61,11 @@ function LoadingScreen() {
 /* ── Pre-auth Navbar (Strictly for unauthenticated users) ── */
 function PreAuthNav({ activePage, onNavigate }: { activePage: Page; onNavigate: (page: Page) => void }) {
   const [guideOpen, setGuideOpen] = useState(false);
+  const isMobile = useIsMobile(768);
 
   return (
     <>
-      <header style={{ position: 'sticky', top: 0, zIndex: 100 }}>
+      <header style={{ position: 'sticky', top: 0, zIndex: 100, background: '#000000' }}>
         <div
           style={{
             borderBottom: '1px solid rgba(255,255,255,0.08)',
@@ -79,9 +80,9 @@ function PreAuthNav({ activePage, onNavigate }: { activePage: Page; onNavigate: 
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
-              gap: 16,
-              padding: '0 2rem',
-              height: 64,
+              gap: isMobile ? 8 : 16,
+              padding: isMobile ? '0 0.85rem' : '0 2rem',
+              height: isMobile ? 56 : 64,
             }}
           >
             {/* Logo */}
@@ -89,25 +90,30 @@ function PreAuthNav({ activePage, onNavigate }: { activePage: Page; onNavigate: 
               onClick={() => onNavigate('overview')}
               style={{ display: 'flex', alignItems: 'center', cursor: 'pointer', flexShrink: 0 }}
             >
-              <Logo size="md" showText={true} />
+              <Logo size={isMobile ? 'sm' : 'md'} showText={true} />
             </div>
 
             {/* Right actions */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.45rem' : '0.75rem', flexShrink: 0 }}>
               <Button
                 variant={activePage === 'overview' ? 'primary' : 'pill'}
                 size="sm"
                 onClick={() => onNavigate(activePage === 'overview' ? 'chat' : 'overview')}
-                style={{ padding: '0 16px', flexShrink: 0 }}
+                style={{
+                  padding: isMobile ? '5px 10px' : '0 16px',
+                  fontSize: isMobile ? '0.74rem' : '0.82rem',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
               >
                 {activePage === 'overview' ? (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <LogIn size={13} />
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <LogIn size={isMobile ? 12 : 13} />
                     <span>Sign in</span>
                   </span>
                 ) : (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                    <LayoutDashboard size={13} />
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    <LayoutDashboard size={isMobile ? 12 : 13} />
                     <span>Overview</span>
                   </span>
                 )}
@@ -117,10 +123,15 @@ function PreAuthNav({ activePage, onNavigate }: { activePage: Page; onNavigate: 
                 size="sm"
                 onClick={() => setGuideOpen(true)}
                 aria-label="Open guide"
-                style={{ padding: '0 16px', flexShrink: 0 }}
+                style={{
+                  padding: isMobile ? '5px 10px' : '0 16px',
+                  fontSize: isMobile ? '0.74rem' : '0.82rem',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                }}
               >
-                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                  <BookOpen size={13} style={{ color: 'var(--muted)' }} />
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                  <BookOpen size={isMobile ? 12 : 13} style={{ color: 'var(--muted)' }} />
                   <span>Guide</span>
                 </span>
               </Button>
@@ -177,15 +188,14 @@ function AppShell() {
 
   // 1. Unauthenticated user flow: Overview/Landing page or Login page
   if (!user) {
-    if (page === 'overview') {
-      return (
-        <SpecShowcasePage onOpenApp={(targetPage) => setPage((targetPage as Page) || 'chat')} />
-      );
-    }
     return (
       <div style={{ minHeight: '100vh', background: '#000000', display: 'flex', flexDirection: 'column' }}>
         <PreAuthNav activePage={page} onNavigate={(p) => setPage(p)} />
-        <AuthPage />
+        {page === 'overview' ? (
+          <SpecShowcasePage onOpenApp={(targetPage) => setPage((targetPage as Page) || 'chat')} />
+        ) : (
+          <AuthPage />
+        )}
       </div>
     );
   }
